@@ -1,0 +1,21 @@
+{% extends "book_stations/base.html" %}
+
+{% block title %}Your profile{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body">
+            <h1 class="card-title text-3xl">Profile</h1>
+            <p class="text-lg">Signed in as <strong>{{ request.user.username }}</strong>.</p>
+            <div class="card-actions mt-2">
+                <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list-create' %}">View stations</a>
+                <form method="post" action="{% url 'users:logout' %}">
+                    {% csrf_token %}
+                    <button class="btn btn-outline" type="submit">Log out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

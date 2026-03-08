@@ -23,4 +23,5 @@ urlpatterns = [
     path("", book_station_views.home, name="home"),
     path('admin/', admin.site.urls),
     path("book_stations/", include("book_stations.urls")),
+    path("users/", include("users.urls")),
 ]

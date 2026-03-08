@@ -1,0 +1,42 @@
+{% extends "book_stations/base.html" %}
+
+{% block title %}Log in{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body">
+            <h1 class="card-title text-3xl">Log in</h1>
+
+            <form method="post" class="mt-4 space-y-3">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-error py-2">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                {% for field in form %}
+                    <label class="form-control w-full" for="{{ field.id_for_label }}">
+                        <div class="label">
+                            <span class="label-text">{{ field.label }}</span>
+                        </div>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="label">
+                                <span class="label-text-alt text-error">{{ field.errors|striptags }}</span>
+                            </div>
+                        {% endif %}
+                    </label>
+                {% endfor %}
+
+                <button class="btn btn-primary w-full" type="submit">Log in</button>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+
+            <p class="mt-2 text-sm text-base-content/75">
+                Need an account?
+                <a href="{% url 'users:signup' %}" class="link link-primary">Sign up</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

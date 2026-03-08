@@ -1,0 +1,18 @@
+{% extends "book_stations/base.html" %}
+
+{% block title %}Logged out{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body">
+            <h1 class="card-title text-3xl">You are logged out</h1>
+            <p class="text-base-content/80">See you soon at Little libraries.</p>
+            <div class="card-actions mt-2">
+                <a href="{% url 'users:login' %}" class="btn btn-primary">Log in again</a>
+                <a href="/" class="btn btn-ghost">Back home</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

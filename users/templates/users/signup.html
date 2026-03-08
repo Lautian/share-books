@@ -1,0 +1,47 @@
+{% extends "book_stations/base.html" %}
+
+{% block title %}Sign up{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body">
+            <h1 class="card-title text-3xl">Create account</h1>
+            <p class="text-base-content/75">Join Little libraries to track your stations and activity.</p>
+
+            <form method="post" class="mt-4 space-y-3">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <div class="alert alert-error py-2">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                {% for field in form %}
+                    <label class="form-control w-full" for="{{ field.id_for_label }}">
+                        <div class="label">
+                            <span class="label-text">{{ field.label }}</span>
+                        </div>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="label">
+                                <span class="label-text-alt text-base-content/70">{{ field.help_text }}</span>
+                            </div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="label">
+                                <span class="label-text-alt text-error">{{ field.errors|striptags }}</span>
+                            </div>
+                        {% endif %}
+                    </label>
+                {% endfor %}
+
+                <button class="btn btn-primary w-full" type="submit">Create account</button>
+            </form>
+
+            <p class="mt-2 text-sm text-base-content/75">
+                Already have an account?
+                <a href="{% url 'users:login' %}" class="link link-primary">Log in</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
