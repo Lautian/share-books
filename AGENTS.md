@@ -36,7 +36,7 @@ users/
     urls.py
     tests.py
 
-book_exchange/
+book_stations/
     models.py         → toy library models
     admin.py
     apps.py
@@ -108,7 +108,7 @@ Templates should live in:
 
 Example:
 
-    book_exchange/templates/book_exchange/book_exchange_detail.html
+    book_stations/templates/book_stations/book_stations_detail.html
 
 Testing
 -------
