@@ -133,3 +133,44 @@ Important notes for agents
 - Do not delete migrations.
 - Keep changes minimal and localized to relevant apps.
 - Prefer editing existing files rather than creating new top-level modules.
+
+Python dependencies
+-------------------
+
+Dependencies are managed with `requirements.txt`.
+
+The development environment (including GitHub Codespaces) installs
+dependencies using:
+
+    pip install -r requirements.txt
+
+Therefore:
+
+- Whenever adding a Python package, update `requirements.txt`.
+- Whenever upgrading a package, update `requirements.txt`.
+- Do not install packages without updating this file.
+
+Preferred workflow when adding a dependency:
+
+    pip install <package>
+    pip freeze | grep <package> >> requirements.txt
+
+If multiple dependencies change, regenerate the file:
+
+    pip freeze > requirements.txt
+
+Important:
+- Django version must remain pinned unless intentionally upgraded.
+- Avoid unnecessary dependencies.
+
+Environment assumptions
+-----------------------
+
+The project runs in GitHub Codespaces using the devcontainer configuration.
+
+Environment setup automatically runs:
+
+    pip install -r requirements.txt
+
+Do not introduce other dependency managers (poetry, pipenv, etc.)
+without updating the devcontainer configuration.
