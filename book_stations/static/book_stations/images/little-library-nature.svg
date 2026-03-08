@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-label="A small book cabinet in a nature setting">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9dc8de" />
+      <stop offset="100%" stop-color="#d8ebd4" />
+    </linearGradient>
+    <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#74a86d" />
+      <stop offset="100%" stop-color="#3f6e44" />
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0c08a" />
+      <stop offset="100%" stop-color="#b7733f" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)" />
+
+  <g opacity="0.8">
+    <ellipse cx="220" cy="170" rx="150" ry="54" fill="#ffffff" />
+    <ellipse cx="420" cy="140" rx="120" ry="42" fill="#ffffff" />
+    <ellipse cx="1320" cy="160" rx="170" ry="58" fill="#ffffff" />
+  </g>
+
+  <path d="M0 560 C280 440, 540 640, 820 520 C1030 430, 1340 620, 1600 520 L1600 1000 L0 1000 Z" fill="#6a975d" />
+  <path d="M0 660 C220 590, 540 760, 860 670 C1140 600, 1390 760, 1600 680 L1600 1000 L0 1000 Z" fill="url(#meadow)" />
+
+  <g>
+    <rect x="660" y="480" width="280" height="300" rx="12" fill="url(#wood)" />
+    <rect x="690" y="520" width="220" height="160" rx="10" fill="#f9ebcf" stroke="#8e5d34" stroke-width="8" />
+    <rect x="690" y="698" width="220" height="20" fill="#8e5d34" opacity="0.7" />
+    <path d="M640 500 L800 390 L960 500 Z" fill="#b36b38" />
+    <path d="M662 500 L800 414 L938 500 Z" fill="#de9558" />
+    <rect x="735" y="548" width="33" height="110" rx="3" fill="#c23d4e" />
+    <rect x="771" y="548" width="30" height="110" rx="3" fill="#2e6e9f" />
+    <rect x="804" y="548" width="25" height="110" rx="3" fill="#4d8e44" />
+    <rect x="832" y="548" width="32" height="110" rx="3" fill="#df9b2f" />
+  </g>
+
+  <g fill="#2f5b34">
+    <rect x="490" y="520" width="24" height="220" />
+    <circle cx="502" cy="480" r="78" />
+    <rect x="1130" y="550" width="26" height="220" />
+    <circle cx="1143" cy="510" r="85" />
+  </g>
+
+  <path d="M580 840 C740 780, 900 905, 1060 840" fill="none" stroke="#cdb17a" stroke-width="18" stroke-linecap="round" opacity="0.6" />
+</svg>

@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="garden">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Little libraries{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind = {
+            config: {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            display: ["Source Serif 4", "serif"],
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet" type="text/css">
+
+    <style>
+        body.nature-site {
+            position: relative;
+            isolation: isolate;
+            font-family: "Source Serif 4", serif;
+        }
+
+        body.nature-site::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background:
+                linear-gradient(150deg, rgba(248, 248, 238, 0.78), rgba(225, 239, 226, 0.56)),
+                url("{% static 'book_stations/images/little-library-nature.svg' %}") center / cover no-repeat;
+            opacity: 0.94;
+        }
+
+        body.nature-site::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 83% 11%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 52%);
+            pointer-events: none;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="nature-site min-h-screen text-base-content">
+<header class="sticky top-0 z-30 border-b border-base-300/60 bg-base-100/70 backdrop-blur-md">
+    <div class="navbar mx-auto max-w-6xl px-4">
+        <div class="navbar-start gap-2">
+            <div class="dropdown">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-square md:hidden" aria-label="Open menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-5 w-5 stroke-current">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </div>
+                <ul tabindex="0" class="menu menu-sm dropdown-content z-[1] mt-3 w-52 rounded-box bg-base-100 p-2 shadow">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="{% url 'book_stations:bookstation-list-create' %}">Book stations</a></li>
+                    <li><a href="/admin/">Admin</a></li>
+                </ul>
+            </div>
+            <a href="/" class="btn btn-ghost text-xl font-semibold tracking-wide">Little libraries</a>
+        </div>
+
+        <div class="navbar-end hidden md:flex">
+            <ul class="menu menu-horizontal gap-1 rounded-box bg-base-100/80 p-1 text-sm shadow-sm">
+                <li><a href="/">Home</a></li>
+                <li><a href="{% url 'book_stations:bookstation-list-create' %}">Book stations</a></li>
+                <li><a href="/admin/">Admin</a></li>
+            </ul>
+        </div>
+    </div>
+</header>
+
+<main class="mx-auto w-full max-w-6xl px-4 py-6 md:py-10">
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

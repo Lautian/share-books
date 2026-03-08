@@ -1,0 +1,29 @@
+{% extends "book_stations/base.html" %}
+
+{% block title %}Little libraries{% endblock %}
+
+{% block content %}
+<section class="hero min-h-[72vh] items-start md:items-center">
+    <div class="hero-content w-full justify-start px-0">
+        <article
+            class="card w-full max-w-3xl border border-base-300/70 shadow-2xl backdrop-blur-sm"
+            style="background-color: rgba(250, 252, 248, 0.74);"
+        >
+            <div class="card-body p-6 md:p-10">
+                <div class="badge badge-success badge-outline mb-2 w-fit">Community reading network</div>
+                <h1 id="home-title" class="text-4xl font-bold leading-tight md:text-6xl">Little libraries</h1>
+                <p class="mt-4 max-w-2xl text-lg leading-relaxed text-base-content/85 md:text-xl">
+                    Find neighborhood book stations where people leave and take books, magazines,
+                    DVDs, and more. Explore nearby cabinets and help your local reading circle grow.
+                </p>
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list-create' %}">
+                        Browse stations
+                    </a>
+                    <a class="btn btn-outline" href="/admin/">Manage in admin</a>
+                </div>
+            </div>
+        </article>
+    </div>
+</section>
+{% endblock %}
