@@ -5,6 +5,11 @@ from . import views
 app_name = "book_stations"
 
 urlpatterns = [
-    path("", views.bookstation_list_create, name="bookstation-list-create"),
-    path("<slug:readable_id>/", views.bookstation_detail, name="bookstation-detail"),
+    path("", views.bookstation_list, name="bookstation-list"),
+    path("api/stations/", views.bookstation_list_create, name="bookstation-list-create"),
+    path(
+        "api/stations/<slug:readable_id>/",
+        views.bookstation_detail,
+        name="bookstation-detail",
+    ),
 ]

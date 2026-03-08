@@ -59,6 +59,30 @@ class BookStationViewTests(TestCase):
 		self.assertEqual(len(payload), 1)
 		self.assertEqual(payload[0]["readable_id"], "riverside-box")
 
+	def test_browse_stations_renders_html_list(self):
+		response = self.client.get(reverse("book_stations:bookstation-list"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, "book_stations/bookstation_list.html")
+		self.assertContains(response, "Browse Book Stations")
+		self.assertContains(response, "Riverside Box")
+
+	def test_browse_stations_supports_location_sorting(self):
+		BookStation.objects.create(
+			name="Cedar Shelf",
+			readable_id="cedar-shelf",
+			description="Shaded corner cabinet",
+			latitude=51.500000,
+			longitude=-0.090000,
+			location="Alpha Avenue",
+		)
+
+		response = self.client.get(reverse("book_stations:bookstation-list"), {"sort": "location"})
+
+		self.assertEqual(response.status_code, 200)
+		stations = list(response.context["stations"])
+		self.assertEqual(stations[0].readable_id, "cedar-shelf")
+
 	def test_get_detail_returns_single_bookstation(self):
 		response = self.client.get(
 			reverse(

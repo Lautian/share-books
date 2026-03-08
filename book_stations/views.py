@@ -13,6 +13,28 @@ def home(request):
 	return render(request, "book_stations/home.html")
 
 
+def bookstation_list(request):
+	sort = request.GET.get("sort", "name")
+	stations = BookStation.objects.all()
+
+	if sort == "location":
+		stations = stations.order_by("location", "name")
+	elif sort == "slug":
+		stations = stations.order_by("readable_id")
+	else:
+		sort = "name"
+		stations = stations.order_by("name")
+
+	return render(
+		request,
+		"book_stations/bookstation_list.html",
+		{
+			"stations": stations,
+			"active_sort": sort,
+		},
+	)
+
+
 def _serialize_bookstation(station):
 	return {
 		"name": station.name,

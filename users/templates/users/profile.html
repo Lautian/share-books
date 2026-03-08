@@ -9,7 +9,7 @@
             <h1 class="card-title text-3xl">Profile</h1>
             <p class="text-lg">Signed in as <strong>{{ request.user.username }}</strong>.</p>
             <div class="card-actions mt-2">
-                <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list-create' %}">View stations</a>
+                <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list' %}">View stations</a>
                 <form method="post" action="{% url 'users:logout' %}">
                     {% csrf_token %}
                     <button class="btn btn-outline" type="submit">Log out</button>
