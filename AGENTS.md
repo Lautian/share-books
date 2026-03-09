@@ -26,24 +26,25 @@ share_books/
 manage.py
 .gitignore
 
-Apps live at the repository root:
+Apps live at the repository root. Each app has its own folder and subfolders:
 
-users/
-    models.py         → user models / authentication
+<app_name>/             →eg users or book_stations or items
+    models.py         
     admin.py
     apps.py
     views.py
     urls.py
     tests.py
 
-book_stations/
-    models.py         → toy library models
-    admin.py
-    apps.py
-    views.py
-    urls.py
-    tests.py
+Homepage and reusable resources live in core:
+ core/
+    static/
     templates/
+    apps.py
+    tests.py
+    urls.py
+    views.py
+
 
 Common Django commands
 ----------------------

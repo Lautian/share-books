@@ -1,0 +1,107 @@
+{% extends "core/base.html" %}
+
+{% block title %}Add Book Station{% endblock %}
+
+{% block extra_head %}
+<script>
+    function fillCurrentLocation() {
+        const latitudeInput = document.getElementById("id_latitude");
+        const longitudeInput = document.getElementById("id_longitude");
+        const status = document.getElementById("geo-status");
+
+        if (!navigator.geolocation) {
+            status.textContent = "Geolocation is not supported by this browser.";
+            return;
+        }
+
+        status.textContent = "Fetching your location...";
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                latitudeInput.value = position.coords.latitude.toFixed(6);
+                longitudeInput.value = position.coords.longitude.toFixed(6);
+                status.textContent = "Latitude and longitude were added.";
+            },
+            function () {
+                status.textContent = "Could not read your location. You can still enter coordinates manually.";
+            }
+        );
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl">
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.18em] text-success">Contribute</p>
+            <h1 class="mt-2 text-4xl font-bold leading-tight">Add Book Station</h1>
+            <p class="mt-3 text-base-content/80">
+                Required fields are <strong>name</strong> and <strong>location</strong>. The station slug is generated from the name.
+            </p>
+        </header>
+
+        <form class="mt-6 space-y-4" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Name *</span>
+                {{ form.name }}
+                {% if form.name.errors %}<span class="text-error text-sm">{{ form.name.errors.0 }}</span>{% endif %}
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Location *</span>
+                {{ form.location }}
+                <span class="label-text-alt">Textual location (street, neighborhood, city, etc.).</span>
+                {% if form.location.errors %}<span class="text-error text-sm">{{ form.location.errors.0 }}</span>{% endif %}
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Description</span>
+                {{ form.description }}
+                {% if form.description.errors %}<span class="text-error text-sm">{{ form.description.errors.0 }}</span>{% endif %}
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Picture upload</span>
+                {{ form.picture_upload }}
+                {% if form.picture_upload.errors %}<span class="text-error text-sm">{{ form.picture_upload.errors.0 }}</span>{% endif %}
+            </label>
+
+            <div class="rounded-xl border border-base-300/70 bg-base-100/70 p-4">
+                <p class="text-sm font-semibold">Optional geolocation</p>
+                <p class="mt-1 text-sm text-base-content/75">
+                    Add coordinates manually or use your browser location once and then adjust if needed.
+                </p>
+
+                <div class="mt-3 grid gap-3 md:grid-cols-2">
+                    <label class="form-control w-full">
+                        <span class="label-text font-semibold">Latitude</span>
+                        {{ form.latitude }}
+                        {% if form.latitude.errors %}<span class="text-error text-sm">{{ form.latitude.errors.0 }}</span>{% endif %}
+                    </label>
+                    <label class="form-control w-full">
+                        <span class="label-text font-semibold">Longitude</span>
+                        {{ form.longitude }}
+                        {% if form.longitude.errors %}<span class="text-error text-sm">{{ form.longitude.errors.0 }}</span>{% endif %}
+                    </label>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <button class="btn btn-sm btn-outline" type="button" onclick="fillCurrentLocation()">Use my current location</button>
+                    <span id="geo-status" class="text-sm text-base-content/70"></span>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button class="btn btn-primary" type="submit">Create station</button>
+                <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">Cancel</a>
+            </div>
+        </form>
+    </article>
+</section>
+{% endblock %}

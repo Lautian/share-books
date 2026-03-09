@@ -3,19 +3,74 @@
 {% block title %}Your profile{% endblock %}
 
 {% block content %}
-<section class="mx-auto max-w-2xl">
+<section class="mx-auto max-w-4xl space-y-6">
     <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
         <div class="card-body">
             <h1 class="card-title text-3xl">Profile</h1>
             <p class="text-lg">Signed in as <strong>{{ request.user.username }}</strong>.</p>
-            <div class="card-actions mt-2">
+            <div class="card-actions mt-2 flex-wrap">
                 <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list' %}">View stations</a>
+                <a class="btn btn-outline" href="{% url 'book_stations:bookstation-create' %}">Add station</a>
+                <a class="btn btn-outline" href="{% url 'book_stations:item-create' %}">Add item</a>
                 <form method="post" action="{% url 'users:logout' %}">
                     {% csrf_token %}
                     <button class="btn btn-outline" type="submit">Log out</button>
                 </form>
             </div>
         </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="card-title text-2xl">Stations you added</h2>
+                    <span class="badge badge-primary">{{ added_stations|length }}</span>
+                </div>
+
+                {% if added_stations %}
+                    <ul class="space-y-2 text-sm">
+                        {% for station in added_stations %}
+                            <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                                <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+                                    {{ station.name }}
+                                </a>
+                                <p class="text-base-content/70">{{ station.location }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-base-content/75">You have not added any stations yet.</p>
+                {% endif %}
+            </div>
+        </article>
+
+        <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+            <div class="card-body">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="card-title text-2xl">Items you added</h2>
+                    <span class="badge badge-primary">{{ added_items|length }}</span>
+                </div>
+
+                {% if added_items %}
+                    <ul class="space-y-2 text-sm">
+                        {% for item in added_items %}
+                            <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                                <a class="font-semibold link-hover" href="{% url 'book_stations:item-detail' item.id %}">
+                                    {{ item.title }}
+                                </a>
+                                <p class="text-base-content/70">
+                                    {{ item.get_item_type_display }}
+                                    {% if item.author %}by {{ item.author }}{% endif %}
+                                </p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-base-content/75">You have not added any items yet.</p>
+                {% endif %}
+            </div>
+        </article>
     </div>
 </section>
 {% endblock %}

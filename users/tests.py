@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
+from book_stations.models import BookStation, Item
+
 
 class UserAuthorizationTests(TestCase):
     def setUp(self):
@@ -9,6 +11,10 @@ class UserAuthorizationTests(TestCase):
         self.password = "SafePassword123"
         self.user = self.user_model.objects.create_user(
             username="reader",
+            password=self.password,
+        )
+        self.other_user = self.user_model.objects.create_user(
+            username="other-reader",
             password=self.password,
         )
 
@@ -56,11 +62,41 @@ class UserAuthorizationTests(TestCase):
     def test_profile_view_for_authenticated_user(self):
         self.client.login(username="reader", password=self.password)
 
+        station = BookStation.objects.create(
+            name="Profile Station",
+            location="City Center",
+            added_by=self.user,
+        )
+        Item.objects.create(
+            title="Profile Item",
+            author="Writer",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.UNKNOWN,
+            added_by=self.user,
+        )
+        BookStation.objects.create(
+            name="Other User Station",
+            location="Elsewhere",
+            added_by=self.other_user,
+        )
+
         response = self.client.get(reverse("users:profile"))
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "users/profile.html")
         self.assertContains(response, "reader")
+        self.assertContains(response, "Profile Station")
+        self.assertContains(response, "Profile Item")
+        self.assertNotContains(response, "Other User Station")
+        self.assertContains(response, reverse("book_stations:bookstation-create"))
+        self.assertContains(response, reverse("book_stations:item-create"))
+        self.assertContains(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station.readable_id},
+            ),
+        )
 
     def test_logout_clears_session(self):
         self.client.login(username="reader", password=self.password)

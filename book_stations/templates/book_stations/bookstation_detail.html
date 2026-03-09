@@ -94,15 +94,19 @@
 
                 <section class="meta-card rounded-2xl p-4 shadow-sm">
                     <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Geolocation</p>
-                    <p class="mt-2 font-mono text-base">{{ station.latitude }}, {{ station.longitude }}</p>
-                    <a
-                        class="btn btn-xs btn-outline mt-3"
-                        href="https://www.openstreetmap.org/?mlat={{ station.latitude }}&mlon={{ station.longitude }}#map=17/{{ station.latitude }}/{{ station.longitude }}"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Open in map
-                    </a>
+                    {% if station.latitude is not None and station.longitude is not None %}
+                        <p class="mt-2 font-mono text-base">{{ station.latitude }}, {{ station.longitude }}</p>
+                        <a
+                            class="btn btn-xs btn-outline mt-3"
+                            href="https://www.openstreetmap.org/?mlat={{ station.latitude }}&mlon={{ station.longitude }}#map=17/{{ station.latitude }}/{{ station.longitude }}"
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            Open in map
+                        </a>
+                    {% else %}
+                        <p class="mt-2 text-base text-base-content/70">Coordinates were not provided for this station.</p>
+                    {% endif %}
                 </section>
             </div>
         </div>

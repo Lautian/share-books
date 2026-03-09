@@ -35,6 +35,10 @@
             <div class="flex gap-2">
                 <button class="btn btn-primary" type="submit">Apply filters</button>
                 <a class="btn btn-outline" href="{% url 'book_stations:item-list' %}">Reset</a>
+                {% if user.is_authenticated %}
+                    <a class="btn btn-outline" href="{% url 'book_stations:item-create' %}">Add item</a>
+                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-create' %}">Add station</a>
+                {% endif %}
             </div>
         </form>
     </div>
@@ -43,6 +47,15 @@
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {% for item in items %}
                 <article class="rounded-2xl border border-base-300/70 bg-base-100/80 p-4 shadow">
+                    {% if item.thumbnail_url %}
+                        <img
+                            class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
+                            src="{{ item.thumbnail_url }}"
+                            alt="Cover image for {{ item.title }}"
+                            loading="lazy"
+                        >
+                    {% endif %}
+
                     <div class="flex items-start justify-between gap-2">
                         <h2 class="text-xl font-semibold leading-snug">
                             <a class="link-hover" href="{% url 'book_stations:item-detail' item.id %}">{{ item.title }}</a>

@@ -25,6 +25,15 @@
             </p>
         </header>
 
+        {% if item.thumbnail_url %}
+            <img
+                class="mt-5 h-56 w-full rounded-2xl border border-base-300/70 object-cover"
+                src="{{ item.thumbnail_url }}"
+                alt="Cover image for {{ item.title }}"
+                loading="lazy"
+            >
+        {% endif %}
+
         <div class="mt-6 grid gap-4 md:grid-cols-2">
             <section class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4">
                 <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Type</p>

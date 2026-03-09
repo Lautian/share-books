@@ -1,0 +1,88 @@
+{% extends "core/base.html" %}
+
+{% block title %}Add Item{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl">
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.18em] text-success">Contribute</p>
+            <h1 class="mt-2 text-4xl font-bold leading-tight">Add Item</h1>
+            <p class="mt-3 text-base-content/80">
+                Only <strong>title</strong> is always required. <strong>Author</strong> is also required when item type is <strong>Book</strong>.
+            </p>
+        </header>
+
+        <form class="mt-6 space-y-4" method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Title *</span>
+                {{ form.title }}
+                {% if form.title.errors %}<span class="text-error text-sm">{{ form.title.errors.0 }}</span>{% endif %}
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Author</span>
+                {{ form.author }}
+                {% if form.author.errors %}<span class="text-error text-sm">{{ form.author.errors.0 }}</span>{% endif %}
+            </label>
+
+            <div class="grid gap-3 md:grid-cols-2">
+                <label class="form-control w-full">
+                    <span class="label-text font-semibold">Item type</span>
+                    {{ form.item_type }}
+                    {% if form.item_type.errors %}<span class="text-error text-sm">{{ form.item_type.errors.0 }}</span>{% endif %}
+                </label>
+
+                <label class="form-control w-full">
+                    <span class="label-text font-semibold">Status</span>
+                    {{ form.status }}
+                    {% if form.status.errors %}<span class="text-error text-sm">{{ form.status.errors.0 }}</span>{% endif %}
+                </label>
+            </div>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Cover thumbnail URL</span>
+                {{ form.thumbnail_url }}
+                {% if form.thumbnail_url.errors %}<span class="text-error text-sm">{{ form.thumbnail_url.errors.0 }}</span>{% endif %}
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Description</span>
+                {{ form.description }}
+                {% if form.description.errors %}<span class="text-error text-sm">{{ form.description.errors.0 }}</span>{% endif %}
+            </label>
+
+            <div class="grid gap-3 md:grid-cols-2">
+                <label class="form-control w-full">
+                    <span class="label-text font-semibold">Current station</span>
+                    {{ form.current_book_station }}
+                    {% if form.current_book_station.errors %}<span class="text-error text-sm">{{ form.current_book_station.errors.0 }}</span>{% endif %}
+                </label>
+
+                <label class="form-control w-full">
+                    <span class="label-text font-semibold">Last seen at</span>
+                    {{ form.last_seen_at }}
+                    {% if form.last_seen_at.errors %}<span class="text-error text-sm">{{ form.last_seen_at.errors.0 }}</span>{% endif %}
+                </label>
+            </div>
+
+            <label class="form-control w-full">
+                <span class="label-text font-semibold">Last activity</span>
+                {{ form.last_activity }}
+                {% if form.last_activity.errors %}<span class="text-error text-sm">{{ form.last_activity.errors.0 }}</span>{% endif %}
+            </label>
+
+            <div class="flex flex-wrap gap-2">
+                <button class="btn btn-primary" type="submit">Create item</button>
+                <a class="btn btn-outline" href="{% url 'book_stations:item-list' %}">Cancel</a>
+            </div>
+        </form>
+    </article>
+</section>
+{% endblock %}

@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import redirect, render
 
+from book_stations.models import BookStation, Item
+
 
 def signup(request):
     if request.user.is_authenticated:
@@ -22,4 +24,13 @@ def signup(request):
 
 @login_required(login_url="users:login")
 def profile(request):
-    return render(request, "users/profile.html")
+    added_stations = BookStation.objects.filter(added_by=request.user).order_by("name")
+    added_items = Item.objects.filter(added_by=request.user).order_by("title", "id")
+    return render(
+        request,
+        "users/profile.html",
+        {
+            "added_stations": added_stations,
+            "added_items": added_items,
+        },
+    )

@@ -1,13 +1,15 @@
 import json
 from decimal import Decimal, InvalidOperation
 
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
 from django.http import HttpResponseNotAllowed, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
+from .forms import BookStationCreateForm, ItemCreateForm
 from .models import BookStation, Item
 
 
@@ -63,9 +65,10 @@ def _serialize_bookstation(station):
 		"readable_id": station.readable_id,
 		"description": station.description,
 		"picture": station.picture,
-		"latitude": float(station.latitude),
-		"longitude": float(station.longitude),
+		"latitude": float(station.latitude) if station.latitude is not None else None,
+		"longitude": float(station.longitude) if station.longitude is not None else None,
 		"location": station.location,
+		"added_by": station.added_by.username,
 	}
 
 
@@ -83,6 +86,7 @@ def _serialize_item(item):
 		"id": item.id,
 		"title": item.title,
 		"author": item.author,
+		"thumbnail_url": item.thumbnail_url,
 		"description": item.description,
 		"item_type": item.item_type,
 		"status": item.status,
@@ -91,6 +95,7 @@ def _serialize_item(item):
 		),
 		"last_seen_at": item.last_seen_at.readable_id if item.last_seen_at else None,
 		"last_activity": item.last_activity.isoformat() if item.last_activity else None,
+		"added_by": item.added_by.username,
 	}
 
 
@@ -128,13 +133,16 @@ def _parse_last_activity(value):
 @csrf_exempt
 def bookstation_list_create(request):
 	if request.method == "GET":
-		stations = BookStation.objects.all()
+		stations = BookStation.objects.select_related("added_by").all()
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
 		)
 
 	if request.method == "POST":
+		if not request.user.is_authenticated:
+			return JsonResponse({"error": "Authentication required."}, status=403)
+
 		try:
 			payload = json.loads(request.body.decode("utf-8"))
 		except (json.JSONDecodeError, UnicodeDecodeError):
@@ -148,6 +156,7 @@ def bookstation_list_create(request):
 			latitude=_to_decimal(payload.get("latitude")),
 			longitude=_to_decimal(payload.get("longitude")),
 			location=payload.get("location", ""),
+			added_by=request.user,
 		)
 
 		try:
@@ -165,7 +174,10 @@ def bookstation_detail_api(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	station = get_object_or_404(
+		BookStation.objects.select_related("added_by"),
+		readable_id=readable_id,
+	)
 	return JsonResponse(_serialize_bookstation(station))
 
 
@@ -249,7 +261,9 @@ def bookstation_inventory_page(request, readable_id):
 @csrf_exempt
 def item_list_create(request):
 	if request.method == "GET":
-		items = Item.objects.select_related("current_book_station", "last_seen_at").all()
+		items = Item.objects.select_related(
+			"current_book_station", "last_seen_at", "added_by"
+		).all()
 		status = request.GET.get("status")
 		item_type = request.GET.get("item_type")
 		station_reference = request.GET.get("station")
@@ -270,6 +284,9 @@ def item_list_create(request):
 		return JsonResponse([_serialize_item(item) for item in items], safe=False)
 
 	if request.method == "POST":
+		if not request.user.is_authenticated:
+			return JsonResponse({"error": "Authentication required."}, status=403)
+
 		try:
 			payload = json.loads(request.body.decode("utf-8"))
 		except (json.JSONDecodeError, UnicodeDecodeError):
@@ -279,6 +296,7 @@ def item_list_create(request):
 			item = Item(
 				title=payload.get("title", ""),
 				author=payload.get("author", ""),
+				thumbnail_url=payload.get("thumbnail_url", ""),
 				description=payload.get("description", ""),
 				item_type=payload.get("item_type", Item.ItemType.BOOK),
 				status=payload.get("status", Item.Status.UNKNOWN),
@@ -289,6 +307,7 @@ def item_list_create(request):
 					payload.get("last_seen_at"), "last_seen_at"
 				),
 				last_activity=_parse_last_activity(payload.get("last_activity")),
+				added_by=request.user,
 			)
 
 			item.full_clean()
@@ -307,7 +326,40 @@ def item_detail_api(request, item_id):
 		return HttpResponseNotAllowed(["GET"])
 
 	item = get_object_or_404(
-		Item.objects.select_related("current_book_station", "last_seen_at"),
+		Item.objects.select_related("current_book_station", "last_seen_at", "added_by"),
 		pk=item_id,
 	)
 	return JsonResponse(_serialize_item(item))
+
+
+@login_required(login_url="users:login")
+def bookstation_create(request):
+	if request.method == "POST":
+		form = BookStationCreateForm(request.POST, request.FILES)
+		if form.is_valid():
+			station = form.save(commit=False)
+			station.added_by = request.user
+			station.save()
+			return redirect(
+				"book_stations:bookstation-detail",
+				readable_id=station.readable_id,
+			)
+	else:
+		form = BookStationCreateForm()
+
+	return render(request, "book_stations/bookstation_form.html", {"form": form})
+
+
+@login_required(login_url="users:login")
+def item_create(request):
+	if request.method == "POST":
+		form = ItemCreateForm(request.POST)
+		if form.is_valid():
+			item = form.save(commit=False)
+			item.added_by = request.user
+			item.save()
+			return redirect("book_stations:item-detail", item_id=item.id)
+	else:
+		form = ItemCreateForm()
+
+	return render(request, "book_stations/item_form.html", {"form": form})
