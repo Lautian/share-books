@@ -7,6 +7,16 @@ app_name = "book_stations"
 urlpatterns = [
     path("", views.bookstation_list, name="bookstation-list"),
     path("add/", views.bookstation_create, name="bookstation-create"),
+    path(
+        "<slug:readable_id>/edit/",
+        views.bookstation_edit,
+        name="bookstation-edit",
+    ),
+    path(
+        "<slug:readable_id>/delete/",
+        views.bookstation_delete,
+        name="bookstation-delete",
+    ),
     path("api/stations/", views.bookstation_list_create, name="bookstation-list-create"),
     path(
         "api/stations/<slug:readable_id>/",

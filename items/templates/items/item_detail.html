@@ -14,6 +14,10 @@
                 Current station
             </a>
         {% endif %}
+        {% if user.is_authenticated and item.added_by_id == user.id %}
+            <a class="btn btn-sm btn-outline" href="{% url 'items:item-edit' item.id %}">Edit item</a>
+            <a class="btn btn-sm btn-error btn-outline" href="{% url 'items:item-delete' item.id %}">Delete item</a>
+        {% endif %}
     </div>
 
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">

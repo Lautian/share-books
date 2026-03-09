@@ -202,3 +202,37 @@ def item_create(request):
         form = ItemCreateForm()
 
     return render(request, "items/item_form.html", {"form": form})
+
+
+@login_required(login_url="users:login")
+def item_edit(request, item_id):
+    item = get_object_or_404(Item, pk=item_id, added_by=request.user)
+
+    if request.method == "POST":
+        form = ItemCreateForm(request.POST, instance=item)
+        if form.is_valid():
+            updated_item = form.save()
+            return redirect("items:item-detail", item_id=updated_item.id)
+    else:
+        form = ItemCreateForm(instance=item)
+
+    return render(
+        request,
+        "items/item_form.html",
+        {
+            "form": form,
+            "is_edit": True,
+            "item": item,
+        },
+    )
+
+
+@login_required(login_url="users:login")
+def item_delete(request, item_id):
+    item = get_object_or_404(Item, pk=item_id, added_by=request.user)
+
+    if request.method == "POST":
+        item.delete()
+        return redirect("users:profile")
+
+    return render(request, "items/item_confirm_delete.html", {"item": item})

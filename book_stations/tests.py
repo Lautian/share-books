@@ -61,6 +61,10 @@ class BookStationViewTests(TestCase):
             username="station-owner",
             password="StrongPass123",
         )
+        self.other_user = get_user_model().objects.create_user(
+            username="other-station-user",
+            password="StrongPass123",
+        )
         self.station = BookStation.objects.create(
             name="Riverside Box",
             readable_id="riverside-box",
@@ -157,6 +161,114 @@ class BookStationViewTests(TestCase):
             response,
             "/static/book_stations/images/photos/riverside-box-lowres.svg",
         )
+
+    def test_detail_page_shows_owner_controls_only_for_owner(self):
+        self.client.login(username="station-owner", password="StrongPass123")
+        owner_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertContains(
+            owner_response,
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+        self.assertContains(
+            owner_response,
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+
+        self.client.login(username="other-station-user", password="StrongPass123")
+        other_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertNotContains(
+            other_response,
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+        self.assertNotContains(
+            other_response,
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+
+    def test_owner_can_edit_station(self):
+        self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+            data={
+                "name": "Riverside Box Updated",
+                "location": "Riverside Walk, London",
+                "description": "Updated description",
+                "latitude": "51.507351",
+                "longitude": "-0.127758",
+            },
+        )
+
+        self.station.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+        self.assertEqual(self.station.name, "Riverside Box Updated")
+        self.assertEqual(self.station.description, "Updated description")
+
+    def test_non_owner_cannot_edit_or_delete_station(self):
+        self.client.login(username="other-station-user", password="StrongPass123")
+
+        edit_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+        delete_response = self.client.post(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(BookStation.objects.filter(pk=self.station.pk).exists())
+
+    def test_owner_can_delete_station(self):
+        self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(BookStation.objects.filter(pk=self.station.pk).exists())
 
     def test_get_detail_page_handles_station_without_picture(self):
         station_without_picture = BookStation.objects.create(

@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+
+{% block title %}Delete Book Station{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl">
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/85 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.18em] text-error">Danger zone</p>
+            <h1 class="mt-2 text-3xl font-bold leading-tight md:text-4xl">Delete Book Station</h1>
+            <p class="mt-3 text-base-content/80">
+                You are about to delete <strong>{{ station.name }}</strong>.
+            </p>
+        </header>
+
+        <p class="mt-5 text-base-content/80">
+            This action cannot be undone. Items currently linked to this station will no longer have it as current or last seen location.
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+            <form method="post" action="{% url 'book_stations:bookstation-delete' station.readable_id %}">
+                {% csrf_token %}
+                <button class="btn btn-error" type="submit">Delete station</button>
+            </form>
+            <a class="btn btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">Cancel</a>
+        </div>
+    </article>
+</section>
+{% endblock %}

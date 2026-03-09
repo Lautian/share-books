@@ -36,6 +36,14 @@
                                     {{ station.name }}
                                 </a>
                                 <p class="text-base-content/70">{{ station.location }}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <a class="btn btn-xs btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
+                                        Edit
+                                    </a>
+                                    <a class="btn btn-xs btn-error btn-outline" href="{% url 'book_stations:bookstation-delete' station.readable_id %}">
+                                        Delete
+                                    </a>
+                                </div>
                             </li>
                         {% endfor %}
                     </ul>
@@ -63,6 +71,14 @@
                                     {{ item.get_item_type_display }}
                                     {% if item.author %}by {{ item.author }}{% endif %}
                                 </p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <a class="btn btn-xs btn-outline" href="{% url 'items:item-edit' item.id %}">
+                                        Edit
+                                    </a>
+                                    <a class="btn btn-xs btn-error btn-outline" href="{% url 'items:item-delete' item.id %}">
+                                        Delete
+                                    </a>
+                                </div>
                             </li>
                         {% endfor %}
                     </ul>

@@ -55,10 +55,18 @@
 
 {% block content %}
 <section class="mx-auto max-w-4xl">
-    <div class="mb-5">
+    <div class="mb-5 flex flex-wrap gap-2">
         <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-list' %}">
             Back to stations
         </a>
+        {% if user.is_authenticated and station.added_by_id == user.id %}
+            <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
+                Edit station
+            </a>
+            <a class="btn btn-sm btn-error btn-outline" href="{% url 'book_stations:bookstation-delete' station.readable_id %}">
+                Delete station
+            </a>
+        {% endif %}
     </div>
 
     <article class="detail-shell rounded-3xl p-6 shadow-2xl backdrop-blur-sm md:p-8">

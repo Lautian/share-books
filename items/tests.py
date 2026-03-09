@@ -80,6 +80,10 @@ class ItemViewTests(TestCase):
             username="item-owner",
             password="StrongPass123",
         )
+        self.other_user = get_user_model().objects.create_user(
+            username="other-item-user",
+            password="StrongPass123",
+        )
         self.station = BookStation.objects.create(
             name="South Park Box",
             readable_id="south-park-box",
@@ -147,6 +151,85 @@ class ItemViewTests(TestCase):
         self.assertContains(response, "Item detail")
         self.assertContains(response, "Clean Code")
         self.assertContains(response, "Robert C. Martin")
+
+    def test_item_detail_shows_owner_controls_only_for_owner(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+        owner_response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertContains(
+            owner_response,
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertContains(
+            owner_response,
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id}),
+        )
+
+        self.client.login(username="other-item-user", password="StrongPass123")
+        other_response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertNotContains(
+            other_response,
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertNotContains(
+            other_response,
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id}),
+        )
+
+    def test_owner_can_edit_item(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+            data={
+                "title": "Clean Code 2nd Edition",
+                "author": "Robert C. Martin",
+                "item_type": Item.ItemType.BOOK,
+                "thumbnail_url": "",
+                "description": "Updated programming book",
+                "status": Item.Status.AT_BOOK_STATION,
+                "current_book_station": self.station.id,
+                "last_seen_at": self.station.id,
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.item_here.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
+        self.assertEqual(self.item_here.description, "Updated programming book")
+
+    def test_non_owner_cannot_edit_or_delete_item(self):
+        self.client.login(username="other-item-user", password="StrongPass123")
+
+        edit_response = self.client.get(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id})
+        )
+        delete_response = self.client.post(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(Item.objects.filter(pk=self.item_here.pk).exists())
+
+    def test_owner_can_delete_item(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
 
     def test_get_station_inventory_page_renders_dvd_cases(self):
         Item.objects.create(

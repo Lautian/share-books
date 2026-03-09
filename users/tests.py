@@ -98,6 +98,29 @@ class UserAuthorizationTests(TestCase):
                 kwargs={"readable_id": station.readable_id},
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": station.readable_id},
+            ),
+        )
+        self.assertContains(
+            response,
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": station.readable_id},
+            ),
+        )
+        user_item = Item.objects.get(title="Profile Item")
+        self.assertContains(
+            response,
+            reverse("items:item-edit", kwargs={"item_id": user_item.id}),
+        )
+        self.assertContains(
+            response,
+            reverse("items:item-delete", kwargs={"item_id": user_item.id}),
+        )
 
     def test_logout_clears_session(self):
         self.client.login(username="reader", password=self.password)

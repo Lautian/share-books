@@ -173,3 +173,59 @@ def bookstation_create(request):
 		form = BookStationCreateForm()
 
 	return render(request, "book_stations/bookstation_form.html", {"form": form})
+
+
+@login_required(login_url="users:login")
+def bookstation_edit(request, readable_id):
+	station = get_object_or_404(
+		BookStation,
+		readable_id=readable_id,
+		added_by=request.user,
+	)
+
+	if request.method == "POST":
+		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
+		if form.is_valid():
+			updated_station = form.save()
+			return redirect(
+				"book_stations:bookstation-detail",
+				readable_id=updated_station.readable_id,
+			)
+	else:
+		form = BookStationCreateForm(instance=station)
+
+	return render(
+		request,
+		"book_stations/bookstation_form.html",
+		{
+			"form": form,
+			"is_edit": True,
+			"station": station,
+		},
+	)
+
+
+@login_required(login_url="users:login")
+def bookstation_delete(request, readable_id):
+	station = get_object_or_404(
+		BookStation,
+		readable_id=readable_id,
+		added_by=request.user,
+	)
+
+	if request.method == "POST":
+		Item.objects.filter(
+			current_book_station=station,
+			status=Item.Status.AT_BOOK_STATION,
+		).update(
+			status=Item.Status.UNKNOWN,
+			current_book_station=None,
+		)
+		station.delete()
+		return redirect("users:profile")
+
+	return render(
+		request,
+		"book_stations/bookstation_confirm_delete.html",
+		{"station": station},
+	)
