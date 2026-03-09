@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from book_stations.models import BookStation, Item
+from book_stations.models import BookStation
+from items.models import Item
 
 
 class UserAuthorizationTests(TestCase):
@@ -89,7 +90,7 @@ class UserAuthorizationTests(TestCase):
         self.assertContains(response, "Profile Item")
         self.assertNotContains(response, "Other User Station")
         self.assertContains(response, reverse("book_stations:bookstation-create"))
-        self.assertContains(response, reverse("book_stations:item-create"))
+        self.assertContains(response, reverse("items:item-create"))
         self.assertContains(
             response,
             reverse(

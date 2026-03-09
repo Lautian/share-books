@@ -34,9 +34,9 @@
 
             <div class="flex gap-2">
                 <button class="btn btn-primary" type="submit">Apply filters</button>
-                <a class="btn btn-outline" href="{% url 'book_stations:item-list' %}">Reset</a>
+                <a class="btn btn-outline" href="{% url 'items:item-list' %}">Reset</a>
                 {% if user.is_authenticated %}
-                    <a class="btn btn-outline" href="{% url 'book_stations:item-create' %}">Add item</a>
+                    <a class="btn btn-outline" href="{% url 'items:item-create' %}">Add item</a>
                     <a class="btn btn-outline" href="{% url 'book_stations:bookstation-create' %}">Add station</a>
                 {% endif %}
             </div>
@@ -58,7 +58,7 @@
 
                     <div class="flex items-start justify-between gap-2">
                         <h2 class="text-xl font-semibold leading-snug">
-                            <a class="link-hover" href="{% url 'book_stations:item-detail' item.id %}">{{ item.title }}</a>
+                            <a class="link-hover" href="{% url 'items:item-detail' item.id %}">{{ item.title }}</a>
                         </h2>
                         <span class="badge badge-ghost">{{ item.get_item_type_display }}</span>
                     </div>

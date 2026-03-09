@@ -72,7 +72,7 @@
                     {% if user.is_authenticated %}
                         <li><a href="{% url 'users:profile' %}">Profile</a></li>
                         <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
-                        <li><a href="{% url 'book_stations:item-create' %}">Add item</a></li>
+                        <li><a href="{% url 'items:item-create' %}">Add item</a></li>
                         <li>
                             <form method="post" action="{% url 'users:logout' %}">
                                 {% csrf_token %}
@@ -96,7 +96,7 @@
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'users:profile' %}">Profile</a></li>
                     <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
-                    <li><a href="{% url 'book_stations:item-create' %}">Add item</a></li>
+                    <li><a href="{% url 'items:item-create' %}">Add item</a></li>
                     <li>
                         <form method="post" action="{% url 'users:logout' %}">
                             {% csrf_token %}

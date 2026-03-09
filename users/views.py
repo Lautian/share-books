@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import redirect, render
 
-from book_stations.models import BookStation, Item
+from book_stations.models import BookStation
+from items.models import Item
 
 
 def signup(request):

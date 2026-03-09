@@ -221,7 +221,7 @@
         <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
             Back to station
         </a>
-        <a class="btn btn-sm btn-outline" href="{% url 'book_stations:item-list' %}">All items</a>
+        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">All items</a>
     </div>
 
     <header class="inventory-shell mb-6 rounded-2xl p-6 shadow-xl">
@@ -242,7 +242,7 @@
                         {% cycle "h-short" "h-mid" "h-tall" "h-mid" "h-xtall" "h-tall" as height_cycle silent %}
                         <a
                             class="shelf-book {{ tone_cycle }} {{ height_cycle }}"
-                            href="{% url 'book_stations:item-detail' item.id %}"
+                            href="{% url 'items:item-detail' item.id %}"
                             title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
                         >
                             <span class="spine-text">
@@ -260,7 +260,7 @@
                         {% for item in dvd_items %}
                             <a
                                 class="dvd-case"
-                                href="{% url 'book_stations:item-detail' item.id %}"
+                                href="{% url 'items:item-detail' item.id %}"
                                 title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
                             >
                                 <span class="dvd-badge">DVD</span>

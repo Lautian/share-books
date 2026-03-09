@@ -5,7 +5,7 @@
 {% block content %}
 <section class="mx-auto max-w-4xl">
     <div class="mb-5 flex flex-wrap gap-2">
-        <a class="btn btn-sm btn-outline" href="{% url 'book_stations:item-list' %}">Back to items</a>
+        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">Back to items</a>
         {% if item.current_book_station %}
             <a
                 class="btn btn-sm btn-outline"
