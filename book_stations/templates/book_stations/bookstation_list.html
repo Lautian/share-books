@@ -72,7 +72,9 @@
                 <article class="station-card card shadow-lg">
                     <div class="card-body gap-3">
                         <div class="flex items-start gap-3">
-                            <h2 class="card-title text-2xl leading-snug">{{ station.name }}</h2>
+                            <h2 class="card-title text-2xl leading-snug">
+                                <a class="link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">{{ station.name }}</a>
+                            </h2>
                         </div>
 
                         <p class="text-base-content/80">{{ station.description|default:"No description yet." }}</p>
@@ -87,6 +89,11 @@
                             </div>
                             <div class="border-t border-base-300/60 pt-2">
                                 <p class="station-id font-mono text-[0.72rem] leading-relaxed text-base-content/60">{{ station.readable_id }}</p>
+                            </div>
+                            <div class="card-actions justify-end">
+                                <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+                                    View details
+                                </a>
                             </div>
                         </div>
                     </div>

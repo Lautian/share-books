@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Riverside book station photo stand-in">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9bc8df"/>
+      <stop offset="100%" stop-color="#d8ead4"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#79a36f"/>
+      <stop offset="100%" stop-color="#4e784f"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" fill="url(#sky)"/>
+  <rect y="188" width="480" height="132" fill="url(#grass)"/>
+  <rect x="184" y="124" width="112" height="138" rx="8" fill="#c9824e"/>
+  <path d="M174 128 L240 86 L306 128 Z" fill="#ac673b"/>
+  <rect x="198" y="145" width="84" height="78" rx="6" fill="#f4e7cd" stroke="#8f5c37" stroke-width="6"/>
+  <rect x="204" y="154" width="13" height="58" rx="2" fill="#ce4d57"/>
+  <rect x="219" y="154" width="11" height="58" rx="2" fill="#3f759d"/>
+  <rect x="232" y="154" width="10" height="58" rx="2" fill="#58844a"/>
+  <rect x="244" y="154" width="13" height="58" rx="2" fill="#dca240"/>
+  <rect x="259" y="154" width="12" height="58" rx="2" fill="#7d4f8e"/>
+  <path d="M0 240 C90 215, 175 262, 260 240 C325 224, 410 262, 480 246 L480 320 L0 320 Z" fill="#3f6f43" opacity="0.82"/>
+</svg>

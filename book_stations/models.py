@@ -1,11 +1,13 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.templatetags.static import static
 
 
 class BookStation(models.Model):
 	name = models.CharField(max_length=150)
 	readable_id = models.SlugField(max_length=64, unique=True)
 	description = models.TextField(blank=True)
+	picture = models.CharField(max_length=255, blank=True)
 	latitude = models.DecimalField(
 		max_digits=9,
 		decimal_places=6,
@@ -23,3 +25,11 @@ class BookStation(models.Model):
 
 	def __str__(self):
 		return f"{self.name} ({self.readable_id})"
+
+	@property
+	def picture_url(self):
+		if not self.picture:
+			return ""
+		if self.picture.startswith(("http://", "https://", "/")):
+			return self.picture
+		return static(self.picture)

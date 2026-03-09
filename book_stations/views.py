@@ -31,11 +31,24 @@ def bookstation_list(request):
 	)
 
 
+def bookstation_detail_page(request, readable_id):
+	if request.method != "GET":
+		return HttpResponseNotAllowed(["GET"])
+
+	station = get_object_or_404(BookStation, readable_id=readable_id)
+	return render(
+		request,
+		"book_stations/bookstation_detail.html",
+		{"station": station},
+	)
+
+
 def _serialize_bookstation(station):
 	return {
 		"name": station.name,
 		"readable_id": station.readable_id,
 		"description": station.description,
+		"picture": station.picture,
 		"latitude": float(station.latitude),
 		"longitude": float(station.longitude),
 		"location": station.location,
@@ -70,6 +83,7 @@ def bookstation_list_create(request):
 			name=payload.get("name", ""),
 			readable_id=payload.get("readable_id", ""),
 			description=payload.get("description", ""),
+			picture=payload.get("picture", ""),
 			latitude=_to_decimal(payload.get("latitude")),
 			longitude=_to_decimal(payload.get("longitude")),
 			location=payload.get("location", ""),
@@ -86,7 +100,7 @@ def bookstation_list_create(request):
 	return HttpResponseNotAllowed(["GET", "POST"])
 
 
-def bookstation_detail(request, readable_id):
+def bookstation_detail_api(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 

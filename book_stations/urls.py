@@ -9,7 +9,8 @@ urlpatterns = [
     path("api/stations/", views.bookstation_list_create, name="bookstation-list-create"),
     path(
         "api/stations/<slug:readable_id>/",
-        views.bookstation_detail,
-        name="bookstation-detail",
+        views.bookstation_detail_api,
+        name="bookstation-detail-api",
     ),
+    path("<slug:readable_id>/", views.bookstation_detail_page, name="bookstation-detail"),
 ]

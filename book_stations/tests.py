@@ -38,6 +38,7 @@ class BookStationViewTests(TestCase):
 			name="Riverside Box",
 			readable_id="riverside-box",
 			description="Community shelf by the riverside path",
+			picture="book_stations/images/photos/riverside-box-lowres.svg",
 			latitude=51.507351,
 			longitude=-0.127758,
 			location="Riverside Walk, London",
@@ -50,6 +51,10 @@ class BookStationViewTests(TestCase):
 		payload = response.json()
 		self.assertEqual(len(payload), 1)
 		self.assertEqual(payload[0]["readable_id"], "riverside-box")
+		self.assertEqual(
+			payload[0]["picture"],
+			"book_stations/images/photos/riverside-box-lowres.svg",
+		)
 
 	def test_browse_stations_renders_html_list(self):
 		response = self.client.get(reverse("book_stations:bookstation-list"))
@@ -58,6 +63,10 @@ class BookStationViewTests(TestCase):
 		self.assertTemplateUsed(response, "book_stations/bookstation_list.html")
 		self.assertContains(response, "Browse Book Stations")
 		self.assertContains(response, "Riverside Box")
+		self.assertContains(
+			response,
+			reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id}),
+		)
 
 	def test_browse_stations_supports_location_sorting(self):
 		BookStation.objects.create(
@@ -75,7 +84,7 @@ class BookStationViewTests(TestCase):
 		stations = list(response.context["stations"])
 		self.assertEqual(stations[0].readable_id, "cedar-shelf")
 
-	def test_get_detail_returns_single_bookstation(self):
+	def test_get_detail_page_renders_station_information(self):
 		response = self.client.get(
 			reverse(
 				"book_stations:bookstation-detail",
@@ -84,15 +93,57 @@ class BookStationViewTests(TestCase):
 		)
 
 		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, "book_stations/bookstation_detail.html")
+		self.assertContains(response, "Book station detail")
+		self.assertContains(response, "Riverside Box")
+		self.assertContains(response, "Riverside Walk, London")
+		self.assertContains(response, "riverside-box")
+		self.assertContains(response, "Photo of Riverside Box")
+		self.assertContains(response, "/static/book_stations/images/photos/riverside-box-lowres.svg")
+
+	def test_get_detail_page_handles_station_without_picture(self):
+		station_without_picture = BookStation.objects.create(
+			name="No Photo Shelf",
+			readable_id="no-photo-shelf",
+			description="A station still waiting for a photo",
+			latitude=51.500000,
+			longitude=-0.100000,
+			location="Elm Street",
+		)
+
+		response = self.client.get(
+			reverse(
+				"book_stations:bookstation-detail",
+				kwargs={"readable_id": station_without_picture.readable_id},
+			)
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "No station photo yet")
+
+	def test_get_detail_returns_single_bookstation_json(self):
+		response = self.client.get(
+			reverse(
+				"book_stations:bookstation-detail-api",
+				kwargs={"readable_id": self.station.readable_id},
+			)
+		)
+
+		self.assertEqual(response.status_code, 200)
 		payload = response.json()
 		self.assertEqual(payload["name"], "Riverside Box")
 		self.assertEqual(payload["location"], "Riverside Walk, London")
+		self.assertEqual(
+			payload["picture"],
+			"book_stations/images/photos/riverside-box-lowres.svg",
+		)
 
 	def test_post_creates_bookstation(self):
 		payload = {
 			"name": "Library Corner",
 			"readable_id": "library-corner",
 			"description": "Take one leave one shelf",
+			"picture": "book_stations/images/photos/city-corner-lowres.svg",
 			"latitude": 48.856613,
 			"longitude": 2.352222,
 			"location": "Rue de Rivoli, Paris",
@@ -106,6 +157,7 @@ class BookStationViewTests(TestCase):
 
 		self.assertEqual(response.status_code, 201)
 		self.assertTrue(BookStation.objects.filter(readable_id="library-corner").exists())
+		self.assertEqual(response.json()["picture"], "book_stations/images/photos/city-corner-lowres.svg")
 
 	def test_post_rejects_invalid_coordinates(self):
 		payload = {

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Cedar shelf station photo stand-in">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b7d3dd"/>
+      <stop offset="100%" stop-color="#cce3c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" fill="url(#bg)"/>
+  <rect y="205" width="480" height="115" fill="#6e9361"/>
+  <rect x="132" y="110" width="216" height="164" rx="12" fill="#b67241"/>
+  <path d="M124 117 L240 56 L356 117 Z" fill="#955a33"/>
+  <rect x="160" y="138" width="160" height="98" rx="8" fill="#f2dfbc" stroke="#7f4f2e" stroke-width="8"/>
+  <line x1="240" y1="138" x2="240" y2="236" stroke="#7f4f2e" stroke-width="5"/>
+  <rect x="173" y="150" width="15" height="74" rx="2" fill="#3f74a6"/>
+  <rect x="190" y="150" width="14" height="74" rx="2" fill="#c3554f"/>
+  <rect x="206" y="150" width="13" height="74" rx="2" fill="#4e8747"/>
+  <rect x="261" y="150" width="15" height="74" rx="2" fill="#d09a3f"/>
+  <rect x="278" y="150" width="14" height="74" rx="2" fill="#7c5a9d"/>
+  <rect x="294" y="150" width="13" height="74" rx="2" fill="#53896c"/>
+  <circle cx="85" cy="85" r="42" fill="#f8fbff" opacity="0.75"/>
+</svg>
