@@ -4,28 +4,149 @@
 
 {% block extra_head %}
 <script>
-    function fillCurrentLocation() {
-        const latitudeInput = document.getElementById("id_latitude");
-        const longitudeInput = document.getElementById("id_longitude");
-        const status = document.getElementById("geo-status");
+    const plusCodeEncodeUrl = "{% url 'book_stations:pluscode-encode' %}";
+    const plusCodeDecodeUrl = "{% url 'book_stations:pluscode-decode' %}";
 
-        if (!navigator.geolocation) {
-            status.textContent = "Geolocation is not supported by this browser.";
+    let plusCodeInput = null;
+    let latitudeInput = null;
+    let longitudeInput = null;
+    let status = null;
+    let isSyncingCoordinates = false;
+
+    function debounce(callback, waitMs) {
+        let timerId;
+        return function (...args) {
+            clearTimeout(timerId);
+            timerId = setTimeout(() => callback.apply(this, args), waitMs);
+        };
+    }
+
+    function setGeoStatus(message) {
+        if (status) {
+            status.textContent = message;
+        }
+    }
+
+    async function syncPlusCodeFromCoordinates() {
+        if (!plusCodeInput || !latitudeInput || !longitudeInput) {
             return;
         }
 
-        status.textContent = "Fetching your location...";
+        const latitude = latitudeInput.value.trim();
+        const longitude = longitudeInput.value.trim();
+
+        if (!latitude || !longitude) {
+            plusCodeInput.value = "";
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ latitude, longitude });
+            const response = await fetch(`${plusCodeEncodeUrl}?${params.toString()}`);
+
+            if (!response.ok) {
+                plusCodeInput.value = "";
+                return;
+            }
+
+            const payload = await response.json();
+            plusCodeInput.value = payload.plus_code || "";
+
+            if (!plusCodeInput.value) {
+                setGeoStatus("Could not infer a Plus Code from those coordinates.");
+            }
+        } catch {
+            plusCodeInput.value = "";
+        }
+    }
+
+    async function syncCoordinatesFromPlusCode() {
+        if (!plusCodeInput || !latitudeInput || !longitudeInput) {
+            return;
+        }
+
+        const plusCode = plusCodeInput.value.trim();
+        if (!plusCode) {
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ plus_code: plusCode });
+            const response = await fetch(`${plusCodeDecodeUrl}?${params.toString()}`);
+
+            if (!response.ok) {
+                setGeoStatus("Could not infer coordinates from that Plus Code.");
+                return;
+            }
+
+            const payload = await response.json();
+            if (!payload.latitude || !payload.longitude) {
+                setGeoStatus("Could not infer coordinates from that Plus Code.");
+                return;
+            }
+
+            isSyncingCoordinates = true;
+            latitudeInput.value = payload.latitude;
+            longitudeInput.value = payload.longitude;
+            isSyncingCoordinates = false;
+            setGeoStatus("Latitude and longitude were inferred from Plus Code.");
+        } catch {
+            setGeoStatus("Could not infer coordinates from that Plus Code.");
+        }
+    }
+
+    function setupGeolocationSync() {
+        plusCodeInput = document.getElementById("id_plus_code");
+        latitudeInput = document.getElementById("id_latitude");
+        longitudeInput = document.getElementById("id_longitude");
+        status = document.getElementById("geo-status");
+
+        if (!plusCodeInput || !latitudeInput || !longitudeInput) {
+            return;
+        }
+
+        const debouncedSyncPlusCode = debounce(function () {
+            if (isSyncingCoordinates) {
+                return;
+            }
+            syncPlusCodeFromCoordinates();
+        }, 350);
+
+        latitudeInput.addEventListener("input", debouncedSyncPlusCode);
+        longitudeInput.addEventListener("input", debouncedSyncPlusCode);
+        plusCodeInput.addEventListener("change", syncCoordinatesFromPlusCode);
+        plusCodeInput.addEventListener("blur", syncCoordinatesFromPlusCode);
+
+        if (!plusCodeInput.value.trim() && latitudeInput.value.trim() && longitudeInput.value.trim()) {
+            syncPlusCodeFromCoordinates();
+        }
+    }
+
+    function fillCurrentLocation() {
+        if (!latitudeInput || !longitudeInput || !status) {
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            setGeoStatus("Geolocation is not supported by this browser.");
+            return;
+        }
+
+        setGeoStatus("Fetching your location...");
         navigator.geolocation.getCurrentPosition(
             function (position) {
                 latitudeInput.value = position.coords.latitude.toFixed(6);
                 longitudeInput.value = position.coords.longitude.toFixed(6);
-                status.textContent = "Latitude and longitude were added.";
+                syncPlusCodeFromCoordinates();
+                setGeoStatus("Latitude and longitude were added.");
             },
             function () {
-                status.textContent = "Could not read your location. You can still enter coordinates manually.";
+                setGeoStatus("Could not read your location. You can still enter coordinates manually.");
             }
         );
     }
+
+    document.addEventListener("DOMContentLoaded", setupGeolocationSync);
 </script>
 {% endblock %}
 
@@ -79,6 +200,22 @@
                 <p class="mt-1 text-sm text-base-content/75">
                     Add coordinates manually or use your browser location once and then adjust if needed.
                 </p>
+
+                <label class="form-control mt-3 w-full">
+                    <span class="label justify-start gap-2">
+                        <span class="label-text font-semibold">Plus Code</span>
+                        <details class="relative">
+                            <summary class="btn btn-xs btn-circle btn-ghost text-info list-none">?</summary>
+                            <div class="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-base-300 bg-base-100 p-3 text-xs text-base-content shadow-2xl">
+                                Plus Codes are short digital addresses that identify a location.
+                                <a class="link link-primary" href="https://maps.google.com/pluscodes/" target="_blank" rel="noopener noreferrer">Learn more about Plus Codes</a>
+                            </div>
+                        </details>
+                    </span>
+                    {{ form.plus_code }}
+                    <span class="label-text-alt">Use a full Plus Code (for example, 849VCWC8+Q9).</span>
+                    {% if form.plus_code.errors %}<span class="text-error text-sm">{{ form.plus_code.errors.0 }}</span>{% endif %}
+                </label>
 
                 <div class="mt-3 grid gap-3 md:grid-cols-2">
                     <label class="form-control w-full">

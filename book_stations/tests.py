@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from items.models import Item
 
+from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
 from .models import BookStation
 
 
@@ -53,6 +54,98 @@ class BookStationModelTests(TestCase):
         )
 
         self.assertEqual(station.readable_id, "generated-slug-station")
+
+
+class BookStationCreateFormTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="plus-code-user",
+            password="StrongPass123",
+        )
+
+    def test_plus_code_populates_latitude_and_longitude(self):
+        plus_code = encode_plus_code(51.507351, -0.127758)
+        form = BookStationCreateForm(
+            data={
+                "name": "Plus Code Station",
+                "location": "Westminster",
+                "description": "",
+                "plus_code": plus_code,
+                "latitude": "",
+                "longitude": "",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        expected_latitude, expected_longitude = decode_plus_code(plus_code)
+        self.assertEqual(form.cleaned_data["latitude"], expected_latitude)
+        self.assertEqual(form.cleaned_data["longitude"], expected_longitude)
+
+    def test_plus_code_overrides_manual_coordinates(self):
+        plus_code = encode_plus_code(40.689247, -74.044502)
+        form = BookStationCreateForm(
+            data={
+                "name": "Override Station",
+                "location": "Liberty Island",
+                "description": "",
+                "plus_code": plus_code,
+                "latitude": "0.000001",
+                "longitude": "0.000001",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        expected_latitude, expected_longitude = decode_plus_code(plus_code)
+        self.assertEqual(form.cleaned_data["latitude"], expected_latitude)
+        self.assertEqual(form.cleaned_data["longitude"], expected_longitude)
+
+    def test_invalid_plus_code_raises_form_error(self):
+        form = BookStationCreateForm(
+            data={
+                "name": "Invalid Plus Code Station",
+                "location": "Somewhere",
+                "description": "",
+                "plus_code": "NOT-A-CODE",
+                "latitude": "",
+                "longitude": "",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("plus_code", form.errors)
+
+    def test_edit_form_prefills_plus_code_from_instance_coordinates(self):
+        station = BookStation.objects.create(
+            name="Existing Station",
+            description="",
+            latitude=48.858370,
+            longitude=2.294481,
+            location="Paris",
+            added_by=self.user,
+        )
+
+        form = BookStationCreateForm(instance=station)
+
+        self.assertEqual(
+            form.initial.get("plus_code"),
+            encode_plus_code(station.latitude, station.longitude),
+        )
+
+    def test_without_plus_code_manual_coordinates_remain_unchanged(self):
+        form = BookStationCreateForm(
+            data={
+                "name": "Manual Coordinates Station",
+                "location": "Manual Town",
+                "description": "",
+                "plus_code": "",
+                "latitude": "51.500000",
+                "longitude": "-0.120000",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(str(form.cleaned_data["latitude"]), "51.500000")
+        self.assertEqual(str(form.cleaned_data["longitude"]), "-0.120000")
 
 
 class BookStationViewTests(TestCase):

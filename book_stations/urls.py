@@ -7,6 +7,8 @@ app_name = "book_stations"
 urlpatterns = [
     path("", views.bookstation_list, name="bookstation-list"),
     path("add/", views.bookstation_create, name="bookstation-create"),
+    path("api/plus-codes/encode/", views.plus_code_encode_api, name="pluscode-encode"),
+    path("api/plus-codes/decode/", views.plus_code_decode_api, name="pluscode-decode"),
     path(
         "<slug:readable_id>/edit/",
         views.bookstation_edit,

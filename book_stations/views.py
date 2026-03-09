@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from items.models import Item
 
-from .forms import BookStationCreateForm
+from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
 from .models import BookStation
 
 
@@ -80,6 +80,34 @@ def _to_decimal(value):
 		return Decimal(str(value))
 	except (InvalidOperation, TypeError, ValueError):
 		return value
+
+
+def plus_code_encode_api(request):
+	if request.method != "GET":
+		return HttpResponseNotAllowed(["GET"])
+
+	plus_code = encode_plus_code(
+		_to_decimal(request.GET.get("latitude")),
+		_to_decimal(request.GET.get("longitude")),
+	)
+	return JsonResponse({"plus_code": plus_code})
+
+
+def plus_code_decode_api(request):
+	if request.method != "GET":
+		return HttpResponseNotAllowed(["GET"])
+
+	decoded_coordinates = decode_plus_code(request.GET.get("plus_code", ""))
+	if decoded_coordinates is None:
+		return JsonResponse({"latitude": "", "longitude": ""})
+
+	latitude, longitude = decoded_coordinates
+	return JsonResponse(
+		{
+			"latitude": f"{latitude:.6f}",
+			"longitude": f"{longitude:.6f}",
+		}
+	)
 
 
 @csrf_exempt
