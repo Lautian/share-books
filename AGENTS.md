@@ -64,6 +64,9 @@ Create admin user:
 
     python manage.py createsuperuser
 
+Run tests:
+    python manage.py test
+
 General development rules
 -------------------------
 
@@ -116,6 +119,8 @@ Testing
 Tests should be added in:
 
     app/tests.py
+
+When creating a new feature, at the end run the full test suite
 
 Git workflow
 ------------

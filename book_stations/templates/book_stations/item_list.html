@@ -1,0 +1,87 @@
+{% extends "core/base.html" %}
+
+{% block title %}Items | Book Stations{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-6xl">
+    <div class="mb-8 rounded-2xl border border-base-300/70 bg-base-100/80 p-6 shadow-xl">
+        <p class="text-sm uppercase tracking-[0.18em] text-success">Inventory explorer</p>
+        <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">Browse Items</h1>
+        <p class="mt-3 max-w-3xl text-lg text-base-content/80">
+            This is a best-effort snapshot of community inventory. Use status and type filters to focus the list.
+        </p>
+
+        <form class="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" method="get">
+            <label class="form-control">
+                <span class="label-text text-sm font-semibold">Status</span>
+                <select class="select select-bordered" name="status">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="form-control">
+                <span class="label-text text-sm font-semibold">Type</span>
+                <select class="select select-bordered" name="item_type">
+                    <option value="">All types</option>
+                    {% for value, label in item_type_choices %}
+                        <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="flex gap-2">
+                <button class="btn btn-primary" type="submit">Apply filters</button>
+                <a class="btn btn-outline" href="{% url 'book_stations:item-list' %}">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    {% if items %}
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {% for item in items %}
+                <article class="rounded-2xl border border-base-300/70 bg-base-100/80 p-4 shadow">
+                    <div class="flex items-start justify-between gap-2">
+                        <h2 class="text-xl font-semibold leading-snug">
+                            <a class="link-hover" href="{% url 'book_stations:item-detail' item.id %}">{{ item.title }}</a>
+                        </h2>
+                        <span class="badge badge-ghost">{{ item.get_item_type_display }}</span>
+                    </div>
+
+                    <p class="mt-2 text-sm text-base-content/80">
+                        {% if item.author %}by {{ item.author }}{% else %}Author not specified{% endif %}
+                    </p>
+
+                    <div class="mt-3 space-y-2 text-sm">
+                        <div>
+                            <span class="badge badge-outline">Status</span>
+                            <span class="ml-2 font-medium">{{ item.get_status_display }}</span>
+                        </div>
+                        <div>
+                            <span class="badge badge-outline">Current station</span>
+                            <span class="ml-2">
+                                {% if item.current_book_station %}
+                                    <a class="link-hover" href="{% url 'book_stations:bookstation-detail' item.current_book_station.readable_id %}">
+                                        {{ item.current_book_station.name }}
+                                    </a>
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="text-xs text-base-content/65">
+                            Last activity: {{ item.last_activity|date:"Y-m-d"|default:"Unknown" }}
+                        </p>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert border border-base-300 bg-base-100/80 shadow">
+            <span>No items match the selected filters.</span>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

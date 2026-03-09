@@ -107,6 +107,44 @@
             </div>
         </div>
 
+        <section class="meta-card mt-6 rounded-2xl p-5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Inventory snapshot</p>
+                    <h2 class="mt-1 text-xl font-semibold">Items currently marked at this station</h2>
+                </div>
+                <a
+                    class="btn btn-sm btn-outline"
+                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                >
+                    Open full inventory
+                </a>
+            </div>
+
+            {% if inventory_items %}
+                <ul class="mt-4 space-y-3">
+                    {% for item in inventory_items %}
+                        <li class="rounded-xl border border-base-300/70 bg-base-100/70 p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <a class="font-semibold link-hover" href="{% url 'book_stations:item-detail' item.id %}">
+                                    {{ item.title }}
+                                </a>
+                                <span class="badge badge-ghost">{{ item.get_item_type_display }}</span>
+                            </div>
+                            <p class="mt-1 text-sm text-base-content/80">
+                                {% if item.author %}by {{ item.author }}{% else %}Author not specified{% endif %}
+                            </p>
+                            <p class="mt-1 text-xs text-base-content/65">
+                                Last activity: {{ item.last_activity|date:"Y-m-d"|default:"Unknown" }}
+                            </p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="mt-4 text-base-content/75">No items are currently marked as present at this station.</p>
+            {% endif %}
+        </section>
+
         <p class="station-reference station-id mt-6 pt-3 font-mono">
             ref: {{ station.readable_id }}
         </p>
