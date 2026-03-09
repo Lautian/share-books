@@ -99,10 +99,6 @@ class Item(models.Model):
     def save(self, *args, **kwargs):
         if self.last_activity is None:
             self.last_activity = timezone.localdate()
-        if (
-            self.status == self.Status.AT_BOOK_STATION
-            and self.current_book_station_id is not None
-            and self.last_seen_at_id is None
-        ):
+        if self.current_book_station_id is not None:
             self.last_seen_at = self.current_book_station
         super().save(*args, **kwargs)

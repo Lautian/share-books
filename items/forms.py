@@ -67,4 +67,8 @@ class ItemCreateForm(forms.ModelForm):
         ).strip():
             self.add_error("author", "Author is required when the item type is BOOK.")
 
+        current_station = cleaned_data.get("current_book_station")
+        if current_station is not None:
+            cleaned_data["last_seen_at"] = current_station
+
         return cleaned_data

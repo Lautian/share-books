@@ -2,6 +2,39 @@
 
 {% block title %}{% if is_edit %}Edit Item{% else %}Add Item{% endif %}{% endblock %}
 
+{% block extra_head %}
+<script>
+    function syncLastSeenField() {
+        const currentStation = document.getElementById("id_current_book_station");
+        const lastSeen = document.getElementById("id_last_seen_at");
+        if (!currentStation || !lastSeen) {
+            return;
+        }
+
+        if (currentStation.value) {
+            lastSeen.value = currentStation.value;
+            lastSeen.disabled = true;
+            lastSeen.classList.add("opacity-70", "cursor-not-allowed");
+            lastSeen.setAttribute("aria-disabled", "true");
+        } else {
+            lastSeen.disabled = false;
+            lastSeen.classList.remove("opacity-70", "cursor-not-allowed");
+            lastSeen.removeAttribute("aria-disabled");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const currentStation = document.getElementById("id_current_book_station");
+        if (!currentStation) {
+            return;
+        }
+
+        currentStation.addEventListener("change", syncLastSeenField);
+        syncLastSeenField();
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <section class="mx-auto max-w-3xl">
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
@@ -70,6 +103,9 @@
                 <label class="form-control w-full">
                     <span class="label-text font-semibold">Last seen at</span>
                     {{ form.last_seen_at }}
+                    <span class="label-text-alt">
+                        Auto-set to current station when a current station is selected.
+                    </span>
                     {% if form.last_seen_at.errors %}<span class="text-error text-sm">{{ form.last_seen_at.errors.0 }}</span>{% endif %}
                 </label>
             </div>

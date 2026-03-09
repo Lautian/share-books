@@ -152,6 +152,29 @@ class ItemViewTests(TestCase):
         self.assertContains(response, "Clean Code")
         self.assertContains(response, "Robert C. Martin")
 
+    def test_item_detail_shows_dash_when_last_seen_is_missing(self):
+        item_without_last_seen = Item.objects.create(
+            title="Untracked Item",
+            author="A. Writer",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.TAKEN_OUT,
+            current_book_station=None,
+            last_seen_at=None,
+            added_by=self.user,
+        )
+
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": item_without_last_seen.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<span class="text-base-content/70">-</span>',
+            html=True,
+        )
+
     def test_item_detail_shows_owner_controls_only_for_owner(self):
         self.client.login(username="item-owner", password="StrongPass123")
         owner_response = self.client.get(
@@ -194,7 +217,7 @@ class ItemViewTests(TestCase):
                 "description": "Updated programming book",
                 "status": Item.Status.AT_BOOK_STATION,
                 "current_book_station": self.station.id,
-                "last_seen_at": self.station.id,
+                "last_seen_at": self.other_station.id,
                 "last_activity": "2026-03-09",
             },
         )
@@ -206,6 +229,7 @@ class ItemViewTests(TestCase):
         )
         self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
         self.assertEqual(self.item_here.description, "Updated programming book")
+        self.assertEqual(self.item_here.last_seen_at, self.station)
 
     def test_non_owner_cannot_edit_or_delete_item(self):
         self.client.login(username="other-item-user", password="StrongPass123")
