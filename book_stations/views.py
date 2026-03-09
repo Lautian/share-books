@@ -2,6 +2,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.dateparse import parse_date
@@ -12,7 +13,12 @@ from .models import BookStation, Item
 
 def bookstation_list(request):
 	sort = request.GET.get("sort", "name")
-	stations = BookStation.objects.all()
+	stations = BookStation.objects.annotate(
+		item_count=Count(
+			"current_items",
+			filter=Q(current_items__status=Item.Status.AT_BOOK_STATION),
+		)
+	)
 
 	if sort == "location":
 		stations = stations.order_by("location", "name")
@@ -225,6 +231,8 @@ def bookstation_inventory_page(request, readable_id):
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	).order_by("title", "id")
+	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
+	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 
 	return render(
 		request,
@@ -232,6 +240,8 @@ def bookstation_inventory_page(request, readable_id):
 		{
 			"station": station,
 			"items": items,
+			"book_like_items": book_like_items,
+			"dvd_items": dvd_items,
 		},
 	)
 

@@ -2,6 +2,219 @@
 
 {% block title %}{{ station.name }} Inventory{% endblock %}
 
+{% block extra_head %}
+<style>
+    .inventory-shell {
+        background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
+        border: 1px solid rgba(98, 120, 89, 0.24);
+    }
+
+    .shelf-stage {
+        border: 2px solid rgba(142, 93, 52, 0.34);
+        border-radius: 1.2rem;
+        background: linear-gradient(180deg, rgba(249, 235, 207, 0.96), rgba(239, 220, 184, 0.9));
+        box-shadow:
+            inset 0 8px 20px rgba(255, 255, 255, 0.35),
+            inset 0 -10px 22px rgba(121, 75, 45, 0.18),
+            0 16px 28px rgba(55, 39, 23, 0.2);
+        overflow-x: auto;
+        padding: 1.4rem 1rem 0.95rem;
+    }
+
+    .book-row {
+        align-items: flex-end;
+        display: flex;
+        min-height: 18.2rem;
+        min-width: 100%;
+        width: max-content;
+        margin: 0 auto;
+        padding: 0 0.2rem;
+    }
+
+    .book-group {
+        align-items: flex-end;
+        display: flex;
+        gap: 0.36rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .dvd-group {
+        align-items: flex-end;
+        display: flex;
+        gap: 0.55rem;
+        margin-left: auto;
+        padding-left: 1.1rem;
+    }
+
+    .shelf-book {
+        border: 1px solid rgba(22, 22, 22, 0.3);
+        border-bottom-width: 0;
+        border-radius: 0.36rem 0.36rem 0 0;
+        box-shadow: 0 8px 14px rgba(52, 36, 20, 0.28);
+        color: rgba(255, 252, 245, 0.98);
+        display: block;
+        overflow: hidden;
+        position: relative;
+        text-decoration: none;
+        width: clamp(2.85rem, 5.2vw, 3.65rem);
+    }
+
+    .shelf-book:hover {
+        transform: translateY(-3px);
+    }
+
+    .dvd-case:hover {
+        transform: translateY(-3px);
+    }
+
+    .shelf-book::after {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .dvd-case {
+        background:
+            linear-gradient(180deg, rgba(243, 245, 248, 0.96), rgba(206, 213, 222, 0.94)),
+            linear-gradient(90deg, rgba(47, 57, 74, 0.96), rgba(73, 86, 106, 0.92));
+        border: 1px solid rgba(30, 35, 44, 0.48);
+        border-radius: 0.36rem;
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+            0 10px 18px rgba(33, 34, 36, 0.24);
+        color: rgba(18, 24, 33, 0.95);
+        display: block;
+        height: clamp(8.6rem, 16vw, 10rem);
+        overflow: hidden;
+        padding: 0;
+        position: relative;
+        text-decoration: none;
+        width: clamp(6rem, 12vw, 7.4rem);
+    }
+
+    .dvd-case::before {
+        background: linear-gradient(180deg, rgba(33, 42, 56, 0.94), rgba(56, 68, 85, 0.9));
+        content: "";
+        inset: 0.22rem auto 0.22rem 0.22rem;
+        position: absolute;
+        width: 0.42rem;
+    }
+
+    .dvd-case::after {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .dvd-badge {
+        background: rgba(24, 31, 43, 0.92);
+        border-radius: 0.22rem;
+        color: #f8f8f6;
+        font-size: 0.61rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        padding: 0.18rem 0.28rem;
+        position: absolute;
+        right: 0.42rem;
+        top: 0.38rem;
+        z-index: 2;
+    }
+
+    .dvd-title {
+        display: block;
+        font-size: 1.02rem;
+        font-weight: 700;
+        inset: 2rem 0.48rem 0.42rem 0.92rem;
+        line-height: 1.24;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        position: absolute;
+        white-space: normal;
+        word-break: break-word;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.36);
+    }
+
+    .spine-text {
+        display: block;
+        inset: 0.58rem 0.34rem 0.42rem;
+        overflow: hidden;
+        position: absolute;
+        text-orientation: mixed;
+        writing-mode: vertical-rl;
+    }
+
+    .spine-text strong {
+        display: block;
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.16;
+    }
+
+    .spine-text span {
+        display: block;
+        font-size: 0.74rem;
+        letter-spacing: 0.01em;
+        margin-top: 0.36rem;
+        opacity: 0.92;
+    }
+
+    .h-short {
+        height: 12.2rem;
+    }
+
+    .h-mid {
+        height: 14.2rem;
+    }
+
+    .h-tall {
+        height: 16.2rem;
+    }
+
+    .h-xtall {
+        height: 17.7rem;
+    }
+
+    .tone-1 {
+        background: linear-gradient(180deg, #ca4e60, #943043);
+    }
+
+    .tone-2 {
+        background: linear-gradient(180deg, #2f739d, #1f4f6c);
+    }
+
+    .tone-3 {
+        background: linear-gradient(180deg, #5d8c47, #3b6433);
+    }
+
+    .tone-4 {
+        background: linear-gradient(180deg, #d09a34, #9b6f21);
+    }
+
+    .tone-5 {
+        background: linear-gradient(180deg, #7d5da4, #5d4380);
+    }
+
+    .tone-6 {
+        background: linear-gradient(180deg, #4a8d7d, #31665a);
+    }
+
+    .shelf-plank {
+        background: linear-gradient(180deg, #f0c08a, #b7733f);
+        border: 1px solid rgba(105, 63, 36, 0.55);
+        border-radius: 0.35rem;
+        box-shadow: 0 5px 10px rgba(73, 46, 29, 0.28);
+        height: 1.24rem;
+        margin-top: -0.18rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="mx-auto max-w-5xl">
     <div class="mb-5 flex flex-wrap gap-2">
@@ -11,7 +224,7 @@
         <a class="btn btn-sm btn-outline" href="{% url 'book_stations:item-list' %}">All items</a>
     </div>
 
-    <header class="mb-6 rounded-2xl border border-base-300/70 bg-base-100/80 p-6 shadow-xl">
+    <header class="inventory-shell mb-6 rounded-2xl p-6 shadow-xl">
         <p class="text-sm uppercase tracking-[0.18em] text-success">Station inventory</p>
         <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{{ station.name }}</h1>
         <p class="mt-3 text-base-content/80">
@@ -21,26 +234,43 @@
     </header>
 
     {% if items %}
-        <div class="space-y-3">
-            {% for item in items %}
-                <article class="rounded-2xl border border-base-300/70 bg-base-100/80 p-4 shadow">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h2 class="text-xl font-semibold">
-                            <a class="link-hover" href="{% url 'book_stations:item-detail' item.id %}">{{ item.title }}</a>
-                        </h2>
-                        <div class="flex flex-wrap gap-2">
-                            <span class="badge badge-outline">{{ item.get_item_type_display }}</span>
-                            <span class="badge badge-ghost">{{ item.get_status_display }}</span>
-                        </div>
+        <div class="shelf-stage" aria-label="Stylized bookshelf row">
+            <div class="book-row">
+                <div class="book-group">
+                    {% for item in book_like_items %}
+                        {% cycle "tone-1" "tone-2" "tone-3" "tone-4" "tone-5" "tone-6" as tone_cycle silent %}
+                        {% cycle "h-short" "h-mid" "h-tall" "h-mid" "h-xtall" "h-tall" as height_cycle silent %}
+                        <a
+                            class="shelf-book {{ tone_cycle }} {{ height_cycle }}"
+                            href="{% url 'book_stations:item-detail' item.id %}"
+                            title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
+                        >
+                            <span class="spine-text">
+                                <strong>{{ item.title }}</strong>
+                                {% if item.author %}
+                                    <span>{{ item.author }}</span>
+                                {% endif %}
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {% if dvd_items %}
+                    <div class="dvd-group">
+                        {% for item in dvd_items %}
+                            <a
+                                class="dvd-case"
+                                href="{% url 'book_stations:item-detail' item.id %}"
+                                title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
+                            >
+                                <span class="dvd-badge">DVD</span>
+                                <span class="dvd-title">{{ item.title }}</span>
+                            </a>
+                        {% endfor %}
                     </div>
-                    <p class="mt-1 text-sm text-base-content/80">
-                        {% if item.author %}by {{ item.author }}{% else %}Author not specified{% endif %}
-                    </p>
-                    <p class="mt-2 text-xs text-base-content/65">
-                        Last activity: {{ item.last_activity|date:"Y-m-d"|default:"Unknown" }}
-                    </p>
-                </article>
-            {% endfor %}
+                {% endif %}
+            </div>
+            <div class="shelf-plank" aria-hidden="true"></div>
         </div>
     {% else %}
         <div class="alert border border-base-300 bg-base-100/80 shadow">

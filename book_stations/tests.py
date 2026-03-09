@@ -46,6 +46,22 @@ class BookStationViewTests(TestCase):
 			longitude=-0.127758,
 			location="Riverside Walk, London",
 		)
+		Item.objects.create(
+			title="Counted Inventory Item",
+			author="",
+			description="",
+			item_type=Item.ItemType.BOOK,
+			status=Item.Status.AT_BOOK_STATION,
+			current_book_station=self.station,
+		)
+		Item.objects.create(
+			title="Taken Out Should Not Count",
+			author="",
+			description="",
+			item_type=Item.ItemType.BOOK,
+			status=Item.Status.TAKEN_OUT,
+			current_book_station=None,
+		)
 
 	def test_get_list_returns_bookstations(self):
 		response = self.client.get(reverse("book_stations:bookstation-list-create"))
@@ -66,6 +82,7 @@ class BookStationViewTests(TestCase):
 		self.assertTemplateUsed(response, "book_stations/bookstation_list.html")
 		self.assertContains(response, "Browse Book Stations")
 		self.assertContains(response, "Riverside Box")
+		self.assertContains(response, "1 item")
 		self.assertContains(
 			response,
 			reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id}),
@@ -353,6 +370,29 @@ class ItemViewTests(TestCase):
 		self.assertTemplateUsed(response, "book_stations/station_inventory.html")
 		self.assertContains(response, "Clean Code")
 		self.assertNotContains(response, "Ocean Dreams")
+
+	def test_get_station_inventory_page_renders_dvd_cases(self):
+		Item.objects.create(
+			title="Blade Runner",
+			author="",
+			description="",
+			item_type=Item.ItemType.DVD,
+			status=Item.Status.AT_BOOK_STATION,
+			current_book_station=self.station,
+		)
+
+		response = self.client.get(
+			reverse(
+				"book_stations:bookstation-inventory",
+				kwargs={"readable_id": self.station.readable_id},
+			)
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'class="dvd-group"', html=False)
+		self.assertContains(response, 'class="dvd-case"', html=False)
+		self.assertContains(response, "DVD")
+		self.assertContains(response, "Blade Runner")
 
 	def test_get_items_api_returns_items(self):
 		response = self.client.get(reverse("book_stations:item-list-create"))
