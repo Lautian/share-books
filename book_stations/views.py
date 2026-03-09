@@ -9,10 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import BookStation
 
 
-def home(request):
-	return render(request, "book_stations/home.html")
-
-
 def bookstation_list(request):
 	sort = request.GET.get("sort", "name")
 	stations = BookStation.objects.all()

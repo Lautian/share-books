@@ -17,10 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from book_stations import views as book_station_views
-
 urlpatterns = [
-    path("", book_station_views.home, name="home"),
+    path("", include("core.urls")),
     path('admin/', admin.site.urls),
     path("book_stations/", include("book_stations.urls")),
     path("users/", include("users.urls")),

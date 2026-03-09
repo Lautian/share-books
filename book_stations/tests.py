@@ -43,14 +43,6 @@ class BookStationViewTests(TestCase):
 			location="Riverside Walk, London",
 		)
 
-	def test_root_renders_homepage(self):
-		response = self.client.get("/")
-
-		self.assertEqual(response.status_code, 200)
-		self.assertTemplateUsed(response, "book_stations/home.html")
-		self.assertContains(response, "Little libraries")
-		self.assertContains(response, "Book stations")
-
 	def test_get_list_returns_bookstations(self):
 		response = self.client.get(reverse("book_stations:bookstation-list-create"))
 
