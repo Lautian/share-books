@@ -75,6 +75,7 @@ class BookStationCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["name"].widget.attrs.update({"class": "input input-bordered w-full"})
+        self.fields["location"].required = False
         self.fields["location"].widget.attrs.update(
             {"class": "input input-bordered w-full"}
         )
@@ -110,21 +111,33 @@ class BookStationCreateForm(forms.ModelForm):
 
         if not normalized_plus_code:
             cleaned_data["plus_code"] = ""
-            return cleaned_data
+        else:
+            decoded_coordinates = decode_plus_code(normalized_plus_code)
+            if decoded_coordinates is None:
+                self.add_error(
+                    "plus_code",
+                    "Enter a valid full Plus Code (for example 849VCWC8+Q9).",
+                )
+            else:
+                # Plus Code is the source of truth whenever provided.
+                cleaned_data["plus_code"] = normalized_plus_code
+                cleaned_data["latitude"], cleaned_data["longitude"] = decoded_coordinates
+                self.errors.pop("latitude", None)
+                self.errors.pop("longitude", None)
 
-        decoded_coordinates = decode_plus_code(normalized_plus_code)
-        if decoded_coordinates is None:
-            self.add_error(
-                "plus_code",
-                "Enter a valid full Plus Code (for example 849VCWC8+Q9).",
-            )
-            return cleaned_data
+        cleaned_data["location"] = (cleaned_data.get("location") or "").strip()
+        has_textual_location = bool(cleaned_data["location"])
+        has_geolocation = (
+            cleaned_data.get("latitude") is not None
+            and cleaned_data.get("longitude") is not None
+        )
 
-        # Plus Code is the source of truth whenever provided.
-        cleaned_data["plus_code"] = normalized_plus_code
-        cleaned_data["latitude"], cleaned_data["longitude"] = decoded_coordinates
-        self.errors.pop("latitude", None)
-        self.errors.pop("longitude", None)
+        if not has_textual_location and not has_geolocation:
+            message = "Provide either a textual location or both latitude and longitude."
+            self.add_error("location", message)
+            self.add_error("latitude", message)
+            self.add_error("longitude", message)
+
         return cleaned_data
 
     def save(self, commit=True):

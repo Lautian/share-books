@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
+from django.db import IntegrityError, connection
 from django.test import TestCase
 from django.urls import reverse
 
@@ -55,6 +55,44 @@ class BookStationModelTests(TestCase):
 
         self.assertEqual(station.readable_id, "generated-slug-station")
 
+    def test_model_allows_blank_location_when_geolocation_is_present(self):
+        station = BookStation(
+            name="Geo Only Station",
+            description="",
+            latitude="40.712776",
+            longitude="-74.005974",
+            location="",
+            added_by=self.user,
+        )
+
+        station.full_clean()
+
+    def test_model_rejects_when_location_and_geolocation_are_missing(self):
+        station = BookStation(
+            name="Missing Location Data",
+            description="",
+            latitude=None,
+            longitude=None,
+            location="",
+            added_by=self.user,
+        )
+
+        with self.assertRaises(ValidationError) as error_context:
+            station.full_clean()
+
+        self.assertIn("location", error_context.exception.message_dict)
+
+    def test_database_constraint_rejects_when_location_and_geolocation_are_missing(self):
+        with self.assertRaises(IntegrityError):
+            BookStation.objects.create(
+                name="DB Invalid Station",
+                description="",
+                latitude=None,
+                longitude=None,
+                location="",
+                added_by=self.user,
+            )
+
 
 class BookStationCreateFormTests(TestCase):
     def setUp(self):
@@ -68,7 +106,7 @@ class BookStationCreateFormTests(TestCase):
         form = BookStationCreateForm(
             data={
                 "name": "Plus Code Station",
-                "location": "Westminster",
+                "location": "",
                 "description": "",
                 "plus_code": plus_code,
                 "latitude": "",
@@ -146,6 +184,37 @@ class BookStationCreateFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(str(form.cleaned_data["latitude"]), "51.500000")
         self.assertEqual(str(form.cleaned_data["longitude"]), "-0.120000")
+
+    def test_form_accepts_empty_location_if_coordinates_are_provided(self):
+        form = BookStationCreateForm(
+            data={
+                "name": "Geo Coordinates Only",
+                "location": "",
+                "description": "",
+                "plus_code": "",
+                "latitude": "52.520008",
+                "longitude": "13.404954",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_form_rejects_when_location_and_geolocation_are_empty(self):
+        form = BookStationCreateForm(
+            data={
+                "name": "Missing Location Info",
+                "location": "",
+                "description": "",
+                "plus_code": "",
+                "latitude": "",
+                "longitude": "",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("location", form.errors)
+        self.assertIn("latitude", form.errors)
+        self.assertIn("longitude", form.errors)
 
 
 class BookStationViewTests(TestCase):
