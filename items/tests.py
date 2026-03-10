@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from book_stations.models import BookStation
+from movements.models import Movement
 
 from .models import Item
 
@@ -227,6 +228,65 @@ class ItemViewTests(TestCase):
             other_response,
             reverse("items:item-delete", kwargs={"item_id": self.item_here.id}),
         )
+
+    def test_item_detail_shows_latest_three_movements_and_full_history_link(self):
+        self.item_here.status = Item.Status.TAKEN_OUT
+        self.item_here.current_book_station = None
+        self.item_here.save(reported_by=self.user)
+
+        self.item_here.status = Item.Status.AT_BOOK_STATION
+        self.item_here.current_book_station = self.other_station
+        self.item_here.save(reported_by=self.user)
+
+        self.item_here.status = Item.Status.LOST
+        self.item_here.current_book_station = None
+        self.item_here.save(reported_by=self.user)
+
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "History")
+        self.assertContains(
+            response,
+            reverse("items:item-history", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertContains(response, "Marked lost")
+        self.assertContains(response, "Placed in station")
+        self.assertContains(response, "Taken out")
+        self.assertNotContains(response, "Added to catalog")
+
+        recent_movements = list(response.context["recent_movements"])
+        self.assertEqual(len(recent_movements), 3)
+        self.assertEqual(
+            [movement.movement_type for movement in recent_movements],
+            [
+                Movement.MovementType.MARKED_LOST,
+                Movement.MovementType.PLACED_IN,
+                Movement.MovementType.TAKEN_OUT,
+            ],
+        )
+
+    def test_item_history_page_renders_full_timeline(self):
+        self.item_here.status = Item.Status.TAKEN_OUT
+        self.item_here.current_book_station = None
+        self.item_here.save(reported_by=self.user)
+
+        response = self.client.get(
+            reverse("items:item-history", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_history.html")
+        self.assertContains(response, "Movement timeline")
+        self.assertContains(response, "Added to catalog")
+        self.assertContains(response, "Taken out")
+        self.assertContains(response, "Reported by item-owner")
+
+        movements = list(response.context["movements"])
+        self.assertGreaterEqual(len(movements), 2)
+        self.assertEqual(movements[0].movement_type, Movement.MovementType.CREATED)
 
     def test_owner_can_edit_item(self):
         self.client.login(username="item-owner", password="StrongPass123")

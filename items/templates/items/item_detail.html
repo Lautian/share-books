@@ -87,6 +87,32 @@
                 <p class="mt-2 text-base font-medium">{{ item.last_activity|date:"Y-m-d"|default:"Unknown" }}</p>
             </section>
         </div>
+
+        <section class="mt-8 rounded-2xl border border-base-300/70 bg-base-100/70 p-4 md:p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300/70 pb-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">History</p>
+                    <h2 class="text-xl font-semibold">Latest movements</h2>
+                </div>
+                <a class="btn btn-sm btn-outline" href="{% url 'items:item-history' item.id %}">Full history</a>
+            </div>
+
+            {% if recent_movements %}
+                <ul class="mt-4 space-y-3">
+                    {% for movement in recent_movements %}
+                        <li class="rounded-xl border border-base-300/60 bg-base-100 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="badge badge-outline badge-success">{{ movement.user_friendly_type_label }}</span>
+                                <span class="text-xs text-base-content/70">{{ movement.timestamp|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <p class="mt-2 text-sm text-base-content/85">{{ movement.timeline_description }}</p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="mt-4 text-sm text-base-content/70">No movements recorded yet.</p>
+            {% endif %}
+        </section>
     </article>
 </section>
 {% endblock %}

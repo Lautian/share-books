@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
+from movements.models import Movement
 
 from .forms import ItemCreateForm
 from .models import Item
@@ -112,7 +113,45 @@ def item_detail_page(request, item_id):
         Item.objects.select_related("current_book_station", "last_seen_at"),
         pk=item_id,
     )
-    return render(request, "items/item_detail.html", {"item": item})
+    recent_movements = (
+        item.movements.select_related(
+            "from_book_station",
+            "to_book_station",
+            "reported_by",
+        )
+        .order_by("-timestamp", "-id")[:3]
+    )
+    return render(
+        request,
+        "items/item_detail.html",
+        {
+            "item": item,
+            "recent_movements": recent_movements,
+        },
+    )
+
+
+def item_history_page(request, item_id):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    item = get_object_or_404(
+        Item.objects.select_related("current_book_station", "last_seen_at"),
+        pk=item_id,
+    )
+    movements = Movement.objects.select_related(
+        "from_book_station",
+        "to_book_station",
+        "reported_by",
+    ).filter(item=item).order_by("timestamp", "id")
+    return render(
+        request,
+        "items/item_history.html",
+        {
+            "item": item,
+            "movements": movements,
+        },
+    )
 
 
 @csrf_exempt

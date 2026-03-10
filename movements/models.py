@@ -14,6 +14,15 @@ class Movement(models.Model):
         TRANSFERRED = "TRANSFERRED", "Transferred"
         CREATED = "CREATED", "Created"
 
+    UI_TYPE_LABELS = {
+        MovementType.TAKEN_OUT: "Taken out",
+        MovementType.PLACED_IN: "Placed in station",
+        MovementType.MARKED_LOST: "Marked lost",
+        MovementType.MARKED_FOUND: "Marked found",
+        MovementType.TRANSFERRED: "Transferred",
+        MovementType.CREATED: "Added to catalog",
+    }
+
     item = models.ForeignKey(
         "items.Item",
         on_delete=models.CASCADE,
@@ -51,3 +60,58 @@ class Movement(models.Model):
 
     def __str__(self):
         return f"{self.item.title} {self.movement_type}"
+
+    @property
+    def user_friendly_type_label(self):
+        return self.UI_TYPE_LABELS.get(self.movement_type, self.get_movement_type_display())
+
+    @property
+    def timeline_marker(self):
+        marker_map = {
+            self.MovementType.TAKEN_OUT: "OUT",
+            self.MovementType.PLACED_IN: "IN",
+            self.MovementType.MARKED_LOST: "LOST",
+            self.MovementType.MARKED_FOUND: "FOUND",
+            self.MovementType.TRANSFERRED: "MOVE",
+            self.MovementType.CREATED: "NEW",
+        }
+        return marker_map.get(self.movement_type, "LOG")
+
+    @property
+    def timeline_description(self):
+        from_station_name = (
+            self.from_book_station.name if self.from_book_station is not None else "unknown"
+        )
+        to_station_name = (
+            self.to_book_station.name if self.to_book_station is not None else "unknown"
+        )
+
+        if self.movement_type == self.MovementType.CREATED:
+            if self.to_book_station is not None:
+                return f"Item record created at {to_station_name}."
+            return "Item record created with no station assigned yet."
+
+        if self.movement_type == self.MovementType.TRANSFERRED:
+            return f"Moved from {from_station_name} to {to_station_name}."
+
+        if self.movement_type == self.MovementType.PLACED_IN:
+            if self.to_book_station is not None:
+                return f"Placed in {to_station_name}."
+            return "Placed in a station."
+
+        if self.movement_type == self.MovementType.TAKEN_OUT:
+            if self.from_book_station is not None:
+                return f"Taken out from {from_station_name}."
+            return "Taken out from station."
+
+        if self.movement_type == self.MovementType.MARKED_LOST:
+            if self.from_book_station is not None:
+                return f"Marked as lost after being at {from_station_name}."
+            return "Marked as lost."
+
+        if self.movement_type == self.MovementType.MARKED_FOUND:
+            if self.to_book_station is not None:
+                return f"Marked as found at {to_station_name}."
+            return "Marked as found."
+
+        return "Movement recorded."
