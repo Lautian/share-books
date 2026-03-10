@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'core',
     'book_stations',
     'items',
+    'movements',
     'users',
 ]
 

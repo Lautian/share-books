@@ -115,9 +115,118 @@ class Item(models.Model):
                 }
             )
 
+    @classmethod
+    def _effective_station_id(cls, status, station_id):
+        if status == cls.Status.AT_BOOK_STATION:
+            return station_id
+        return None
+
+    @classmethod
+    def _resolve_movement_type(
+        cls,
+        *,
+        is_create,
+        previous_status,
+        previous_station_id,
+        status,
+        station_id,
+    ):
+        if is_create:
+            return "CREATED"
+
+        if (
+            previous_station_id is not None
+            and station_id is not None
+            and previous_station_id != station_id
+        ):
+            return "TRANSFERRED"
+
+        if previous_station_id is not None and station_id is None:
+            if status == cls.Status.LOST:
+                return "MARKED_LOST"
+            return "TAKEN_OUT"
+
+        if previous_station_id is None and station_id is not None:
+            if previous_status == cls.Status.LOST:
+                return "MARKED_FOUND"
+            return "PLACED_IN"
+
+        if previous_status != status:
+            if status == cls.Status.LOST:
+                return "MARKED_LOST"
+            if previous_status == cls.Status.LOST:
+                return "MARKED_FOUND"
+            if status == cls.Status.TAKEN_OUT:
+                return "TAKEN_OUT"
+
+        if status == cls.Status.AT_BOOK_STATION:
+            return "PLACED_IN"
+        return "TAKEN_OUT"
+
     def save(self, *args, **kwargs):
+        reported_by = kwargs.pop("reported_by", None)
+        movement_notes = kwargs.pop("movement_notes", "")
+        create_movement = kwargs.pop("create_movement", True)
+
+        is_create = self._state.adding
+        previous_status = None
+        previous_station_id = None
+
+        if not is_create and self.pk:
+            previous_state = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values("status", "current_book_station_id")
+                .first()
+            )
+            if previous_state is not None:
+                previous_status = previous_state["status"]
+                previous_station_id = previous_state["current_book_station_id"]
+
         if self.last_activity is None:
             self.last_activity = timezone.localdate()
         if self.current_book_station_id is not None:
             self.last_seen_at = self.current_book_station
         super().save(*args, **kwargs)
+
+        if not create_movement:
+            return
+
+        effective_previous_station_id = self._effective_station_id(
+            previous_status,
+            previous_station_id,
+        )
+        effective_current_station_id = self._effective_station_id(
+            self.status,
+            self.current_book_station_id,
+        )
+
+        has_movement_change = (
+            is_create
+            or previous_status != self.status
+            or effective_previous_station_id != effective_current_station_id
+        )
+        if not has_movement_change:
+            return
+
+        if reported_by is None:
+            reported_by = self.added_by
+
+        from movements.models import Movement
+
+        movement_type = self._resolve_movement_type(
+            is_create=is_create,
+            previous_status=previous_status,
+            previous_station_id=effective_previous_station_id,
+            status=self.status,
+            station_id=effective_current_station_id,
+        )
+
+        Movement.objects.create(
+            item=self,
+            reported_by=reported_by,
+            from_book_station_id=effective_previous_station_id,
+            to_book_station_id=effective_current_station_id,
+            movement_type=movement_type,
+            notes=movement_notes,
+        )

@@ -1,8 +1,10 @@
+from tempfile import TemporaryDirectory
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, connection
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from items.models import Item
@@ -594,6 +596,21 @@ class InventoryMigrationRegressionTests(TestCase):
 
 
 class BookStationCreateFormViewTests(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._temporary_media_directory = TemporaryDirectory()
+        cls._media_override = override_settings(
+            MEDIA_ROOT=cls._temporary_media_directory.name
+        )
+        cls._media_override.enable()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._media_override.disable()
+        cls._temporary_media_directory.cleanup()
+        super().tearDownClass()
+
     def setUp(self):
         self.password = "StrongPass123"
         self.user = get_user_model().objects.create_user(

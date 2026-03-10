@@ -189,7 +189,7 @@ def item_list_create(request):
             )
 
             item.full_clean()
-            item.save()
+            item.save(reported_by=request.user)
         except ValidationError as error:
             errors = getattr(error, "message_dict", {"__all__": error.messages})
             return JsonResponse({"errors": errors}, status=400)
@@ -217,7 +217,7 @@ def item_create(request):
         if form.is_valid():
             item = form.save(commit=False)
             item.added_by = request.user
-            item.save()
+            item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
         form = ItemCreateForm()
@@ -232,7 +232,9 @@ def item_edit(request, item_id):
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
-            updated_item = form.save()
+            updated_item = form.save(commit=False)
+            updated_item.save(reported_by=request.user)
+            form.save_m2m()
             return redirect("items:item-detail", item_id=updated_item.id)
     else:
         form = ItemCreateForm(instance=item)

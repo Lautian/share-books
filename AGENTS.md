@@ -83,6 +83,8 @@ Avoid:
 - modifying Django internal apps
 - committing secrets
 
+Don't be lazy
+
 When adding models
 ------------------
 
@@ -122,6 +124,8 @@ Tests should be added in:
     app/tests.py
 
 When creating a new feature, at the end run the full test suite
+
+After final testing, make sure to remove any temporary media or data files created solely for testing
 
 Git workflow
 ------------
