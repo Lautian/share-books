@@ -3,7 +3,7 @@
 {% block title %}{{ item.title }} history | Item{% endblock %}
 
 {% block content %}
-<section class="mx-auto max-w-4xl">
+<section class="mx-auto max-w-6xl">
     <div class="mb-5 flex flex-wrap gap-2">
         <a class="btn btn-sm btn-outline" href="{% url 'items:item-detail' item.id %}">Back to item</a>
         <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">Back to items</a>
@@ -12,49 +12,62 @@
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
         <header class="border-b border-base-300/70 pb-4">
             <p class="text-sm uppercase tracking-[0.2em] text-success">Full history</p>
-            <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">Movement timeline</h1>
-            <p class="mt-3 text-lg text-base-content/80">{{ item.title }}</p>
+            <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">Item journey flow</h1>
+            <p class="mt-3 text-lg text-base-content/80">
+                {{ item.title }}
+                <span class="mx-2 text-base-content/40">•</span>
+                {{ movements|length }} recorded movement{{ movements|length|pluralize }}
+            </p>
         </header>
 
-        {% if movements %}
-            <ol class="mt-8 space-y-6">
-                {% for movement in movements %}
-                    <li class="relative pl-12">
-                        <span
-                            class="absolute left-0 top-0 inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-success/40 bg-success/10 px-1 text-[10px] font-bold tracking-wide text-success"
-                        >
-                            {{ movement.timeline_marker }}
-                        </span>
-                        {% if not forloop.last %}
-                            <span class="absolute left-4 top-8 h-[calc(100%+0.75rem)] w-px bg-base-300/80"></span>
-                        {% endif %}
+        {% if journey_start_station %}
+            <div class="mt-7 rounded-2xl border border-base-300/70 bg-gradient-to-b from-base-100 via-base-100 to-success/5 p-4 md:p-6">
+                <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Timeline</p>
+                <p class="mt-1 text-sm text-base-content/75">Hover the labels to see movement details.</p>
 
-                        <div class="rounded-2xl border border-base-300/70 bg-base-100 p-4 shadow-sm">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <h2 class="text-lg font-semibold">{{ movement.user_friendly_type_label }}</h2>
-                                <time class="text-xs font-medium text-base-content/70">{{ movement.timestamp|date:"Y-m-d H:i" }}</time>
+                <div class="mx-auto mt-5 max-w-2xl">
+                    <div class="relative pl-20">
+                        <span class="absolute left-8 top-2 h-[calc(100%-1rem)] w-1.5 rounded-full bg-gradient-to-b from-amber-300 via-emerald-300 to-sky-300"></span>
+
+                        <div class="relative mb-8">
+                            <span class="absolute left-0 top-0 flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl shadow-lg ring-4 ring-base-100" style="{{ journey_start_station.icon_style }}">📚</span>
+                            <div class="ml-20 pt-2">
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-600">First sighting</p>
+                                <a class="mt-1 inline-block text-lg font-semibold link-hover" style="{{ journey_start_station.name_style }}" href="{% url 'book_stations:bookstation-detail' journey_start_station.readable_id %}">
+                                    {{ journey_start_station.name }}
+                                </a>
                             </div>
-                            <p class="mt-2 text-sm text-base-content/85">{{ movement.timeline_description }}</p>
-
-                            <div class="mt-3 flex flex-wrap gap-2 text-xs text-base-content/70">
-                                <span class="rounded-full border border-base-300/70 px-2 py-1">Reported by {{ movement.reported_by.username }}</span>
-                                {% if movement.from_book_station %}
-                                    <span class="rounded-full border border-base-300/70 px-2 py-1">From {{ movement.from_book_station.name }}</span>
-                                {% endif %}
-                                {% if movement.to_book_station %}
-                                    <span class="rounded-full border border-base-300/70 px-2 py-1">To {{ movement.to_book_station.name }}</span>
-                                {% endif %}
-                            </div>
-
-                            {% if movement.notes %}
-                                <p class="mt-3 rounded-xl bg-base-200/70 p-3 text-sm text-base-content/80">
-                                    <span class="font-semibold">Note:</span> {{ movement.notes }}
-                                </p>
-                            {% endif %}
                         </div>
-                    </li>
-                {% endfor %}
-            </ol>
+
+                        {% for step in journey_steps %}
+                            <div class="relative mb-4 min-h-10">
+                                <div class="ml-9 flex h-10 items-center gap-3">
+                                    <span
+                                        class="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border-2 border-base-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide shadow-md {{ step.transition_class }}"
+                                        title="{{ step.transition_title }}"
+                                    >
+                                        {{ step.transition_label }}
+                                    </span>
+                                    <span class="text-lg font-semibold text-base-content/45" aria-hidden="true">↓</span>
+                                </div>
+                            </div>
+
+                            <div class="relative mb-8">
+                                <span class="absolute left-0 top-0 flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl shadow-lg ring-4 ring-base-100" style="{{ step.station.icon_style }}">📚</span>
+                                <div class="ml-20 pt-3">
+                                    <a class="inline-block text-lg font-semibold link-hover" style="{{ step.station.name_style }}" href="{% url 'book_stations:bookstation-detail' step.station.readable_id %}">
+                                        {{ step.station.name }}
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% elif movements %}
+            <p class="mt-6 rounded-2xl border border-base-300/70 bg-base-100/70 p-4 text-sm text-base-content/70">
+                This item has movements, but no station appears in those records yet.
+            </p>
         {% else %}
             <p class="mt-6 rounded-2xl border border-base-300/70 bg-base-100/70 p-4 text-sm text-base-content/70">
                 No movements recorded yet for this item.

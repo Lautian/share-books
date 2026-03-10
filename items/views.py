@@ -63,6 +63,160 @@ def _parse_last_activity(value):
     raise ValidationError({"last_activity": "Use ISO date format YYYY-MM-DD."})
 
 
+def _build_station_style_map(stations):
+    station_count = len(stations)
+    style_map = {}
+
+    for index, station in enumerate(stations):
+        # Evenly distribute hues across the stations present in this journey so
+        # each rendered station gets a distinct visual identity.
+        hue = (24 + ((360.0 * index) / max(station_count, 1))) % 360
+        next_hue = (hue + 14) % 360
+        style_map[station.id] = {
+            "icon_style": (
+                f"border-color: hsl({hue:.2f} 78% 50%);"
+                f" background: linear-gradient(145deg, hsl({hue:.2f} 92% 88%),"
+                f" hsl({next_hue:.2f} 84% 77%));"
+                f" color: hsl({hue:.2f} 72% 22%);"
+            ),
+            "name_style": f"color: hsl({hue:.2f} 72% 30%);",
+        }
+
+    return style_map
+
+
+def _station_visual(station, station_style_map, *, is_first=False):
+    style = station_style_map[station.id]
+    return {
+        "name": station.name,
+        "readable_id": station.readable_id,
+        "icon_style": style["icon_style"],
+        "name_style": style["name_style"],
+        "is_first": is_first,
+    }
+
+
+def _transition_style(style_key):
+    style_map = {
+        "move": "bg-gradient-to-r from-fuchsia-300 to-violet-300 text-violet-900",
+        "out_in": "bg-gradient-to-r from-sky-300 to-cyan-300 text-cyan-900",
+        "in": "bg-gradient-to-r from-lime-300 to-emerald-300 text-emerald-900",
+    }
+    return style_map.get(
+        style_key,
+        "bg-gradient-to-r from-base-200 to-base-300 text-base-content",
+    )
+
+
+def _format_out_duration_label(start_timestamp, end_timestamp):
+    if end_timestamp <= start_timestamp:
+        return "out briefly"
+
+    day_delta = (end_timestamp.date() - start_timestamp.date()).days
+    if day_delta <= 0:
+        return "out for <1 day"
+    if day_delta == 1:
+        return "out for 1 day"
+    return f"out for {day_delta} days"
+
+
+def _find_first_station_reference(movements):
+    for index, movement in enumerate(movements):
+        if movement.from_book_station is not None:
+            return index, movement.from_book_station
+        if movement.to_book_station is not None:
+            return index, movement.to_book_station
+    return None, None
+
+
+def _build_journey_steps(movements):
+    start_index, start_station = _find_first_station_reference(movements)
+    if start_station is None:
+        return None, []
+
+    station_order = [start_station]
+    seen_station_ids = {start_station.id}
+    for movement in movements[start_index:]:
+        if (
+            movement.to_book_station is not None
+            and movement.to_book_station.id not in seen_station_ids
+        ):
+            station_order.append(movement.to_book_station)
+            seen_station_ids.add(movement.to_book_station.id)
+
+    station_style_map = _build_station_style_map(station_order)
+    start_station_visual = _station_visual(
+        start_station,
+        station_style_map,
+        is_first=True,
+    )
+    steps = []
+    pending_out_event = None
+
+    for movement in movements[start_index:]:
+        from_station = movement.from_book_station
+        to_station = movement.to_book_station
+
+        # The initial arrival/creation is conveyed by first sighting and should not
+        # render an extra transition token.
+        if (
+            not steps
+            and pending_out_event is None
+            and from_station is None
+            and to_station is not None
+            and to_station.id == start_station.id
+        ):
+            continue
+
+        if from_station is not None and to_station is None:
+            if pending_out_event is None:
+                pending_out_event = {
+                    "timestamp": movement.timestamp,
+                    "reported_by": movement.reported_by.username,
+                }
+            continue
+
+        if from_station is None and to_station is not None:
+            if pending_out_event is not None:
+                transition_label = _format_out_duration_label(
+                    pending_out_event["timestamp"],
+                    movement.timestamp,
+                )
+                transition_title = (
+                    f"Out by {pending_out_event['reported_by']}, back in by "
+                    f"{movement.reported_by.username}"
+                )
+                transition_class = _transition_style("out_in")
+            else:
+                transition_label = "in"
+                transition_title = f"By {movement.reported_by.username}"
+                transition_class = _transition_style("in")
+
+            steps.append(
+                {
+                    "transition_label": transition_label,
+                    "transition_title": transition_title,
+                    "transition_class": transition_class,
+                    "station": _station_visual(to_station, station_style_map),
+                }
+            )
+            pending_out_event = None
+            continue
+
+        if from_station is not None and to_station is not None:
+            steps.append(
+                {
+                    "transition_label": "move",
+                    "transition_title": f"By {movement.reported_by.username}",
+                    "transition_class": _transition_style("move"),
+                    "station": _station_visual(to_station, station_style_map),
+                }
+            )
+            pending_out_event = None
+
+    return start_station_visual, steps
+
+
 def item_list(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
@@ -139,17 +293,24 @@ def item_history_page(request, item_id):
         Item.objects.select_related("current_book_station", "last_seen_at"),
         pk=item_id,
     )
-    movements = Movement.objects.select_related(
-        "from_book_station",
-        "to_book_station",
-        "reported_by",
-    ).filter(item=item).order_by("timestamp", "id")
+    movements = list(
+        Movement.objects.select_related(
+            "from_book_station",
+            "to_book_station",
+            "reported_by",
+        )
+        .filter(item=item)
+        .order_by("timestamp", "id")
+    )
+    journey_start_station, journey_steps = _build_journey_steps(movements)
     return render(
         request,
         "items/item_history.html",
         {
             "item": item,
             "movements": movements,
+            "journey_start_station": journey_start_station,
+            "journey_steps": journey_steps,
         },
     )
 

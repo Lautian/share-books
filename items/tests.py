@@ -273,19 +273,32 @@ class ItemViewTests(TestCase):
         self.item_here.current_book_station = None
         self.item_here.save(reported_by=self.user)
 
+        self.item_here.status = Item.Status.AT_BOOK_STATION
+        self.item_here.current_book_station = self.other_station
+        self.item_here.save(reported_by=self.user)
+
         response = self.client.get(
             reverse("items:item-history", kwargs={"item_id": self.item_here.id})
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "items/item_history.html")
-        self.assertContains(response, "Movement timeline")
-        self.assertContains(response, "Added to catalog")
-        self.assertContains(response, "Taken out")
-        self.assertContains(response, "Reported by item-owner")
+        self.assertContains(response, "Item journey flow")
+        self.assertContains(response, "Visual timeline")
+        self.assertContains(response, "First sighting")
+        self.assertContains(response, self.station.name)
+        self.assertContains(response, self.other_station.name)
+        self.assertContains(response, "out for")
+        self.assertContains(response, "Out by item-owner, back in by item-owner")
+        self.assertNotContains(response, ">new<", html=False)
 
         movements = list(response.context["movements"])
-        self.assertGreaterEqual(len(movements), 2)
+        journey_steps = response.context["journey_steps"]
+        journey_start_station = response.context["journey_start_station"]
+        self.assertGreaterEqual(len(movements), 3)
+        self.assertEqual(len(journey_steps), 1)
+        self.assertEqual(journey_start_station["name"], self.station.name)
+        self.assertEqual(journey_steps[0]["station"]["name"], self.other_station.name)
         self.assertEqual(movements[0].movement_type, Movement.MovementType.CREATED)
 
     def test_owner_can_edit_item(self):
