@@ -150,19 +150,40 @@ def item_list_create(request):
             return JsonResponse({"error": "Invalid JSON payload."}, status=400)
 
         try:
+            status = payload.get("status", Item.Status.UNKNOWN) or Item.Status.UNKNOWN
+            current_station = _resolve_station_reference(
+                payload.get("current_book_station"), "current_book_station"
+            )
+            last_seen_at = _resolve_station_reference(
+                payload.get("last_seen_at"), "last_seen_at"
+            )
+            status_was_explicitly_set = payload.get("status") not in (None, "")
+
+            # Mirror form semantics: choosing a current station auto-places the item
+            # unless the client explicitly sets a different status.
+            if current_station is not None and not (
+                status_was_explicitly_set and status != Item.Status.AT_BOOK_STATION
+            ):
+                status = Item.Status.AT_BOOK_STATION
+
+            if status != Item.Status.AT_BOOK_STATION:
+                current_station = None
+
+            if current_station is not None:
+                last_seen_at = current_station
+            else:
+                # New API-created items should not keep transient last-seen values.
+                last_seen_at = None
+
             item = Item(
                 title=payload.get("title", ""),
                 author=payload.get("author", ""),
                 thumbnail_url=payload.get("thumbnail_url", ""),
                 description=payload.get("description", ""),
                 item_type=payload.get("item_type", Item.ItemType.BOOK),
-                status=payload.get("status", Item.Status.UNKNOWN),
-                current_book_station=_resolve_station_reference(
-                    payload.get("current_book_station"), "current_book_station"
-                ),
-                last_seen_at=_resolve_station_reference(
-                    payload.get("last_seen_at"), "last_seen_at"
-                ),
+                status=status,
+                current_book_station=current_station,
+                last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
             )

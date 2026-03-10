@@ -62,13 +62,48 @@ class ItemCreateForm(forms.ModelForm):
         if not cleaned_data.get("status"):
             cleaned_data["status"] = Item.Status.UNKNOWN
 
+        status = cleaned_data.get("status")
+        current_station = cleaned_data.get("current_book_station")
+        has_station_history = bool(
+            getattr(self.instance, "pk", None)
+            and (
+                self.instance.current_book_station_id is not None
+                or self.instance.last_seen_at_id is not None
+            )
+        )
+
+        initial_status = self.initial.get("status")
+        if not initial_status and getattr(self.instance, "pk", None):
+            initial_status = self.instance.status
+        if not initial_status:
+            initial_status = Item.Status.UNKNOWN
+
+        submitted_status = self.data.get(self.add_prefix("status"))
+        status_was_changed = submitted_status not in (None, "") and (
+            str(submitted_status) != str(initial_status)
+        )
+
+        # Selecting a current station should automatically place the item at that station,
+        # unless the user explicitly changed status in this submit.
+        if current_station is not None and not (
+            status_was_changed and status != Item.Status.AT_BOOK_STATION
+        ):
+            cleaned_data["status"] = Item.Status.AT_BOOK_STATION
+            status = cleaned_data["status"]
+
+        if status != Item.Status.AT_BOOK_STATION:
+            cleaned_data["current_book_station"] = None
+            current_station = None
+
         if cleaned_data.get("item_type") == Item.ItemType.BOOK and not (
             cleaned_data.get("author") or ""
         ).strip():
             self.add_error("author", "Author is required when the item type is BOOK.")
 
-        current_station = cleaned_data.get("current_book_station")
         if current_station is not None:
             cleaned_data["last_seen_at"] = current_station
+        elif not has_station_history:
+            # Prevent a transient form selection from being stored as history.
+            cleaned_data["last_seen_at"] = None
 
         return cleaned_data

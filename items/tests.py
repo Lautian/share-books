@@ -49,6 +49,30 @@ class ItemModelTests(TestCase):
                 added_by=self.user,
             )
 
+    def test_requires_empty_current_station_when_status_is_not_at_book_station(self):
+        item = Item(
+            title="Wrong Station Status",
+            author="A. Writer",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.TAKEN_OUT,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        with self.assertRaises(ValidationError):
+            item.full_clean()
+
+    def test_database_constraint_rejects_current_station_when_not_at_book_station(self):
+        with self.assertRaises(IntegrityError):
+            Item.objects.create(
+                title="Wrong Station Status Constraint",
+                author="A. Writer",
+                item_type=Item.ItemType.BOOK,
+                status=Item.Status.TAKEN_OUT,
+                current_book_station=self.station,
+                added_by=self.user,
+            )
+
     def test_save_defaults_last_seen_and_last_activity(self):
         item = Item.objects.create(
             title="Neighborhood Almanac",
@@ -231,6 +255,86 @@ class ItemViewTests(TestCase):
         self.assertEqual(self.item_here.description, "Updated programming book")
         self.assertEqual(self.item_here.last_seen_at, self.station)
 
+    def test_edit_assigning_current_station_sets_status_to_at_book_station(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_taken.id}),
+            data={
+                "title": self.item_taken.title,
+                "author": self.item_taken.author,
+                "item_type": self.item_taken.item_type,
+                "thumbnail_url": self.item_taken.thumbnail_url,
+                "description": self.item_taken.description,
+                "status": self.item_taken.status,
+                "current_book_station": self.station.id,
+                "last_seen_at": "",
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.item_taken.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_taken.id}),
+        )
+        self.assertEqual(self.item_taken.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(self.item_taken.current_book_station, self.station)
+        self.assertEqual(self.item_taken.last_seen_at, self.station)
+
+    def test_edit_setting_non_station_status_clears_current_station(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+            data={
+                "title": self.item_here.title,
+                "author": self.item_here.author,
+                "item_type": self.item_here.item_type,
+                "thumbnail_url": self.item_here.thumbnail_url,
+                "description": self.item_here.description,
+                "status": Item.Status.LOST,
+                "current_book_station": self.station.id,
+                "last_seen_at": self.station.id,
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.item_here.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertEqual(self.item_here.status, Item.Status.LOST)
+        self.assertIsNone(self.item_here.current_book_station)
+
+    def test_edit_without_current_station_keeps_existing_last_seen_history(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_taken.id}),
+            data={
+                "title": self.item_taken.title,
+                "author": self.item_taken.author,
+                "item_type": self.item_taken.item_type,
+                "thumbnail_url": self.item_taken.thumbnail_url,
+                "description": self.item_taken.description,
+                "status": Item.Status.TAKEN_OUT,
+                "current_book_station": "",
+                "last_seen_at": self.other_station.id,
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.item_taken.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_taken.id}),
+        )
+        self.assertEqual(self.item_taken.status, Item.Status.TAKEN_OUT)
+        self.assertIsNone(self.item_taken.current_book_station)
+        self.assertEqual(self.item_taken.last_seen_at, self.other_station)
+
     def test_non_owner_cannot_edit_or_delete_item(self):
         self.client.login(username="other-item-user", password="StrongPass123")
 
@@ -347,6 +451,52 @@ class ItemViewTests(TestCase):
         self.assertTrue(Item.objects.filter(title="Gardening Weekly").exists())
         self.assertEqual(response.json()["current_book_station"], "south-park-box")
 
+    def test_post_items_api_ignores_last_seen_without_station_history(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+        payload = {
+            "title": "Transient API Last Seen",
+            "author": "",
+            "item_type": Item.ItemType.MAGAZINE,
+            "status": Item.Status.UNKNOWN,
+            "current_book_station": "",
+            "last_seen_at": self.station.readable_id,
+        }
+
+        response = self.client.post(
+            reverse("items:item-list-create"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_item = Item.objects.get(title="Transient API Last Seen")
+        self.assertIsNone(created_item.current_book_station)
+        self.assertIsNone(created_item.last_seen_at)
+        self.assertIsNone(response.json()["last_seen_at"])
+
+    def test_post_items_api_clears_station_when_non_station_status_is_explicit(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+        payload = {
+            "title": "Explicit Lost",
+            "author": "",
+            "item_type": Item.ItemType.MAGAZINE,
+            "status": Item.Status.LOST,
+            "current_book_station": self.station.readable_id,
+            "last_seen_at": self.station.readable_id,
+        }
+
+        response = self.client.post(
+            reverse("items:item-list-create"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_item = Item.objects.get(title="Explicit Lost")
+        self.assertEqual(created_item.status, Item.Status.LOST)
+        self.assertIsNone(created_item.current_book_station)
+        self.assertIsNone(created_item.last_seen_at)
+
     def test_post_items_api_rejects_at_station_without_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
         payload = {
@@ -425,3 +575,80 @@ class ItemCreateFormViewTests(TestCase):
         )
         self.assertEqual(created_item.added_by, self.user)
         self.assertEqual(created_item.thumbnail_url, "https://example.com/digest.jpg")
+
+    def test_item_create_form_sets_status_when_current_station_is_selected(self):
+        self.client.login(username="form-user", password=self.password)
+
+        response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Station Return",
+                "author": "",
+                "item_type": Item.ItemType.MAGAZINE,
+                "status": Item.Status.UNKNOWN,
+                "current_book_station": self.station.id,
+                "last_seen_at": "",
+                "last_activity": "",
+                "thumbnail_url": "",
+            },
+        )
+
+        created_item = Item.objects.get(title="Station Return")
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": created_item.id}),
+        )
+        self.assertEqual(created_item.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(created_item.current_book_station, self.station)
+        self.assertEqual(created_item.last_seen_at, self.station)
+
+    def test_item_create_form_clears_station_for_non_station_status(self):
+        self.client.login(username="form-user", password=self.password)
+
+        response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Away Item",
+                "author": "",
+                "item_type": Item.ItemType.MAGAZINE,
+                "status": Item.Status.LOST,
+                "current_book_station": self.station.id,
+                "last_seen_at": "",
+                "last_activity": "",
+                "thumbnail_url": "",
+            },
+        )
+
+        created_item = Item.objects.get(title="Away Item")
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": created_item.id}),
+        )
+        self.assertEqual(created_item.status, Item.Status.LOST)
+        self.assertIsNone(created_item.current_book_station)
+        self.assertIsNone(created_item.last_seen_at)
+
+    def test_item_create_form_ignores_last_seen_without_station_history(self):
+        self.client.login(username="form-user", password=self.password)
+
+        response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Transient Last Seen",
+                "author": "",
+                "item_type": Item.ItemType.MAGAZINE,
+                "status": Item.Status.UNKNOWN,
+                "current_book_station": "",
+                "last_seen_at": self.station.id,
+                "last_activity": "",
+                "thumbnail_url": "",
+            },
+        )
+
+        created_item = Item.objects.get(title="Transient Last Seen")
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": created_item.id}),
+        )
+        self.assertIsNone(created_item.current_book_station)
+        self.assertIsNone(created_item.last_seen_at)

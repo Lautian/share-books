@@ -64,6 +64,13 @@ class Item(models.Model):
                     | models.Q(current_book_station__isnull=False)
                 ),
                 name="item_station_required_when_at_station",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="AT_BOOK_STATION")
+                    | models.Q(current_book_station__isnull=True)
+                ),
+                name="item_station_must_be_empty_unless_at_station",
             )
         ]
         indexes = [
@@ -92,6 +99,18 @@ class Item(models.Model):
                 {
                     "current_book_station": (
                         "Current book station is required when status is AT_BOOK_STATION."
+                    )
+                }
+            )
+        if (
+            self.status != self.Status.AT_BOOK_STATION
+            and self.current_book_station_id is not None
+        ):
+            raise ValidationError(
+                {
+                    "current_book_station": (
+                        "Current book station must be empty unless status is "
+                        "AT_BOOK_STATION."
                     )
                 }
             )

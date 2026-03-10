@@ -12,25 +12,64 @@
         }
 
         if (currentStation.value) {
+            if (lastSeen.dataset.autoSynced !== "true") {
+                lastSeen.dataset.previousValue = lastSeen.value || "";
+            }
             lastSeen.value = currentStation.value;
+            lastSeen.dataset.autoSynced = "true";
             lastSeen.disabled = true;
             lastSeen.classList.add("opacity-70", "cursor-not-allowed");
             lastSeen.setAttribute("aria-disabled", "true");
         } else {
+            if (lastSeen.dataset.autoSynced === "true") {
+                lastSeen.value = lastSeen.dataset.previousValue || "";
+            }
+            delete lastSeen.dataset.autoSynced;
+            delete lastSeen.dataset.previousValue;
             lastSeen.disabled = false;
             lastSeen.classList.remove("opacity-70", "cursor-not-allowed");
             lastSeen.removeAttribute("aria-disabled");
         }
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
+    function handleCurrentStationChange() {
         const currentStation = document.getElementById("id_current_book_station");
-        if (!currentStation) {
+        const statusField = document.getElementById("id_status");
+        if (!currentStation || !statusField) {
             return;
         }
 
-        currentStation.addEventListener("change", syncLastSeenField);
+        if (currentStation.value && statusField.value !== "AT_BOOK_STATION") {
+            statusField.value = "AT_BOOK_STATION";
+        }
+
         syncLastSeenField();
+    }
+
+    function handleStatusChange() {
+        const currentStation = document.getElementById("id_current_book_station");
+        const statusField = document.getElementById("id_status");
+        if (!currentStation || !statusField) {
+            return;
+        }
+
+        if (statusField.value !== "AT_BOOK_STATION" && currentStation.value) {
+            currentStation.value = "";
+        }
+
+        syncLastSeenField();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const currentStation = document.getElementById("id_current_book_station");
+        const statusField = document.getElementById("id_status");
+        if (!currentStation || !statusField) {
+            return;
+        }
+
+        currentStation.addEventListener("change", handleCurrentStationChange);
+        statusField.addEventListener("change", handleStatusChange);
+        handleCurrentStationChange();
     });
 </script>
 {% endblock %}
