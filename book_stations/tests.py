@@ -498,6 +498,75 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
 
+    def test_owner_sees_clickable_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Shortcut Test Shelf",
+            readable_id="shortcut-test-shelf",
+            description="A station awaiting a photo",
+            location="Oak Lane",
+            added_by=self.user,
+        )
+        self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertContains(response, "Click to add a photo for this station")
+        self.assertContains(
+            response,
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            ),
+        )
+
+    def test_non_owner_does_not_see_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Non Owner Photo Shelf",
+            readable_id="non-owner-photo-shelf",
+            description="A station with no photo",
+            location="Birch Road",
+            added_by=self.user,
+        )
+        self.client.login(username="other-station-user", password="StrongPass123")
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertNotContains(response, "Click to add a photo for this station")
+
+    def test_anonymous_user_does_not_see_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Anon Photo Shelf",
+            readable_id="anon-photo-shelf",
+            description="A station with no photo",
+            location="Pine Street",
+            added_by=self.user,
+        )
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertNotContains(response, "Click to add a photo for this station")
+
     def test_get_detail_returns_single_bookstation_json(self):
         response = self.client.get(
             reverse(
