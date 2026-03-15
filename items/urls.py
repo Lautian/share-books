@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.item_list, name="item-list"),
     path("add/", views.item_create, name="item-create"),
     path("<int:item_id>/history/", views.item_history_page, name="item-history"),
+    path("<int:item_id>/move/", views.item_move, name="item-move"),
     path("<int:item_id>/edit/", views.item_edit, name="item-edit"),
     path("<int:item_id>/delete/", views.item_delete, name="item-delete"),
     path("<int:item_id>/qr/", views.item_qr_code, name="item-qr"),

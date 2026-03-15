@@ -1,0 +1,83 @@
+{% extends "core/base.html" %}
+
+{% block title %}Move Item | {{ item.title }}{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl">
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/85 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.18em] text-success">Move item</p>
+            <h1 class="mt-2 text-3xl font-bold leading-tight md:text-4xl">{{ item.title }}</h1>
+        </header>
+
+        <div class="mt-5 space-y-2 text-base-content/80">
+            <p>
+                <span class="font-semibold">Current status:</span>
+                {{ item.get_status_display }}
+            </p>
+            {% if item.current_book_station %}
+                <p>
+                    <span class="font-semibold">Currently at:</span>
+                    {{ item.current_book_station.name }}
+                </p>
+            {% endif %}
+        </div>
+
+        {% if action == "take_out" %}
+            <p class="mt-5 text-base-content/80">
+                You are about to <strong>take this item out</strong> of its current station.
+                It will be marked as <strong>Taken out</strong>.
+            </p>
+        {% elif action == "put_in" %}
+            <p class="mt-5 text-base-content/80">
+                You are about to <strong>place this item in a book station</strong>.
+                Please select the destination station.
+            </p>
+        {% elif action == "mark_lost" %}
+            <p class="mt-5 text-base-content/80">
+                You are about to <strong>mark this item as lost</strong>.
+                It will be removed from its current station if applicable.
+            </p>
+        {% endif %}
+
+        {% if error %}
+            <p class="mt-3 text-sm text-error">{{ error }}</p>
+        {% endif %}
+
+        <form class="mt-6" method="post" action="{% url 'items:item-move' item.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="{{ action }}">
+
+            {% if action == "put_in" %}
+                <div class="mb-5">
+                    <label class="label" for="id_station_id">
+                        <span class="label-text font-semibold">Destination station</span>
+                    </label>
+                    <select
+                        class="select select-bordered w-full"
+                        id="id_station_id"
+                        name="station_id"
+                        required
+                    >
+                        <option value="">— Select a station —</option>
+                        {% for station in stations %}
+                            <option value="{{ station.id }}">{{ station.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-2">
+                {% if action == "take_out" %}
+                    <button class="btn btn-warning" type="submit">Confirm: Take Out</button>
+                {% elif action == "put_in" %}
+                    <button class="btn btn-success" type="submit">Confirm: Put In</button>
+                {% elif action == "mark_lost" %}
+                    <button class="btn btn-error" type="submit">Confirm: Mark Lost</button>
+                {% endif %}
+                <a class="btn btn-outline" href="{% url 'items:item-detail' item.id %}">Cancel</a>
+            </div>
+        </form>
+    </article>
+</section>
+{% endblock %}
