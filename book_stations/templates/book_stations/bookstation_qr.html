@@ -1,0 +1,36 @@
+{% extends "core/base.html" %}
+
+{% block title %}QR Code – {{ station.name }}{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-md">
+    <div class="mb-5 flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+            Back to station
+        </a>
+    </div>
+
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.2em] text-success">QR Code</p>
+            <h1 class="mt-2 text-3xl font-bold leading-tight">{{ station.name }}</h1>
+        </header>
+
+        <div class="mt-6 flex flex-col items-center gap-4">
+            <img
+                src="{{ qr_data_uri }}"
+                alt="QR code for {{ station.name }}"
+                class="w-64 rounded-xl border border-base-300/70"
+            >
+            <p class="text-sm text-base-content/70 break-all text-center">{{ detail_url }}</p>
+            <a
+                class="btn btn-primary"
+                href="?download=1"
+                download="qr-{{ station.readable_id }}.png"
+            >
+                Download QR code
+            </a>
+        </div>
+    </article>
+</section>
+{% endblock %}
