@@ -737,3 +737,93 @@ class ItemCreateFormViewTests(TestCase):
         )
         self.assertIsNone(created_item.current_book_station)
         self.assertIsNone(created_item.last_seen_at)
+
+
+class ItemQRCodeViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="qr-item-owner",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="QR Item Station",
+            readable_id="qr-item-station",
+            description="",
+            latitude=51.5,
+            longitude=-0.1,
+            location="QR Item Lane",
+            added_by=self.user,
+        )
+        self.item = Item.objects.create(
+            title="QR Test Book",
+            author="QR Author",
+            description="A book for QR tests",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            last_activity=date(2026, 1, 1),
+            added_by=self.user,
+        )
+
+    def test_qr_page_returns_200(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_qr.html")
+
+    def test_qr_page_contains_item_title(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertContains(response, "QR Test Book")
+
+    def test_qr_page_contains_detail_url(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertContains(response, f"/items/{self.item.id}/")
+
+    def test_qr_page_embeds_image_data_uri(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertContains(response, "data:image/png;base64,")
+
+    def test_qr_download_returns_png(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id}),
+            {"download": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertIn(f"qr-item-{self.item.id}.png", response["Content-Disposition"])
+
+    def test_qr_page_404_for_unknown_item(self):
+        response = self.client.get(
+            reverse("items:item-qr", kwargs={"item_id": 999999})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_qr_page_rejects_post(self):
+        response = self.client.post(
+            reverse("items:item-qr", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_item_detail_page_links_to_qr(self):
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item.id})
+        )
+
+        self.assertContains(
+            response,
+            reverse("items:item-qr", kwargs={"item_id": self.item.id}),
+        )
