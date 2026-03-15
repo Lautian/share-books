@@ -46,16 +46,20 @@ def bookstation_detail_page(request, readable_id):
 		return HttpResponseNotAllowed(["GET"])
 
 	station = get_object_or_404(BookStation, readable_id=readable_id)
-	inventory_items = Item.objects.filter(
+	items = Item.objects.filter(
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
-	).order_by("title")
+	).order_by("title", "id")
+	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
+	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 	return render(
 		request,
 		"book_stations/bookstation_detail.html",
 		{
 			"station": station,
-			"inventory_items": inventory_items,
+			"items": items,
+			"book_like_items": book_like_items,
+			"dvd_items": dvd_items,
 		},
 	)
 
@@ -166,12 +170,56 @@ def bookstation_inventory_page(request, readable_id):
 		return HttpResponseNotAllowed(["GET"])
 
 	station = get_object_or_404(BookStation, readable_id=readable_id)
+	sort_by = request.GET.get("sort_by", "title")
+	sort_dir = request.GET.get("sort_dir")
+	if sort_dir is None:
+		if "sort_by" in request.GET:
+			sort_dir = "asc"
+		else:
+			sort_dir = "asc"
+
+	# Keep compatibility with previous sort query values.
+	legacy_sort = request.GET.get("sort")
+	if legacy_sort and "sort_by" not in request.GET:
+		legacy_sort_map = {
+			"title": ("title", "asc"),
+			"title_desc": ("title", "desc"),
+			"author": ("author", "asc"),
+			"item_type": ("item_type", "asc"),
+			"recent_activity": ("last_activity", "desc"),
+			"oldest_activity": ("last_activity", "asc"),
+		}
+		sort_by, sort_dir = legacy_sort_map.get(legacy_sort, ("title", "asc"))
+
+	valid_sort_by = {"title", "author", "item_type", "last_activity"}
+	if sort_by not in valid_sort_by:
+		sort_by = "title"
+
+	if sort_dir not in {"asc", "desc"}:
+		sort_dir = "asc"
+
 	items = Item.objects.filter(
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
-	).order_by("title", "id")
-	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
-	dvd_items = items.filter(item_type=Item.ItemType.DVD)
+	)
+	sort_field_map = {
+		"title": ["title", "id"],
+		"author": ["author", "title", "id"],
+		"item_type": ["item_type", "title", "id"],
+		"last_activity": ["last_activity", "title", "id"],
+	}
+	order_fields = sort_field_map[sort_by]
+	if sort_dir == "desc":
+		items = items.order_by(f"-{order_fields[0]}", *order_fields[1:])
+	else:
+		items = items.order_by(*order_fields)
+
+	sort_by_options = [
+		("title", "Title"),
+		("author", "Author"),
+		("item_type", "Type"),
+		("last_activity", "Last activity"),
+	]
 
 	return render(
 		request,
@@ -179,8 +227,9 @@ def bookstation_inventory_page(request, readable_id):
 		{
 			"station": station,
 			"items": items,
-			"book_like_items": book_like_items,
-			"dvd_items": dvd_items,
+			"active_sort_by": sort_by,
+			"active_sort_dir": sort_dir,
+			"sort_by_options": sort_by_options,
 		},
 	)
 

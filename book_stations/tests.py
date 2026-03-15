@@ -319,12 +319,57 @@ class BookStationViewTests(TestCase):
         self.assertContains(response, "Book station detail")
         self.assertContains(response, "Riverside Box")
         self.assertContains(response, "Riverside Walk, London")
+        self.assertContains(response, "Inventory")
+        self.assertContains(response, "Full inventory")
         self.assertContains(response, "riverside-box")
         self.assertContains(response, "Photo of Riverside Box")
         self.assertContains(
             response,
             "/static/book_stations/images/photos/riverside-box-lowres.svg",
         )
+
+    def test_inventory_page_supports_sorting_and_renders_controls(self):
+        Item.objects.create(
+            title="Alpha Title",
+            author="Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+        Item.objects.create(
+            title="Zulu Title",
+            author="Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-inventory",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+            {"sort_by": "title"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Items currently at this book station")
+        self.assertContains(response, "Sort by")
+        self.assertContains(response, 'value="title" selected', html=False)
+        self.assertContains(
+            response,
+            'id="sort-dir-input" type="hidden" name="sort_dir" value="asc"',
+            html=False,
+        )
+        self.assertEqual(response.context["active_sort_by"], "title")
+        self.assertEqual(response.context["active_sort_dir"], "asc")
+
+        inventory_items = list(response.context["items"])
+        self.assertEqual(inventory_items[0].title, "Alpha Title")
 
     def test_detail_page_shows_owner_controls_only_for_owner(self):
         self.client.login(username="station-owner", password="StrongPass123")

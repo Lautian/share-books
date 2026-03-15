@@ -284,7 +284,7 @@ class ItemViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "items/item_history.html")
         self.assertContains(response, "Item journey flow")
-        self.assertContains(response, "Visual timeline")
+        self.assertContains(response, "Timeline")
         self.assertContains(response, "First sighting")
         self.assertContains(response, self.station.name)
         self.assertContains(response, self.other_station.name)
@@ -432,7 +432,7 @@ class ItemViewTests(TestCase):
         self.assertRedirects(response, reverse("users:profile"))
         self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
 
-    def test_get_station_inventory_page_renders_dvd_cases(self):
+    def test_station_detail_uses_bookshelf_and_inventory_page_uses_full_width_list(self):
         Item.objects.create(
             title="Blade Runner",
             author="",
@@ -443,18 +443,30 @@ class ItemViewTests(TestCase):
             added_by=self.user,
         )
 
-        response = self.client.get(
+        detail_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+        inventory_response = self.client.get(
             reverse(
                 "book_stations:bookstation-inventory",
                 kwargs={"readable_id": self.station.readable_id},
             )
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'class="dvd-group"', html=False)
-        self.assertContains(response, 'class="dvd-case"', html=False)
-        self.assertContains(response, "DVD")
-        self.assertContains(response, "Blade Runner")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, 'class="dvd-group"', html=False)
+        self.assertContains(detail_response, 'class="dvd-case"', html=False)
+        self.assertContains(detail_response, "Blade Runner")
+
+        self.assertEqual(inventory_response.status_code, 200)
+        self.assertNotContains(inventory_response, 'class="dvd-case"', html=False)
+        self.assertContains(inventory_response, "Items currently at this book station")
+        self.assertContains(inventory_response, "Sort by")
+        self.assertContains(inventory_response, 'class="inventory-list mt-4 space-y-3"', html=False)
+        self.assertContains(inventory_response, "Blade Runner")
 
     def test_get_items_api_returns_items(self):
         response = self.client.get(reverse("items:item-list-create"))
