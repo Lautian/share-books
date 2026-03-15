@@ -254,7 +254,144 @@
         height: 1.24rem;
         margin-top: -0.18rem;
     }
+
+    .book-rest {
+        align-items: flex-end;
+        cursor: pointer;
+        display: none;
+        gap: 0.12rem;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .book-rest:hover {
+        transform: translateY(-3px);
+    }
+
+    .rest-spine {
+        border: 1px solid rgba(22, 22, 22, 0.3);
+        border-bottom-width: 0;
+        border-radius: 0.2rem 0.2rem 0 0;
+        box-shadow: 0 4px 8px rgba(52, 36, 20, 0.2);
+        flex-shrink: 0;
+        width: 0.72rem;
+    }
+
+    .dvd-rest {
+        align-items: flex-end;
+        cursor: pointer;
+        display: none;
+        gap: 0.2rem;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .dvd-rest:hover {
+        transform: translateY(-3px);
+    }
+
+    .rest-dvd-spine {
+        background: linear-gradient(180deg, rgba(243, 245, 248, 0.96), rgba(206, 213, 222, 0.94));
+        border: 1px solid rgba(30, 35, 44, 0.48);
+        border-radius: 0.2rem;
+        box-shadow: 0 6px 12px rgba(33, 34, 36, 0.22);
+        flex-shrink: 0;
+        height: clamp(8.6rem, 16vw, 10rem);
+        width: 0.85rem;
+    }
+
+    .rest-label {
+        background: rgba(30, 20, 10, 0.72);
+        border-radius: 0.8rem;
+        bottom: 0.4rem;
+        color: #fff;
+        font-size: 0.6rem;
+        font-weight: 700;
+        left: 50%;
+        padding: 0.1rem 0.25rem;
+        position: absolute;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        z-index: 3;
+    }
 </style>
+
+<script>
+(function () {
+    var resizeTimer;
+
+    function setupShelfOverflow() {
+        var stage = document.querySelector('.shelf-stage');
+        if (!stage) return;
+
+        var bookGroup = stage.querySelector('.book-group');
+        var dvdGroup = stage.querySelector('.dvd-group');
+
+        var books = bookGroup ? Array.from(bookGroup.querySelectorAll('.shelf-book')) : [];
+        var dvds = dvdGroup ? Array.from(dvdGroup.querySelectorAll('.dvd-case')) : [];
+
+        var bookRest = bookGroup ? bookGroup.querySelector('.book-rest') : null;
+        var dvdRest = dvdGroup ? dvdGroup.querySelector('.dvd-rest') : null;
+
+        // Reset: show all items, hide rest sections
+        books.forEach(function (b) { b.style.display = ''; });
+        dvds.forEach(function (d) { d.style.display = ''; });
+        if (bookRest) bookRest.style.display = 'none';
+        if (dvdRest) dvdRest.style.display = 'none';
+
+        if (stage.scrollWidth <= stage.clientWidth) return;
+
+        // Overflow detected – show rest sections and hide items from the right
+        if (bookRest && books.length > 0) bookRest.style.display = 'flex';
+        if (dvdRest && dvds.length > 0) dvdRest.style.display = 'flex';
+
+        var hiddenBooks = 0;
+        var hiddenDVDs = 0;
+        var dvdPtr = dvds.length - 1;
+        var bookPtr = books.length - 1;
+
+        while (stage.scrollWidth > stage.clientWidth) {
+            if (dvdPtr >= 0) {
+                dvds[dvdPtr].style.display = 'none';
+                hiddenDVDs++;
+                dvdPtr--;
+            } else if (bookPtr >= 0) {
+                books[bookPtr].style.display = 'none';
+                hiddenBooks++;
+                bookPtr--;
+            } else {
+                break;
+            }
+        }
+
+        // Update rest section visibility and labels
+        if (bookRest) {
+            var bookLabel = bookRest.querySelector('.rest-label');
+            if (hiddenBooks > 0) {
+                if (bookLabel) bookLabel.textContent = '+' + hiddenBooks;
+            } else {
+                bookRest.style.display = 'none';
+            }
+        }
+
+        if (dvdRest) {
+            var dvdLabel = dvdRest.querySelector('.rest-label');
+            if (hiddenDVDs > 0) {
+                if (dvdLabel) dvdLabel.textContent = '+' + hiddenDVDs;
+            } else {
+                dvdRest.style.display = 'none';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', setupShelfOverflow);
+
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(setupShelfOverflow, 100);
+    });
+}());
+</script>
 {% endblock %}
 
 {% block content %}
@@ -370,6 +507,21 @@
                                     </span>
                                 </a>
                             {% endfor %}
+                            {% if book_like_items %}
+                                <a
+                                    class="book-rest"
+                                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                    title="full inventory"
+                                    aria-label="Full inventory"
+                                >
+                                    <div class="rest-spine tone-1 h-short"></div>
+                                    <div class="rest-spine tone-2 h-mid"></div>
+                                    <div class="rest-spine tone-3 h-tall"></div>
+                                    <div class="rest-spine tone-4 h-xtall"></div>
+                                    <div class="rest-spine tone-5 h-mid"></div>
+                                    <span class="rest-label"></span>
+                                </a>
+                            {% endif %}
                         </div>
 
                         {% if dvd_items %}
@@ -384,6 +536,18 @@
                                         <span class="dvd-title">{{ item.title }}</span>
                                     </a>
                                 {% endfor %}
+                                <a
+                                    class="dvd-rest"
+                                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                    title="full inventory"
+                                    aria-label="Full inventory"
+                                >
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <span class="rest-label"></span>
+                                </a>
                             </div>
                         {% endif %}
                     </div>

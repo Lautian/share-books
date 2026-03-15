@@ -843,3 +843,158 @@ class BookStationQRCodeViewTests(TestCase):
             response,
             reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id}),
         )
+
+
+class ShelfOverflowRestSectionTests(TestCase):
+    """Tests that rest-section HTML elements are rendered in the detail page
+    and that the JavaScript overflow handler is included."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="rest-section-owner",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="Rest Section Station",
+            readable_id="rest-section-station",
+            description="",
+            latitude=51.5,
+            longitude=-0.1,
+            location="Test Lane",
+            added_by=self.user,
+        )
+        self.detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.station.readable_id},
+        )
+        self.inventory_url = reverse(
+            "book_stations:bookstation-inventory",
+            kwargs={"readable_id": self.station.readable_id},
+        )
+
+    def test_book_rest_section_present_when_books_exist(self):
+        Item.objects.create(
+            title="A Book",
+            author="An Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="book-rest"')
+
+    def test_book_rest_section_links_to_inventory(self):
+        Item.objects.create(
+            title="A Book",
+            author="An Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, self.inventory_url)
+
+    def test_book_rest_section_has_full_inventory_tooltip(self):
+        Item.objects.create(
+            title="A Book",
+            author="An Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, 'title="full inventory"')
+
+    def test_dvd_rest_section_present_when_dvds_exist(self):
+        Item.objects.create(
+            title="A DVD",
+            author="",
+            description="",
+            item_type=Item.ItemType.DVD,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="dvd-rest"')
+
+    def test_dvd_rest_section_links_to_inventory(self):
+        Item.objects.create(
+            title="A DVD",
+            author="",
+            description="",
+            item_type=Item.ItemType.DVD,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, self.inventory_url)
+
+    def test_dvd_rest_section_has_full_inventory_tooltip(self):
+        Item.objects.create(
+            title="A DVD",
+            author="",
+            description="",
+            item_type=Item.ItemType.DVD,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, 'title="full inventory"')
+
+    def test_book_rest_section_absent_when_no_items(self):
+        response = self.client.get(self.detail_url)
+
+        self.assertNotContains(response, 'class="book-rest"')
+
+    def test_dvd_rest_section_absent_when_no_dvds(self):
+        Item.objects.create(
+            title="A Book Only",
+            author="An Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertNotContains(response, 'class="dvd-rest"')
+
+    def test_shelf_overflow_js_is_included_in_page(self):
+        Item.objects.create(
+            title="A Book",
+            author="An Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, "setupShelfOverflow")
