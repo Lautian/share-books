@@ -254,7 +254,154 @@
         height: 1.24rem;
         margin-top: -0.18rem;
     }
+
+    .book-rest {
+        align-items: flex-end;
+        cursor: pointer;
+        display: none;
+        gap: 0.12rem;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .book-rest:hover {
+        transform: translateY(-3px);
+    }
+
+    .rest-spine {
+        border: 1px solid rgba(22, 22, 22, 0.3);
+        border-bottom-width: 0;
+        border-radius: 0.2rem 0.2rem 0 0;
+        box-shadow: 0 4px 8px rgba(52, 36, 20, 0.2);
+        flex-shrink: 0;
+        width: 0.72rem;
+    }
+
+    .dvd-rest {
+        align-items: flex-end;
+        cursor: pointer;
+        display: none;
+        gap: 0.2rem;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .dvd-rest:hover {
+        transform: translateY(-3px);
+    }
+
+    .rest-dvd-spine {
+        background: linear-gradient(180deg, rgba(243, 245, 248, 0.96), rgba(206, 213, 222, 0.94));
+        border: 1px solid rgba(30, 35, 44, 0.48);
+        border-radius: 0.2rem;
+        box-shadow: 0 6px 12px rgba(33, 34, 36, 0.22);
+        flex-shrink: 0;
+        height: clamp(8.6rem, 16vw, 10rem);
+        width: 0.85rem;
+    }
+
+    .rest-label {
+        background: rgba(30, 20, 10, 0.72);
+        border-radius: 0.8rem;
+        bottom: 0.4rem;
+        color: #fff;
+        font-size: 0.6rem;
+        font-weight: 700;
+        left: 50%;
+        padding: 0.1rem 0.25rem;
+        position: absolute;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        z-index: 3;
+    }
 </style>
+
+<script>
+(function () {
+    var resizeTimer;
+
+    function setupShelfOverflow() {
+        var stage = document.querySelector('.shelf-stage');
+        if (!stage) return;
+
+        var bookGroup = stage.querySelector('.book-group');
+        var dvdGroup = stage.querySelector('.dvd-group');
+
+        var books = bookGroup ? Array.from(bookGroup.querySelectorAll('.shelf-book')) : [];
+        var dvds = dvdGroup ? Array.from(dvdGroup.querySelectorAll('.dvd-case')) : [];
+
+        var bookRest = bookGroup ? bookGroup.querySelector('.book-rest') : null;
+        var dvdRest = dvdGroup ? dvdGroup.querySelector('.dvd-rest') : null;
+
+        // Reset: show all items, hide rest sections
+        books.forEach(function (b) { b.style.display = ''; });
+        dvds.forEach(function (d) { d.style.display = ''; });
+        if (bookRest) bookRest.style.display = 'none';
+        if (dvdRest) dvdRest.style.display = 'none';
+
+        if (stage.scrollWidth <= stage.clientWidth) return;
+
+        // Overflow detected. Temporarily show rest sections so their widths are
+        // included in the single measurement pass that follows.
+        if (bookRest && books.length > 0) bookRest.style.display = 'flex';
+        if (dvdRest && dvds.length > 0) dvdRest.style.display = 'flex';
+
+        // Single layout read pass – measure everything at once to avoid forcing
+        // a reflow on every loop iteration.
+        var spaceToFree = stage.scrollWidth - stage.clientWidth;
+        var bookWidths = books.map(function (b) { return b.getBoundingClientRect().width; });
+        var dvdWidths = dvds.map(function (d) { return d.getBoundingClientRect().width; });
+
+        // Hide rest sections again; they will be re-shown selectively below.
+        if (bookRest) bookRest.style.display = 'none';
+        if (dvdRest) dvdRest.style.display = 'none';
+
+        // Pure computation: decide which items to hide.
+        // Always keep at least 1 DVD visible (dvdPtr stops before dvds[0]).
+        var hiddenDVDs = 0, hiddenBooks = 0;
+        var dvdPtr = dvds.length - 1, bookPtr = books.length - 1;
+
+        while (spaceToFree > 0) {
+            if (dvdPtr > 0) {
+                spaceToFree -= dvdWidths[dvdPtr--];
+                hiddenDVDs++;
+            } else if (bookPtr >= 0) {
+                spaceToFree -= bookWidths[bookPtr--];
+                hiddenBooks++;
+            } else {
+                break;
+            }
+        }
+
+        // Batch write: hide items from the right.
+        for (var i = dvds.length - hiddenDVDs; i < dvds.length; i++) {
+            dvds[i].style.display = 'none';
+        }
+        for (var j = books.length - hiddenBooks; j < books.length; j++) {
+            books[j].style.display = 'none';
+        }
+
+        // Re-show rest sections only for types that actually had items hidden.
+        if (hiddenDVDs > 0 && dvdRest) {
+            dvdRest.style.display = 'flex';
+            var dvdLabel = dvdRest.querySelector('.rest-label');
+            if (dvdLabel) dvdLabel.textContent = '+' + hiddenDVDs;
+        }
+        if (hiddenBooks > 0 && bookRest) {
+            bookRest.style.display = 'flex';
+            var bookLabel = bookRest.querySelector('.rest-label');
+            if (bookLabel) bookLabel.textContent = '+' + hiddenBooks;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', setupShelfOverflow);
+
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(setupShelfOverflow, 100);
+    });
+}());
+</script>
 {% endblock %}
 
 {% block content %}
@@ -370,6 +517,21 @@
                                     </span>
                                 </a>
                             {% endfor %}
+                            {% if book_like_items %}
+                                <a
+                                    class="book-rest"
+                                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                    title="full inventory"
+                                    aria-label="Full inventory"
+                                >
+                                    <div class="rest-spine tone-1 h-short"></div>
+                                    <div class="rest-spine tone-2 h-mid"></div>
+                                    <div class="rest-spine tone-3 h-tall"></div>
+                                    <div class="rest-spine tone-4 h-xtall"></div>
+                                    <div class="rest-spine tone-5 h-mid"></div>
+                                    <span class="rest-label"></span>
+                                </a>
+                            {% endif %}
                         </div>
 
                         {% if dvd_items %}
@@ -384,6 +546,18 @@
                                         <span class="dvd-title">{{ item.title }}</span>
                                     </a>
                                 {% endfor %}
+                                <a
+                                    class="dvd-rest"
+                                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                    title="full inventory"
+                                    aria-label="Full inventory"
+                                >
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <div class="rest-dvd-spine"></div>
+                                    <span class="rest-label"></span>
+                                </a>
                             </div>
                         {% endif %}
                     </div>
