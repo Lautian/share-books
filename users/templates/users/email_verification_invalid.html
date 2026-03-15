@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+
+{% block title %}Verification link invalid{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body text-center space-y-4">
+            <div class="text-5xl">❌</div>
+            <h1 class="card-title text-3xl justify-center">Verification link invalid</h1>
+            <p class="text-base-content/75">
+                This verification link is invalid or has expired.
+            </p>
+            <p class="text-base-content/75 text-sm">
+                Please <a href="{% url 'users:signup' %}" class="link link-primary">sign up again</a>
+                to receive a new verification email.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -16,22 +16,33 @@
                 {% endif %}
 
                 {% for field in form %}
-                    <label class="form-control w-full" for="{{ field.id_for_label }}">
-                        <div class="label">
-                            <span class="label-text">{{ field.label }}</span>
+                    {% if field.name == "captcha" %}
+                        <div class="mt-2">
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="label">
+                                    <span class="label-text-alt text-error">{{ field.errors|striptags }}</span>
+                                </div>
+                            {% endif %}
                         </div>
-                        {{ field }}
-                        {% if field.help_text %}
+                    {% else %}
+                        <label class="form-control w-full" for="{{ field.id_for_label }}">
                             <div class="label">
-                                <span class="label-text-alt text-base-content/70">{{ field.help_text }}</span>
+                                <span class="label-text">{{ field.label }}</span>
                             </div>
-                        {% endif %}
-                        {% if field.errors %}
-                            <div class="label">
-                                <span class="label-text-alt text-error">{{ field.errors|striptags }}</span>
-                            </div>
-                        {% endif %}
-                    </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="label">
+                                    <span class="label-text-alt text-base-content/70">{{ field.help_text }}</span>
+                                </div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="label">
+                                    <span class="label-text-alt text-error">{{ field.errors|striptags }}</span>
+                                </div>
+                            {% endif %}
+                        </label>
+                    {% endif %}
                 {% endfor %}
 
                 <button class="btn btn-primary w-full" type="submit">Create account</button>

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_recaptcha',
     'core',
     'book_stations',
     'items',
@@ -122,3 +123,19 @@ USE_TZ = True
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Email settings
+# In production, configure a real email backend and credentials via environment variables.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@sharebooks.example.com'
+
+# Site URL used in email verification links (override in production)
+SITE_URL = 'http://localhost:8000'
+
+# Google reCAPTCHA v2 keys
+# Use the public test keys provided by Google for local/test environments.
+# Override RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in production with real keys.
+RECAPTCHA_PUBLIC_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+RECAPTCHA_PRIVATE_KEY = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
+# Suppress the test-key warning; real keys must be set in production.
+SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
