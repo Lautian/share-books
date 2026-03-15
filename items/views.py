@@ -1,9 +1,13 @@
+import base64
+import io
 import json
 
+import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
@@ -459,3 +463,41 @@ def item_delete(request, item_id):
         return redirect("users:profile")
 
     return render(request, "items/item_confirm_delete.html", {"item": item})
+
+
+def _generate_qr_png_bytes(url):
+    qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf.read()
+
+
+def item_qr_code(request, item_id):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    item = get_object_or_404(Item, pk=item_id)
+    detail_url = request.build_absolute_uri(
+        reverse("items:item-detail", kwargs={"item_id": item_id})
+    )
+    png_bytes = _generate_qr_png_bytes(detail_url)
+
+    if request.GET.get("download"):
+        response = HttpResponse(png_bytes, content_type="image/png")
+        response["Content-Disposition"] = f'attachment; filename="qr-item-{item_id}.png"'
+        return response
+
+    qr_data_uri = "data:image/png;base64," + base64.b64encode(png_bytes).decode()
+    return render(
+        request,
+        "items/item_qr.html",
+        {
+            "item": item,
+            "qr_data_uri": qr_data_uri,
+            "detail_url": detail_url,
+        },
+    )

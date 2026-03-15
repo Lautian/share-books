@@ -307,6 +307,9 @@
         <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-list' %}">
             Back to stations
         </a>
+        <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-qr' station.readable_id %}">
+            QR code
+        </a>
         {% if user.is_authenticated and station.added_by_id == user.id %}
             <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
                 Edit station
@@ -330,6 +333,19 @@
             <section class="photo-wrap overflow-hidden rounded-2xl p-3 shadow-sm">
                 {% if station.picture %}
                     <img class="station-photo rounded-xl" src="{{ station.picture_url }}" alt="Photo of {{ station.name }}">
+                {% elif user.is_authenticated and station.added_by_id == user.id %}
+                    <a
+                        class="photo-fallback flex items-center justify-center rounded-xl p-6 text-center transition-opacity hover:opacity-75"
+                        href="{% url 'book_stations:bookstation-edit' station.readable_id %}"
+                        title="Add a photo for this station"
+                    >
+                        <div>
+                            <p class="font-semibold text-base-content/80">No station photo yet</p>
+                            <p class="mt-2 text-sm leading-relaxed text-base-content/70">
+                                Click to add a photo for this station.
+                            </p>
+                        </div>
+                    </a>
                 {% else %}
                     <div class="photo-fallback flex items-center justify-center rounded-xl p-6 text-center">
                         <div>

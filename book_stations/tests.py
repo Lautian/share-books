@@ -499,6 +499,71 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
 
+    def test_owner_sees_clickable_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Shortcut Test Shelf",
+            readable_id="shortcut-test-shelf",
+            description="A station awaiting a photo",
+            location="Oak Lane",
+            added_by=self.user,
+        )
+        self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertContains(response, "Click to add a photo for this station")
+        self.assertContains(response, 'title="Add a photo for this station"')
+
+    def test_non_owner_does_not_see_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Non Owner Photo Shelf",
+            readable_id="non-owner-photo-shelf",
+            description="A station with no photo",
+            location="Birch Road",
+            added_by=self.user,
+        )
+        self.client.login(username="other-station-user", password="StrongPass123")
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertNotContains(response, "Click to add a photo for this station")
+        self.assertNotContains(response, 'title="Add a photo for this station"')
+
+    def test_anonymous_user_does_not_see_photo_shortcut_when_no_picture(self):
+        station_without_picture = BookStation.objects.create(
+            name="Anon Photo Shelf",
+            readable_id="anon-photo-shelf",
+            description="A station with no photo",
+            location="Pine Street",
+            added_by=self.user,
+        )
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": station_without_picture.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No station photo yet")
+        self.assertNotContains(response, "Click to add a photo for this station")
+        self.assertNotContains(response, 'title="Add a photo for this station"')
+
     def test_get_detail_returns_single_bookstation_json(self):
         response = self.client.get(
             reverse(
@@ -829,4 +894,85 @@ class BookStationCreateFormViewTests(TestCase):
         self.assertEqual(created_station.readable_id, "river-walk-station")
         self.assertTrue(
             created_station.picture.startswith("/media/book_stations/images/photos/")
+        )
+
+
+
+class BookStationQRCodeViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="qr-station-owner",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="QR Test Station",
+            readable_id="qr-test-station",
+            description="Station for QR code tests",
+            latitude=51.5,
+            longitude=-0.1,
+            location="QR Test Lane",
+            added_by=self.user,
+        )
+
+    def test_qr_page_returns_200(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "book_stations/bookstation_qr.html")
+
+    def test_qr_page_contains_station_name(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertContains(response, "QR Test Station")
+
+    def test_qr_page_contains_detail_url(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertContains(response, "qr-test-station")
+
+    def test_qr_page_embeds_image_data_uri(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertContains(response, "data:image/png;base64,")
+
+    def test_qr_download_returns_png(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id}),
+            {"download": "1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertIn("qr-qr-test-station.png", response["Content-Disposition"])
+
+    def test_qr_page_404_for_unknown_station(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": "does-not-exist"})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_qr_page_rejects_post(self):
+        response = self.client.post(
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_bookstation_detail_page_links_to_qr(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})
+        )
+
+        self.assertContains(
+            response,
+            reverse("book_stations:bookstation-qr", kwargs={"readable_id": self.station.readable_id}),
         )
