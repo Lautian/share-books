@@ -518,13 +518,7 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
         self.assertContains(response, "Click to add a photo for this station")
-        self.assertContains(
-            response,
-            reverse(
-                "book_stations:bookstation-edit",
-                kwargs={"readable_id": station_without_picture.readable_id},
-            ),
-        )
+        self.assertContains(response, 'title="Add a photo for this station"')
 
     def test_non_owner_does_not_see_photo_shortcut_when_no_picture(self):
         station_without_picture = BookStation.objects.create(
@@ -546,6 +540,7 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
         self.assertNotContains(response, "Click to add a photo for this station")
+        self.assertNotContains(response, 'title="Add a photo for this station"')
 
     def test_anonymous_user_does_not_see_photo_shortcut_when_no_picture(self):
         station_without_picture = BookStation.objects.create(
@@ -566,6 +561,7 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
         self.assertNotContains(response, "Click to add a photo for this station")
+        self.assertNotContains(response, 'title="Add a photo for this station"')
 
     def test_get_detail_returns_single_bookstation_json(self):
         response = self.client.get(
