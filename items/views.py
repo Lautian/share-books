@@ -465,6 +465,83 @@ def item_delete(request, item_id):
     return render(request, "items/item_confirm_delete.html", {"item": item})
 
 
+_VALID_MOVE_ACTIONS = {"take_out", "put_in", "mark_lost"}
+
+
+@login_required(login_url="users:login")
+def item_move(request, item_id):
+    item = get_object_or_404(
+        Item.objects.select_related("current_book_station", "last_seen_at"),
+        pk=item_id,
+    )
+
+    if request.method == "GET":
+        action = request.GET.get("action", "")
+        if action not in _VALID_MOVE_ACTIONS:
+            return redirect("items:item-detail", item_id=item_id)
+
+        stations = BookStation.objects.order_by("name") if action == "put_in" else None
+        return render(
+            request,
+            "items/item_move_confirm.html",
+            {
+                "item": item,
+                "action": action,
+                "stations": stations,
+            },
+        )
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        if action not in _VALID_MOVE_ACTIONS:
+            return redirect("items:item-detail", item_id=item_id)
+
+        if action == "take_out":
+            item.status = Item.Status.TAKEN_OUT
+            item.current_book_station = None
+            item.save(reported_by=request.user)
+
+        elif action == "put_in":
+            station_id = request.POST.get("station_id", "")
+            if not station_id:
+                stations = BookStation.objects.order_by("name")
+                return render(
+                    request,
+                    "items/item_move_confirm.html",
+                    {
+                        "item": item,
+                        "action": action,
+                        "stations": stations,
+                        "error": "Please select a station.",
+                    },
+                )
+            station = BookStation.objects.filter(pk=station_id).first()
+            if station is None:
+                stations = BookStation.objects.order_by("name")
+                return render(
+                    request,
+                    "items/item_move_confirm.html",
+                    {
+                        "item": item,
+                        "action": action,
+                        "stations": stations,
+                        "error": "Selected station not found. Please choose a station from the list.",
+                    },
+                )
+            item.status = Item.Status.AT_BOOK_STATION
+            item.current_book_station = station
+            item.save(reported_by=request.user)
+
+        elif action == "mark_lost":
+            item.status = Item.Status.LOST
+            item.current_book_station = None
+            item.save(reported_by=request.user)
+
+        return redirect("items:item-detail", item_id=item_id)
+
+    return HttpResponseNotAllowed(["GET", "POST"])
+
+
 def _generate_qr_png_bytes(url):
     qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M)
     qr.add_data(url)

@@ -827,3 +827,250 @@ class ItemQRCodeViewTests(TestCase):
             response,
             reverse("items:item-qr", kwargs={"item_id": self.item.id}),
         )
+
+
+class ItemMoveViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="move-owner",
+            password="StrongPass123",
+        )
+        self.other_user = get_user_model().objects.create_user(
+            username="move-other",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="Move Station A",
+            readable_id="move-station-a",
+            description="",
+            latitude=51.5,
+            longitude=-0.1,
+            location="Move Street",
+            added_by=self.user,
+        )
+        self.other_station = BookStation.objects.create(
+            name="Move Station B",
+            readable_id="move-station-b",
+            description="",
+            latitude=51.6,
+            longitude=-0.2,
+            location="Other Move Street",
+            added_by=self.user,
+        )
+        self.item_at_station = Item.objects.create(
+            title="Move Test Book",
+            author="Move Author",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            last_activity=date(2026, 1, 1),
+            added_by=self.user,
+        )
+        self.item_taken = Item.objects.create(
+            title="Taken Out Book",
+            author="Take Author",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.TAKEN_OUT,
+            current_book_station=None,
+            last_seen_at=self.station,
+            last_activity=date(2026, 1, 1),
+            added_by=self.user,
+        )
+
+    # --- Anonymous user behaviour ---
+
+    def test_anonymous_user_is_redirected_on_get(self):
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.get(url + "?action=take_out")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/users/login/", response["Location"])
+
+    def test_anonymous_user_is_redirected_on_post(self):
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.post(url, {"action": "take_out"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/users/login/", response["Location"])
+
+    def test_item_detail_shows_login_link_for_anonymous(self):
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id})
+        )
+
+        self.assertContains(response, "Log in to move item")
+        login_url = reverse("users:login")
+        self.assertContains(response, login_url)
+
+    # --- Logged-in user: detail page ---
+
+    def test_item_detail_shows_move_buttons_for_authenticated_user(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id})
+        )
+
+        self.assertContains(response, "Take Out")
+        self.assertContains(response, "Put In")
+        self.assertContains(response, "Mark Lost")
+
+    def test_item_detail_does_not_show_login_link_for_authenticated_user(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id})
+        )
+
+        self.assertNotContains(response, "Log in to move item")
+
+    # --- GET confirmation page ---
+
+    def test_get_take_out_confirmation_page(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.get(url + "?action=take_out")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "take_out")
+        self.assertContains(response, "Move Test Book")
+
+    def test_get_put_in_confirmation_page_lists_stations(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        response = self.client.get(url + "?action=put_in")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "Move Station A")
+        self.assertContains(response, "Move Station B")
+
+    def test_get_mark_lost_confirmation_page(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.get(url + "?action=mark_lost")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "mark_lost")
+
+    def test_get_invalid_action_redirects_to_detail(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.get(url + "?action=invalid")
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id}),
+        )
+
+    # --- POST: take out ---
+
+    def test_post_take_out_updates_item_status(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.post(url, {"action": "take_out"})
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id}),
+        )
+        self.item_at_station.refresh_from_db()
+        self.assertEqual(self.item_at_station.status, Item.Status.TAKEN_OUT)
+        self.assertIsNone(self.item_at_station.current_book_station)
+
+    def test_post_take_out_creates_movement_with_reporter(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        self.client.post(url, {"action": "take_out"})
+
+        movement = self.item_at_station.movements.order_by("-timestamp", "-id").first()
+        self.assertEqual(movement.reported_by.username, "move-other")
+
+    # --- POST: put in ---
+
+    def test_post_put_in_updates_item_to_station(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        response = self.client.post(
+            url, {"action": "put_in", "station_id": self.other_station.id}
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_taken.id}),
+        )
+        self.item_taken.refresh_from_db()
+        self.assertEqual(self.item_taken.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(self.item_taken.current_book_station, self.other_station)
+
+    def test_post_put_in_creates_placed_in_movement(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        self.client.post(
+            url, {"action": "put_in", "station_id": self.other_station.id}
+        )
+
+        movement = self.item_taken.movements.order_by("-timestamp", "-id").first()
+        self.assertEqual(movement.reported_by.username, "move-other")
+
+    def test_post_put_in_without_station_re_renders_form(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        response = self.client.post(url, {"action": "put_in", "station_id": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "Please select a station.")
+
+    def test_post_put_in_with_nonexistent_station_re_renders_form(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        response = self.client.post(url, {"action": "put_in", "station_id": "999999"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "Selected station not found")
+        self.item_taken.refresh_from_db()
+        self.assertEqual(self.item_taken.status, Item.Status.TAKEN_OUT)
+
+    # --- POST: mark lost ---
+
+    def test_post_mark_lost_updates_item_status(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.post(url, {"action": "mark_lost"})
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id}),
+        )
+        self.item_at_station.refresh_from_db()
+        self.assertEqual(self.item_at_station.status, Item.Status.LOST)
+        self.assertIsNone(self.item_at_station.current_book_station)
+
+    def test_post_mark_lost_creates_marked_lost_movement(self):
+        self.client.login(username="move-other", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        self.client.post(url, {"action": "mark_lost"})
+
+        movement = self.item_at_station.movements.order_by("-timestamp", "-id").first()
+        self.assertEqual(movement.reported_by.username, "move-other")
+
+    # --- POST: invalid action ---
+
+    def test_post_invalid_action_redirects_to_detail(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
+        response = self.client.post(url, {"action": "fly_away"})
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_at_station.id}),
+        )
+
+    def test_get_404_for_unknown_item(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": 999999})
+        response = self.client.get(url + "?action=take_out")
+
+        self.assertEqual(response.status_code, 404)
