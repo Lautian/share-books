@@ -254,6 +254,50 @@
         height: 1.24rem;
         margin-top: -0.18rem;
     }
+
+    .rest-books {
+        align-items: flex-end;
+        cursor: pointer;
+        display: flex;
+        gap: 0.1rem;
+        text-decoration: none;
+    }
+
+    .rest-books:hover .rest-books-spine {
+        opacity: 0.72;
+        transform: translateY(-2px);
+    }
+
+    .rest-books-spine {
+        border: 1px solid rgba(22, 22, 22, 0.28);
+        border-bottom-width: 0;
+        border-radius: 0.2rem 0.2rem 0 0;
+        box-shadow: 0 4px 8px rgba(52, 36, 20, 0.18);
+        display: block;
+        width: 0.55rem;
+    }
+
+    .rest-dvds {
+        align-items: flex-end;
+        cursor: pointer;
+        display: flex;
+        gap: 0.1rem;
+        text-decoration: none;
+    }
+
+    .rest-dvds:hover .rest-dvds-spine {
+        opacity: 0.72;
+        transform: translateY(-2px);
+    }
+
+    .rest-dvds-spine {
+        background: linear-gradient(180deg, rgba(206, 213, 222, 0.96), rgba(156, 163, 172, 0.9));
+        border: 1px solid rgba(30, 35, 44, 0.48);
+        border-radius: 0.25rem;
+        box-shadow: 0 5px 10px rgba(33, 34, 36, 0.18);
+        display: block;
+        width: 0.85rem;
+    }
 </style>
 {% endblock %}
 
@@ -354,6 +398,23 @@
                                     </span>
                                 </a>
                             {% endfor %}
+                            <a
+                                class="rest-books"
+                                href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                title="full inventory"
+                                hidden
+                            >
+                                <span class="rest-books-spine tone-2 h-xtall"></span>
+                                <span class="rest-books-spine tone-4 h-tall"></span>
+                                <span class="rest-books-spine tone-1 h-mid"></span>
+                                <span class="rest-books-spine tone-6 h-xtall"></span>
+                                <span class="rest-books-spine tone-3 h-short"></span>
+                                <span class="rest-books-spine tone-5 h-tall"></span>
+                                <span class="rest-books-spine tone-2 h-mid"></span>
+                                <span class="rest-books-spine tone-4 h-xtall"></span>
+                                <span class="rest-books-spine tone-1 h-tall"></span>
+                                <span class="rest-books-spine tone-6 h-short"></span>
+                            </a>
                         </div>
 
                         {% if dvd_items %}
@@ -368,6 +429,19 @@
                                         <span class="dvd-title">{{ item.title }}</span>
                                     </a>
                                 {% endfor %}
+                                <a
+                                    class="rest-dvds"
+                                    href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
+                                    title="full inventory"
+                                    hidden
+                                >
+                                    <span class="rest-dvds-spine h-xtall"></span>
+                                    <span class="rest-dvds-spine h-tall"></span>
+                                    <span class="rest-dvds-spine h-mid"></span>
+                                    <span class="rest-dvds-spine h-xtall"></span>
+                                    <span class="rest-dvds-spine h-tall"></span>
+                                    <span class="rest-dvds-spine h-short"></span>
+                                </a>
                             </div>
                         {% endif %}
                     </div>
@@ -383,4 +457,65 @@
         </p>
     </article>
 </section>
+
+<script>
+(function () {
+    function adjustShelf() {
+        var stage = document.querySelector('.shelf-stage');
+        if (!stage) return;
+
+        var bookGroup = stage.querySelector('.book-group');
+        var dvdGroup = stage.querySelector('.dvd-group');
+        var restBooks = bookGroup && bookGroup.querySelector('.rest-books');
+        var restDvds = dvdGroup && dvdGroup.querySelector('.rest-dvds');
+        var books = bookGroup ? Array.from(bookGroup.querySelectorAll('.shelf-book')) : [];
+        var dvds = dvdGroup ? Array.from(dvdGroup.querySelectorAll('.dvd-case')) : [];
+
+        // Reset: show all items, hide rest sections.
+        books.forEach(function (el) { el.hidden = false; });
+        dvds.forEach(function (el) { el.hidden = false; });
+        if (restBooks) restBooks.hidden = true;
+        if (restDvds) restDvds.hidden = true;
+
+        if (stage.scrollWidth <= stage.clientWidth) return;
+
+        // Overflow detected — show rest sections for non-empty groups.
+        if (restBooks && books.length > 0) restBooks.hidden = false;
+        if (restDvds && dvds.length > 0) restDvds.hidden = false;
+
+        // Remove items from the end (DVDs first, then books) until no overflow.
+        var bi = books.length - 1;
+        var di = dvds.length - 1;
+        var booksHidden = 0;
+        var dvdsHidden = 0;
+
+        while (stage.scrollWidth > stage.clientWidth) {
+            if (di >= 0) {
+                dvds[di--].hidden = true;
+                dvdsHidden++;
+            } else if (bi >= 0) {
+                books[bi--].hidden = true;
+                booksHidden++;
+            } else {
+                break;
+            }
+        }
+
+        // Hide rest section if no items from that group were hidden.
+        if (dvdsHidden === 0 && restDvds) restDvds.hidden = true;
+        if (booksHidden === 0 && restBooks) restBooks.hidden = true;
+
+        // Hide rest section if the entire group had to be hidden.
+        if (di < 0 && restDvds) restDvds.hidden = true;
+        if (bi < 0 && restBooks) restBooks.hidden = true;
+    }
+
+    document.addEventListener('DOMContentLoaded', adjustShelf);
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(adjustShelf, 100);
+    });
+}());
+</script>
 {% endblock %}

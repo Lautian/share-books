@@ -1,4 +1,5 @@
 from tempfile import TemporaryDirectory
+import re
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -594,6 +595,137 @@ class BookStationViewTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("readable_id", response.json()["errors"])
+
+
+class BookStationDetailRestSectionTests(TestCase):
+    """Tests for the 'the rest' overflow sections on the detail page."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="rest-section-owner",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="Rest Section Station",
+            readable_id="rest-section-station",
+            description="",
+            latitude=51.500000,
+            longitude=-0.120000,
+            location="Test Lane",
+            added_by=self.user,
+        )
+        self.inventory_url = reverse(
+            "book_stations:bookstation-inventory",
+            kwargs={"readable_id": self.station.readable_id},
+        )
+        self.detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.station.readable_id},
+        )
+
+    def _create_book(self, title="A Book"):
+        return Item.objects.create(
+            title=title,
+            author="Author",
+            description="",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+    def _create_dvd(self, title="A DVD"):
+        return Item.objects.create(
+            title=title,
+            author="Director",
+            description="",
+            item_type=Item.ItemType.DVD,
+            status=Item.Status.AT_BOOK_STATION,
+            current_book_station=self.station,
+            added_by=self.user,
+        )
+
+    def test_detail_page_contains_rest_books_section_with_inventory_link(self):
+        self._create_book()
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="rest-books"')
+        self.assertContains(response, self.inventory_url)
+
+    def test_rest_books_section_has_full_inventory_tooltip(self):
+        self._create_book()
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, 'title="full inventory"')
+
+    def test_rest_books_section_is_initially_hidden(self):
+        self._create_book()
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, 'class="rest-books"')
+        content = response.content.decode()
+        rest_books_match = re.search(
+            r'class="rest-books"[^>]*hidden', content
+        )
+        self.assertIsNotNone(
+            rest_books_match,
+            "The rest-books section should have the hidden attribute.",
+        )
+
+    def test_detail_page_contains_rest_dvds_section_when_dvds_present(self):
+        self._create_dvd()
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="rest-dvds"')
+        self.assertContains(response, self.inventory_url)
+
+    def test_rest_dvds_section_has_full_inventory_tooltip(self):
+        self._create_dvd()
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, 'title="full inventory"')
+
+    def test_rest_dvds_section_is_initially_hidden(self):
+        self._create_dvd()
+        response = self.client.get(self.detail_url)
+
+        content = response.content.decode()
+        rest_dvds_match = re.search(
+            r'class="rest-dvds"[^>]*hidden', content
+        )
+        self.assertIsNotNone(
+            rest_dvds_match,
+            "The rest-dvds section should have the hidden attribute.",
+        )
+
+    def test_detail_page_passes_book_like_items_and_dvd_items_to_context(self):
+        self._create_book("My Book")
+        self._create_dvd("My DVD")
+        response = self.client.get(self.detail_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("book_like_items", response.context)
+        self.assertIn("dvd_items", response.context)
+        book_titles = [item.title for item in response.context["book_like_items"]]
+        dvd_titles = [item.title for item in response.context["dvd_items"]]
+        self.assertIn("My Book", book_titles)
+        self.assertIn("My DVD", dvd_titles)
+
+    def test_detail_page_does_not_show_rest_dvds_when_no_dvds(self):
+        self._create_book()
+        response = self.client.get(self.detail_url)
+
+        self.assertNotContains(response, 'class="rest-dvds"')
+
+    def test_detail_page_contains_overflow_adjustment_script(self):
+        self._create_book()
+        response = self.client.get(self.detail_url)
+
+        self.assertContains(response, "adjustShelf")
+        self.assertContains(response, "rest-books")
+        self.assertContains(response, "rest-dvds")
 
 
 class InventoryMigrationRegressionTests(TestCase):
