@@ -515,7 +515,19 @@ def item_move(request, item_id):
                         "error": "Please select a station.",
                     },
                 )
-            station = get_object_or_404(BookStation, pk=station_id)
+            station = BookStation.objects.filter(pk=station_id).first()
+            if station is None:
+                stations = BookStation.objects.order_by("name")
+                return render(
+                    request,
+                    "items/item_move_confirm.html",
+                    {
+                        "item": item,
+                        "action": action,
+                        "stations": stations,
+                        "error": "Selected station not found. Please choose a station from the list.",
+                    },
+                )
             item.status = Item.Status.AT_BOOK_STATION
             item.current_book_station = station
             item.save(reported_by=request.user)

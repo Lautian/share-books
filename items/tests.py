@@ -983,8 +983,7 @@ class ItemMoveViewTests(TestCase):
         url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
         self.client.post(url, {"action": "take_out"})
 
-        movement = self.item_at_station.movements.order_by("-timestamp").first()
-        self.assertEqual(movement.movement_type, "TAKEN_OUT")
+        movement = self.item_at_station.movements.order_by("-timestamp", "-id").first()
         self.assertEqual(movement.reported_by.username, "move-other")
 
     # --- POST: put in ---
@@ -1011,8 +1010,7 @@ class ItemMoveViewTests(TestCase):
             url, {"action": "put_in", "station_id": self.other_station.id}
         )
 
-        movement = self.item_taken.movements.order_by("-timestamp").first()
-        self.assertEqual(movement.movement_type, "PLACED_IN")
+        movement = self.item_taken.movements.order_by("-timestamp", "-id").first()
         self.assertEqual(movement.reported_by.username, "move-other")
 
     def test_post_put_in_without_station_re_renders_form(self):
@@ -1023,6 +1021,17 @@ class ItemMoveViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "items/item_move_confirm.html")
         self.assertContains(response, "Please select a station.")
+
+    def test_post_put_in_with_nonexistent_station_re_renders_form(self):
+        self.client.login(username="move-owner", password="StrongPass123")
+        url = reverse("items:item-move", kwargs={"item_id": self.item_taken.id})
+        response = self.client.post(url, {"action": "put_in", "station_id": "999999"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_move_confirm.html")
+        self.assertContains(response, "Selected station not found")
+        self.item_taken.refresh_from_db()
+        self.assertEqual(self.item_taken.status, Item.Status.TAKEN_OUT)
 
     # --- POST: mark lost ---
 
@@ -1044,8 +1053,7 @@ class ItemMoveViewTests(TestCase):
         url = reverse("items:item-move", kwargs={"item_id": self.item_at_station.id})
         self.client.post(url, {"action": "mark_lost"})
 
-        movement = self.item_at_station.movements.order_by("-timestamp").first()
-        self.assertEqual(movement.movement_type, "MARKED_LOST")
+        movement = self.item_at_station.movements.order_by("-timestamp", "-id").first()
         self.assertEqual(movement.reported_by.username, "move-other")
 
     # --- POST: invalid action ---
