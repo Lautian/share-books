@@ -227,4 +227,8 @@ class UserAuthorizationTests(TestCase):
         response = self.client.post(reverse("users:logout"))
 
         self.assertTemplateUsed(response, "users/logged_out.html")
-        self.assertContains(response, reverse("users:login"))
+        self.assertContains(
+            response,
+            f'<a href="{reverse("users:login")}" class="btn btn-primary">Log in again</a>',
+            html=True,
+        )
