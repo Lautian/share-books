@@ -19,7 +19,26 @@ from .models import BookStation
 
 
 def bookstation_list(request):
-	sort = request.GET.get("sort", "name")
+	sort_by = request.GET.get("sort_by", "name")
+	sort_dir = request.GET.get("sort_dir", "asc")
+
+	# Keep backward compatibility with previous sort query values.
+	legacy_sort = request.GET.get("sort")
+	if legacy_sort and "sort_by" not in request.GET:
+		legacy_sort_map = {
+			"name": ("name", "asc"),
+			"location": ("location", "asc"),
+			"slug": ("slug", "asc"),
+		}
+		sort_by, sort_dir = legacy_sort_map.get(legacy_sort, ("name", "asc"))
+
+	valid_sort_by = {"name", "location", "slug"}
+	if sort_by not in valid_sort_by:
+		sort_by = "name"
+
+	if sort_dir not in {"asc", "desc"}:
+		sort_dir = "asc"
+
 	stations = BookStation.objects.annotate(
 		item_count=Count(
 			"current_items",
@@ -27,20 +46,31 @@ def bookstation_list(request):
 		)
 	)
 
-	if sort == "location":
-		stations = stations.order_by("location", "name")
-	elif sort == "slug":
-		stations = stations.order_by("readable_id")
+	sort_field_map = {
+		"name": ["name"],
+		"location": ["location", "name"],
+		"slug": ["readable_id"],
+	}
+	order_fields = sort_field_map[sort_by]
+	if sort_dir == "desc":
+		stations = stations.order_by(f"-{order_fields[0]}", *order_fields[1:])
 	else:
-		sort = "name"
-		stations = stations.order_by("name")
+		stations = stations.order_by(*order_fields)
+
+	sort_by_options = [
+		("name", "Name"),
+		("location", "Location"),
+		("slug", "Slug"),
+	]
 
 	return render(
 		request,
 		"book_stations/bookstation_list.html",
 		{
 			"stations": stations,
-			"active_sort": sort,
+			"active_sort_by": sort_by,
+			"active_sort_dir": sort_dir,
+			"sort_by_options": sort_by_options,
 		},
 	)
 
