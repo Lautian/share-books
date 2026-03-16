@@ -11,15 +11,34 @@
     }
 
     .station-card {
+        position: relative;
         background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
         border: 1px solid rgba(98, 120, 89, 0.24);
         border-top: 3px solid rgba(98, 160, 80, 0.6);
         transition: transform 180ms ease, box-shadow 180ms ease;
+        cursor: pointer;
     }
 
     .station-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 16px 32px rgba(46, 68, 43, 0.16);
+    }
+
+    /* Stretched link: the title anchor's ::after covers the whole card */
+    .station-card-link::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+    }
+
+    /* Show a focus ring on the card outline when the link receives keyboard focus */
+    .station-card:has(.station-card-link:focus-visible) {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+    .station-card-link:focus {
+        outline: none;
     }
 
     .geo-pill {
@@ -130,7 +149,7 @@
                         <!-- Title -->
                         <div class="card-section-title flex items-start mb-2">
                             <h2 class="card-title text-2xl font-display leading-snug line-clamp-2 w-full" data-tooltip="{{ station.name }}">
-                                <a class="link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">{{ station.name }}</a>
+                                <a class="link-hover station-card-link" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">{{ station.name }}</a>
                             </h2>
                         </div>
 
@@ -169,13 +188,6 @@
                         <!-- Readable ID -->
                         <div class="card-section-id mt-1 border-t border-base-300/60 pt-2">
                             <p class="font-mono text-[0.72rem] leading-relaxed text-base-content/60 truncate" data-tooltip="{{ station.readable_id }}">{{ station.readable_id }}</p>
-                        </div>
-
-                        <!-- Action -->
-                        <div class="card-actions justify-end mt-3">
-                            <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
-                                View details
-                            </a>
                         </div>
 
                     </div>
