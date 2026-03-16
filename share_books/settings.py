@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+from django_recaptcha.constants import TEST_PUBLIC_KEY as _RECAPTCHA_TEST_PUBLIC_KEY
+from django_recaptcha.constants import TEST_PRIVATE_KEY as _RECAPTCHA_TEST_PRIVATE_KEY
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -125,17 +129,28 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Email settings
-# In production, configure a real email backend and credentials via environment variables.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@sharebooks.example.com'
-
-# Site URL used in email verification links (override in production)
-SITE_URL = 'http://localhost:8000'
+# In production set EMAIL_BACKEND and related vars via environment variables.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    'noreply@sharebooks.example.com',
+)
 
 # Google reCAPTCHA v2 keys
-# Use the public test keys provided by Google for local/test environments.
-# Override RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY in production with real keys.
-RECAPTCHA_PUBLIC_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
-RECAPTCHA_PRIVATE_KEY = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
-# Suppress the test-key warning; real keys must be set in production.
-SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error']
+# Default to Google's public test keys for local development.
+# In production, set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY via environment variables.
+RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC_KEY', _RECAPTCHA_TEST_PUBLIC_KEY)
+RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY', _RECAPTCHA_TEST_PRIVATE_KEY)
+
+# Only suppress the test-key system check when DEBUG is True and the test keys are actually
+# in use.  In production (DEBUG=False) or with real keys, the check runs normally.
+_using_recaptcha_test_keys = (
+    RECAPTCHA_PUBLIC_KEY == _RECAPTCHA_TEST_PUBLIC_KEY
+    or RECAPTCHA_PRIVATE_KEY == _RECAPTCHA_TEST_PRIVATE_KEY
+)
+SILENCED_SYSTEM_CHECKS = (
+    ['django_recaptcha.recaptcha_test_key_error'] if DEBUG and _using_recaptcha_test_keys else []
+)

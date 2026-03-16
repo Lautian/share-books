@@ -17,7 +17,6 @@ from .tokens import email_verification_token
     RECAPTCHA_PUBLIC_KEY="test-public-key",
     RECAPTCHA_PRIVATE_KEY="test-private-key",
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-    SITE_URL="http://testserver",
 )
 class UserAuthorizationTests(TestCase):
     def setUp(self):
@@ -52,9 +51,10 @@ class UserAuthorizationTests(TestCase):
                     "password2": "StrongPass123",
                     "g-recaptcha-response": "PASSED",
                 },
+                follow=True,
             )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("users:signup-pending"))
         self.assertTemplateUsed(response, "users/signup_verify_email.html")
         user = self.user_model.objects.get(username="newreader")
         self.assertFalse(user.is_active)
@@ -109,6 +109,24 @@ class UserAuthorizationTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertTemplateUsed(response, "users/email_verification_invalid.html")
+
+    def test_email_verification_already_active_redirects_to_login(self):
+        active_user = self.user_model.objects.create_user(
+            username="alreadyverified",
+            email="alreadyverified@example.com",
+            password="StrongPass123",
+            is_active=True,
+        )
+        uid = urlsafe_base64_encode(force_bytes(active_user.pk))
+        token = email_verification_token.make_token(active_user)
+
+        response = self.client.get(
+            reverse("users:verify-email", kwargs={"uidb64": uid, "token": token})
+        )
+
+        self.assertRedirects(
+            response, reverse("users:login"), fetch_redirect_response=False
+        )
 
     def test_login_page_loads(self):
         response = self.client.get(reverse("users:login"))

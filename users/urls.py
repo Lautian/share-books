@@ -7,6 +7,7 @@ app_name = "users"
 
 urlpatterns = [
     path("signup/", views.signup, name="signup"),
+    path("signup/pending/", views.signup_pending, name="signup-pending"),
     path("verify-email/<uidb64>/<token>/", views.verify_email, name="verify-email"),
     path(
         "login/",

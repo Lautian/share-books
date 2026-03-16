@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -28,23 +29,39 @@ def signup(request):
             user.is_active = False
             user.save()
             email_sent = _send_verification_email(request, user)
-            return render(
-                request,
-                "users/signup_verify_email.html",
-                {"email": user.email, "email_sent": email_sent},
-            )
+            # POST/Redirect/GET: store state in session, then redirect so that
+            # refreshing the confirmation page never re-submits the form.
+            request.session["signup_email"] = user.email
+            request.session["signup_email_sent"] = email_sent
+            return redirect("users:signup-pending")
     else:
         form = SignupForm()
 
     return render(request, "users/signup.html", {"form": form})
 
 
+def signup_pending(request):
+    """Confirmation page shown after a successful signup form submission."""
+    email = request.session.pop("signup_email", None)
+    email_sent = request.session.pop("signup_email_sent", False)
+    # Validate session values defensively before passing to the template.
+    if not isinstance(email, str) or "@" not in email:
+        return redirect("users:signup")
+    if not isinstance(email_sent, bool):
+        email_sent = False
+    return render(
+        request,
+        "users/signup_verify_email.html",
+        {"email": email, "email_sent": email_sent},
+    )
+
+
 def _send_verification_email(request, user):
     """Send a verification email to the user. Returns True on success, False on failure."""
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = email_verification_token.make_token(user)
-    site_url = getattr(settings, "SITE_URL", request.build_absolute_uri("/").rstrip("/"))
-    verify_url = f"{site_url}/users/verify-email/{uid}/{token}/"
+    path = reverse("users:verify-email", kwargs={"uidb64": uid, "token": token})
+    verify_url = request.build_absolute_uri(path)
     subject = "Verify your Little Libraries account"
     message = (
         f"Hi {user.username},\n\n"
@@ -94,4 +111,5 @@ def profile(request):
             "added_items": added_items,
         },
     )
+
 
