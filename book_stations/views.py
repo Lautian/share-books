@@ -13,7 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
-from moderation.views import is_moderator
+from moderation.utils import is_moderator
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
@@ -168,6 +168,8 @@ def plus_code_decode_api(request):
 def bookstation_list_create(request):
 	if request.method == "GET":
 		stations = BookStation.objects.select_related("added_by").all()
+		if not is_moderator(request.user):
+			stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
@@ -191,6 +193,7 @@ def bookstation_list_create(request):
 			longitude=_to_decimal(payload.get("longitude")),
 			location=payload.get("location", ""),
 			added_by=request.user,
+			moderation_status=BookStation.ModerationStatus.PENDING,
 		)
 
 		try:
@@ -208,10 +211,10 @@ def bookstation_detail_api(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(
-		BookStation.objects.select_related("added_by"),
-		readable_id=readable_id,
-	)
+	qs = BookStation.objects.select_related("added_by")
+	if not is_moderator(request.user):
+		qs = qs.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+	station = get_object_or_404(qs, readable_id=readable_id)
 	return JsonResponse(_serialize_bookstation(station))
 
 
@@ -219,7 +222,17 @@ def bookstation_inventory_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	if is_moderator(request.user):
+		station = get_object_or_404(BookStation, readable_id=readable_id)
+	else:
+		import django.db.models as _m
+		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		if request.user.is_authenticated:
+			qs = BookStation.objects.filter(
+				_m.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| _m.Q(added_by=request.user)
+			)
+		station = get_object_or_404(qs, readable_id=readable_id)
 	sort_by = request.GET.get("sort_by", "title")
 	sort_dir = request.GET.get("sort_dir")
 	if sort_dir is None:

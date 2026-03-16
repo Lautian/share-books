@@ -7,11 +7,7 @@ from django.urls import reverse
 
 from book_stations.models import BookStation
 from items.models import Item
-
-
-def is_moderator(user):
-    """Return True if the user has moderator privileges (staff or superuser)."""
-    return user.is_active and (user.is_staff or user.is_superuser)
+from moderation.utils import is_moderator
 
 
 def moderator_required(view_func):
@@ -20,7 +16,7 @@ def moderator_required(view_func):
     def wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
             login_url = reverse("users:login")
-            return redirect(f"{login_url}?next={request.path}")
+            return redirect(f"{login_url}?next={request.get_full_path()}")
         if not is_moderator(request.user):
             return HttpResponseForbidden("You do not have permission to access this page.")
         return view_func(request, *args, **kwargs)
@@ -68,6 +64,7 @@ def claim_bookstation(request, readable_id):
         BookStation,
         readable_id=readable_id,
         moderation_status=BookStation.ModerationStatus.PENDING,
+        claimed_by__isnull=True,
     )
     station.claimed_by = request.user
     station.save(update_fields=["claimed_by"])
@@ -99,6 +96,7 @@ def claim_item(request, item_id):
         Item,
         pk=item_id,
         moderation_status=Item.ModerationStatus.PENDING,
+        claimed_by__isnull=True,
     )
     item.claimed_by = request.user
     item.save(update_fields=["claimed_by"])

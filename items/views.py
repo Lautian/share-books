@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
-from moderation.views import is_moderator
+from moderation.utils import is_moderator
 from movements.models import Movement
 
 from .forms import ItemCreateForm
@@ -308,10 +308,22 @@ def item_history_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at"),
-        pk=item_id,
-    )
+    if is_moderator(request.user):
+        item = get_object_or_404(
+            Item.objects.select_related("current_book_station", "last_seen_at"),
+            pk=item_id,
+        )
+    else:
+        from django.db.models import Q as _Q
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            _Q(moderation_status=Item.ModerationStatus.APPROVED)
+        )
+        if request.user.is_authenticated:
+            qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+                _Q(moderation_status=Item.ModerationStatus.APPROVED)
+                | _Q(added_by=request.user)
+            )
+        item = get_object_or_404(qs, pk=item_id)
     movements = list(
         Movement.objects.select_related(
             "from_book_station",
@@ -340,6 +352,8 @@ def item_list_create(request):
         items = Item.objects.select_related(
             "current_book_station", "last_seen_at", "added_by"
         ).all()
+        if not is_moderator(request.user):
+            items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
         status = request.GET.get("status")
         item_type = request.GET.get("item_type")
         station_reference = request.GET.get("station")
@@ -405,6 +419,7 @@ def item_list_create(request):
                 last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
+                moderation_status=Item.ModerationStatus.PENDING,
             )
 
             item.full_clean()
@@ -422,10 +437,10 @@ def item_detail_api(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at", "added_by"),
-        pk=item_id,
-    )
+    qs = Item.objects.select_related("current_book_station", "last_seen_at", "added_by")
+    if not is_moderator(request.user):
+        qs = qs.filter(moderation_status=Item.ModerationStatus.APPROVED)
+    item = get_object_or_404(qs, pk=item_id)
     return JsonResponse(_serialize_item(item))
 
 
