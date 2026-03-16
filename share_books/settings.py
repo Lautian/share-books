@@ -41,7 +41,18 @@ if _codespace_name:
     USE_X_FORWARDED_HOST = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     ALLOWED_HOSTS = ['.app.github.dev', 'localhost', '127.0.0.1', '[::1]']
-    CSRF_TRUSTED_ORIGINS = ['https://*.app.github.dev']
+    # Trust both the public Codespaces URL and localhost (the internal address the
+    # Codespaces proxy forwards to).  Once CSRF_TRUSTED_ORIGINS is set Django
+    # enforces strict origin checking on every POST, so both origins must be listed
+    # or the logout form (whose Origin header the browser reports as the internal
+    # http://localhost:8000 address) will fail with an origin-mismatch error.
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.app.github.dev',
+        'http://localhost',
+        'http://localhost:8000',
+        'http://127.0.0.1',
+        'http://127.0.0.1:8000',
+    ]
 
 
 # Application definition
