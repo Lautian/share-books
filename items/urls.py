@@ -6,6 +6,7 @@ app_name = "items"
 
 urlpatterns = [
     path("", views.item_list, name="item-list"),
+    path("add/bulk/", views.item_bulk_add, name="item-bulk-add"),
     path("add/", views.item_create, name="item-create"),
     path("<int:item_id>/history/", views.item_history_page, name="item-history"),
     path("<int:item_id>/move/", views.item_move, name="item-move"),
