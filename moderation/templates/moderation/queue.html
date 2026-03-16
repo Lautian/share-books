@@ -26,6 +26,7 @@
                             <th>Name</th>
                             <th>Added by</th>
                             <th>Location</th>
+                            <th>Photo</th>
                             <th>Claimed by</th>
                             <th class="text-right">Actions</th>
                         </tr>
@@ -40,6 +41,17 @@
                                 </td>
                                 <td>{{ station.added_by.username }}</td>
                                 <td>{{ station.location }}</td>
+                                <td>
+                                    {% if station.picture_url %}
+                                        <a href="{{ station.picture_url }}" target="_blank" rel="noopener noreferrer">
+                                            <img src="{{ station.picture_url }}"
+                                                 alt="Photo of {{ station.name }}"
+                                                 class="h-16 w-16 rounded object-cover ring-1 ring-base-300">
+                                        </a>
+                                    {% else %}
+                                        <span class="text-base-content/40">—</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if station.claimed_by %}
                                         <span class="badge badge-info">{{ station.claimed_by.username }}</span>

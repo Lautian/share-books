@@ -568,3 +568,40 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
 
         self.assertContains(response, self.approved_station.name)
 
+    def test_queue_shows_picture_thumbnail_when_station_has_image(self):
+        """The moderation queue must render an <img> tag for the uploaded photo so
+        that moderators can visually review the image before approving."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("thumb.jpg", b"fake-bytes", content_type="image/jpeg")
+        self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+            data={
+                "name": self.approved_station.name,
+                "location": self.approved_station.location,
+                "description": self.approved_station.description,
+                "picture_upload": upload,
+            },
+        )
+        self.approved_station.refresh_from_db()
+        self.client.logout()
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.get(reverse("moderation:queue"))
+
+        # The queue must include an <img> whose src points to the uploaded picture
+        self.assertContains(response, f'src="{self.approved_station.picture}"')
+        self.assertContains(response, "<img")
+
+    def test_queue_shows_no_picture_column_placeholder_when_no_image(self):
+        """When a pending station has no picture, the queue must show a placeholder
+        rather than a broken image tag."""
+        # pending_station from setUp has no picture
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.get(reverse("moderation:queue"))
+
+        # Should NOT contain an <img> for the no-picture station
+        self.assertNotContains(response, f'alt="Photo of {self.pending_station.name}"')
+
