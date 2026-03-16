@@ -286,6 +286,12 @@ class BookStationViewTests(TestCase):
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
+        # Sort controls should be a dropdown and arrow buttons, not plain links
+        self.assertContains(response, 'name="sort_by"')
+        self.assertContains(response, 'aria-label="Sort ascending"')
+        self.assertContains(response, 'aria-label="Sort descending"')
+        # "Add item" button must not appear on the overview page
+        self.assertNotContains(response, "Add item")
 
     def test_browse_stations_supports_location_sorting(self):
         BookStation.objects.create(
@@ -305,6 +311,61 @@ class BookStationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         stations = list(response.context["stations"])
         self.assertEqual(stations[0].readable_id, "cedar-shelf")
+
+    def test_browse_stations_supports_sort_by_and_sort_dir_params(self):
+        BookStation.objects.create(
+            name="Alpha Shelf",
+            readable_id="alpha-shelf",
+            description="First alphabetically",
+            latitude=51.500000,
+            longitude=-0.090000,
+            location="Zebra Lane",
+            added_by=self.user,
+        )
+
+        # sort_by=name asc: Alpha Shelf should come before Riverside Box
+        response = self.client.get(
+            reverse("book_stations:bookstation-list"),
+            {"sort_by": "name", "sort_dir": "asc"},
+        )
+        self.assertEqual(response.status_code, 200)
+        stations = list(response.context["stations"])
+        self.assertEqual(stations[0].readable_id, "alpha-shelf")
+        self.assertEqual(response.context["active_sort_by"], "name")
+        self.assertEqual(response.context["active_sort_dir"], "asc")
+
+        # sort_by=name desc: Riverside Box should come before Alpha Shelf
+        response = self.client.get(
+            reverse("book_stations:bookstation-list"),
+            {"sort_by": "name", "sort_dir": "desc"},
+        )
+        stations = list(response.context["stations"])
+        self.assertEqual(stations[0].readable_id, "riverside-box")
+        self.assertEqual(response.context["active_sort_dir"], "desc")
+
+        # sort_by=location asc: Riverside Walk comes before Zebra Lane
+        response = self.client.get(
+            reverse("book_stations:bookstation-list"),
+            {"sort_by": "location", "sort_dir": "asc"},
+        )
+        stations = list(response.context["stations"])
+        self.assertEqual(stations[0].readable_id, "riverside-box")
+
+    def test_browse_stations_defaults_to_name_asc(self):
+        response = self.client.get(reverse("book_stations:bookstation-list"))
+
+        self.assertEqual(response.context["active_sort_by"], "name")
+        self.assertEqual(response.context["active_sort_dir"], "asc")
+
+    def test_browse_stations_rejects_invalid_sort_params(self):
+        response = self.client.get(
+            reverse("book_stations:bookstation-list"),
+            {"sort_by": "invalid", "sort_dir": "sideways"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_sort_by"], "name")
+        self.assertEqual(response.context["active_sort_dir"], "asc")
 
     def test_get_detail_page_renders_station_information(self):
         response = self.client.get(
