@@ -217,6 +217,18 @@ class UserAuthorizationTests(TestCase):
         response = self.client.post(reverse("users:logout"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "registration/logged_out.html")
+        self.assertTemplateUsed(response, "users/logged_out.html")
         self.assertIsNone(self.client.session.get("_auth_user_id"))
 
+    def test_logout_shows_user_login_link_not_admin(self):
+        """Regression test: logged-out page must link to regular login, not Django admin."""
+        self.client.login(username="reader", password=self.password)
+
+        response = self.client.post(reverse("users:logout"))
+
+        self.assertTemplateUsed(response, "users/logged_out.html")
+        self.assertContains(
+            response,
+            f'<a href="{reverse("users:login")}" class="btn btn-primary">Log in again</a>',
+            html=True,
+        )
