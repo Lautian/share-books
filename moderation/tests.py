@@ -1,5 +1,8 @@
+import tempfile
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from book_stations.models import BookStation
@@ -423,4 +426,145 @@ class ModerationProfileBadgeTests(ModerationSetUpMixin, TestCase):
         response = self.client.get(reverse("users:profile"))
 
         self.assertNotContains(response, "Awaiting moderation")
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
+    """Tests that image uploads on BookStations are subject to moderation."""
+
+    _PICTURE_URL_PREFIX = "/media/book_stations/images/photos/"
+
+    def test_create_station_with_image_is_pending(self):
+        """A new station submitted with an image upload must start as PENDING."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("photo.jpg", b"fake-jpeg-bytes", content_type="image/jpeg")
+
+        self.client.post(
+            reverse("book_stations:bookstation-create"),
+            data={
+                "name": "Picture Station",
+                "location": "Photo Park",
+                "description": "",
+                "picture_upload": upload,
+            },
+        )
+
+        station = BookStation.objects.get(name="Picture Station")
+        self.assertEqual(
+            station.moderation_status,
+            BookStation.ModerationStatus.PENDING,
+        )
+        # The picture URL should already be saved (file stored, pending review)
+        self.assertTrue(station.picture.startswith(self._PICTURE_URL_PREFIX))
+
+    def test_uploading_image_to_approved_station_resets_to_pending(self):
+        """Uploading a new image to an already-approved station must trigger re-moderation."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("update.jpg", b"new-fake-bytes", content_type="image/jpeg")
+
+        self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+            data={
+                "name": self.approved_station.name,
+                "location": self.approved_station.location,
+                "description": self.approved_station.description,
+                "picture_upload": upload,
+            },
+        )
+
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status,
+            BookStation.ModerationStatus.PENDING,
+        )
+        # The picture must be stored already (saved to disk, awaiting moderator review)
+        self.assertTrue(
+            self.approved_station.picture.startswith(self._PICTURE_URL_PREFIX)
+        )
+
+    def test_station_with_new_image_disappears_from_public_list_until_approved(self):
+        """After uploading an image to an approved station, it should disappear from
+        the public list view until a moderator approves it again."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("another.jpg", b"more-bytes", content_type="image/jpeg")
+
+        self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+            data={
+                "name": self.approved_station.name,
+                "location": self.approved_station.location,
+                "description": self.approved_station.description,
+                "picture_upload": upload,
+            },
+        )
+        self.client.logout()
+
+        # Public view must not show the station with the unreviewed image
+        response = self.client.get(reverse("book_stations:bookstation-list"))
+
+        self.assertNotContains(response, self.approved_station.name)
+
+    def test_approved_station_reappears_after_moderator_approves_new_image(self):
+        """After a moderator approves the re-submitted station (with new image), it must
+        become publicly visible again."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("reapprove.jpg", b"bytes", content_type="image/jpeg")
+        self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+            data={
+                "name": self.approved_station.name,
+                "location": self.approved_station.location,
+                "description": self.approved_station.description,
+                "picture_upload": upload,
+            },
+        )
+        self.client.logout()
+
+        # Moderator approves
+        self.client.login(username="moderator", password=self.password)
+        self.client.post(
+            reverse(
+                "moderation:approve-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+        self.client.logout()
+
+        # Station should now be visible again
+        response = self.client.get(reverse("book_stations:bookstation-list"))
+
+        self.assertContains(response, self.approved_station.name)
+
+    def test_moderator_sees_station_with_pending_image_in_queue(self):
+        """After a user uploads a new image to a station, the moderator should see
+        it in the moderation queue."""
+        self.client.login(username="regular", password=self.password)
+        upload = SimpleUploadedFile("queue.jpg", b"bytes", content_type="image/jpeg")
+        self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+            data={
+                "name": self.approved_station.name,
+                "location": self.approved_station.location,
+                "description": self.approved_station.description,
+                "picture_upload": upload,
+            },
+        )
+        self.client.logout()
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(response, self.approved_station.name)
 

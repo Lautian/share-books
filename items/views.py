@@ -6,6 +6,7 @@ import json
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,6 +14,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
+from moderation.views import is_moderator
 from movements.models import Movement
 
 from .forms import ItemCreateForm
@@ -228,7 +230,6 @@ def item_list(request):
 
     items = Item.objects.select_related("current_book_station", "last_seen_at").all()
 
-    from moderation.views import is_moderator
     if not is_moderator(request.user):
         items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
 
@@ -273,14 +274,12 @@ def item_detail_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    from moderation.views import is_moderator
     if is_moderator(request.user):
         qs = Item.objects.select_related("current_book_station", "last_seen_at")
     elif request.user.is_authenticated:
-        from django.db.models import Q as _Q
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            _Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | _Q(added_by=request.user)
+            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(added_by=request.user)
         )
     else:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(

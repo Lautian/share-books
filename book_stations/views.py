@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
+from moderation.views import is_moderator
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
@@ -47,7 +48,6 @@ def bookstation_list(request):
 		)
 	)
 
-	from moderation.views import is_moderator
 	if not is_moderator(request.user):
 		stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
 
@@ -84,7 +84,6 @@ def bookstation_detail_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	from moderation.views import is_moderator
 	if is_moderator(request.user):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
@@ -254,7 +253,6 @@ def bookstation_inventory_page(request, readable_id):
 		current_book_station=station,
 	)
 
-	from moderation.views import is_moderator
 	if not is_moderator(request.user):
 		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
 
