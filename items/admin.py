@@ -9,10 +9,11 @@ class ItemAdmin(admin.ModelAdmin):
         "title",
         "item_type",
         "status",
+        "moderation_status",
         "current_book_station",
         "last_seen_at",
         "last_activity",
         "added_by",
     )
-    list_filter = ("item_type", "status", "current_book_station", "last_seen_at")
+    list_filter = ("item_type", "status", "moderation_status", "current_book_station", "last_seen_at")
     search_fields = ("title", "author", "description")

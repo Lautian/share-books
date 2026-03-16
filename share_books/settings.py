@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'items',
     'movements',
     'users',
+    'moderation',
 ]
 
 MIDDLEWARE = [

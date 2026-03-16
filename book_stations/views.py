@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -46,6 +47,10 @@ def bookstation_list(request):
 		)
 	)
 
+	from moderation.views import is_moderator
+	if not is_moderator(request.user):
+		stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+
 	sort_field_map = {
 		"name": ["name"],
 		"location": ["location", "name"],
@@ -79,11 +84,23 @@ def bookstation_detail_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	from moderation.views import is_moderator
+	if is_moderator(request.user):
+		station = get_object_or_404(BookStation, readable_id=readable_id)
+	else:
+		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		if request.user.is_authenticated:
+			qs = BookStation.objects.filter(
+				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(added_by=request.user)
+			)
+		station = get_object_or_404(qs, readable_id=readable_id)
 	items = Item.objects.filter(
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	).order_by("title", "id")
+	if not is_moderator(request.user):
+		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
 	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 	return render(
@@ -236,6 +253,11 @@ def bookstation_inventory_page(request, readable_id):
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	)
+
+	from moderation.views import is_moderator
+	if not is_moderator(request.user):
+		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+
 	sort_field_map = {
 		"title": ["title", "id"],
 		"author": ["author", "title", "id"],
@@ -275,6 +297,7 @@ def bookstation_create(request):
 		if form.is_valid():
 			station = form.save(commit=False)
 			station.added_by = request.user
+			station.moderation_status = BookStation.ModerationStatus.PENDING
 			station.save()
 			return redirect(
 				"book_stations:bookstation-detail",
@@ -297,7 +320,10 @@ def bookstation_edit(request, readable_id):
 	if request.method == "POST":
 		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
 		if form.is_valid():
-			updated_station = form.save()
+			updated_station = form.save(commit=False)
+			updated_station.moderation_status = BookStation.ModerationStatus.PENDING
+			updated_station.claimed_by = None
+			updated_station.save()
 			return redirect(
 				"book_stations:bookstation-detail",
 				readable_id=updated_station.readable_id,

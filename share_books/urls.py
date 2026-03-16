@@ -25,6 +25,7 @@ urlpatterns = [
     path("book_stations/", include("book_stations.urls")),
     path("items/", include("items.urls")),
     path("users/", include("users.urls")),
+    path("moderation/", include("moderation.urls")),
 ]
 
 if settings.DEBUG:

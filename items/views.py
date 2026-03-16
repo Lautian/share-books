@@ -227,6 +227,11 @@ def item_list(request):
         return HttpResponseNotAllowed(["GET"])
 
     items = Item.objects.select_related("current_book_station", "last_seen_at").all()
+
+    from moderation.views import is_moderator
+    if not is_moderator(request.user):
+        items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+
     selected_status = request.GET.get("status", "")
     selected_type = request.GET.get("item_type", "")
     selected_station = request.GET.get("station", "")
@@ -268,10 +273,20 @@ def item_detail_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at"),
-        pk=item_id,
-    )
+    from moderation.views import is_moderator
+    if is_moderator(request.user):
+        qs = Item.objects.select_related("current_book_station", "last_seen_at")
+    elif request.user.is_authenticated:
+        from django.db.models import Q as _Q
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            _Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | _Q(added_by=request.user)
+        )
+    else:
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            moderation_status=Item.ModerationStatus.APPROVED
+        )
+    item = get_object_or_404(qs, pk=item_id)
     recent_movements = (
         item.movements.select_related(
             "from_book_station",
@@ -422,6 +437,7 @@ def item_create(request):
         if form.is_valid():
             item = form.save(commit=False)
             item.added_by = request.user
+            item.moderation_status = Item.ModerationStatus.PENDING
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -438,6 +454,8 @@ def item_edit(request, item_id):
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
             updated_item = form.save(commit=False)
+            updated_item.moderation_status = Item.ModerationStatus.PENDING
+            updated_item.claimed_by = None
             updated_item.save(reported_by=request.user)
             form.save_m2m()
             return redirect("items:item-detail", item_id=updated_item.id)
