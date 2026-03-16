@@ -70,6 +70,12 @@ class Item(models.Model):
         on_delete=models.SET_NULL,
         related_name="claimed_items",
     )
+    pending_edit = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Serialised pending edit fields submitted by the owner. None means no edit is awaiting moderation.",
+    )
 
     class Meta:
         db_table = "book_stations_item"

@@ -315,16 +315,39 @@ def bookstation_edit(request, readable_id):
 		added_by=request.user,
 	)
 
+	# Block further edits while any edit (or new submission) is awaiting moderation.
+	if station.moderation_status == BookStation.ModerationStatus.PENDING or station.pending_edit is not None:
+		return render(
+			request,
+			"book_stations/bookstation_form.html",
+			{
+				"is_edit": True,
+				"station": station,
+				"edit_blocked": True,
+			},
+		)
+
+	# Station is APPROVED with no pending edit — the edit is stored as a pending diff
+	# so the original live data stays publicly visible while moderation is in progress.
 	if request.method == "POST":
 		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
 		if form.is_valid():
-			updated_station = form.save(commit=False)
-			updated_station.moderation_status = BookStation.ModerationStatus.PENDING
-			updated_station.claimed_by = None
-			updated_station.save()
+			# Build the pending snapshot from the validated form data.
+			updated = form.save(commit=False)
+			pending_data = {
+				"name": updated.name,
+				"location": updated.location,
+				"description": updated.description,
+				"latitude": str(updated.latitude) if updated.latitude is not None else None,
+				"longitude": str(updated.longitude) if updated.longitude is not None else None,
+				"picture": updated.picture,
+			}
+			station.pending_edit = pending_data
+			station.claimed_by = None
+			station.save(update_fields=["pending_edit", "claimed_by"])
 			return redirect(
 				"book_stations:bookstation-detail",
-				readable_id=updated_station.readable_id,
+				readable_id=station.readable_id,
 			)
 	else:
 		form = BookStationCreateForm(instance=station)

@@ -339,7 +339,8 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         item = Item.objects.get(title="Brand New Book")
         self.assertEqual(item.moderation_status, Item.ModerationStatus.PENDING)
 
-    def test_edit_approved_bookstation_resets_to_pending(self):
+    def test_edit_approved_bookstation_creates_pending_edit(self):
+        """Editing an approved station stores a pending_edit instead of resetting to PENDING."""
         self.client.login(username="regular", password=self.password)
 
         self.client.post(
@@ -355,12 +356,16 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_station.refresh_from_db()
+        # Station stays approved and visible; changes are queued in pending_edit.
         self.assertEqual(
             self.approved_station.moderation_status,
-            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.APPROVED,
         )
+        self.assertIsNotNone(self.approved_station.pending_edit)
+        self.assertEqual(self.approved_station.pending_edit["location"], "Updated Location")
 
-    def test_edit_approved_item_resets_to_pending(self):
+    def test_edit_approved_item_creates_pending_edit(self):
+        """Editing an approved item stores a pending_edit instead of resetting to PENDING."""
         self.client.login(username="regular", password=self.password)
 
         self.client.post(
@@ -374,9 +379,12 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_item.refresh_from_db()
+        # Item stays approved and visible; changes are queued in pending_edit.
         self.assertEqual(
-            self.approved_item.moderation_status, Item.ModerationStatus.PENDING
+            self.approved_item.moderation_status, Item.ModerationStatus.APPROVED
         )
+        self.assertIsNotNone(self.approved_item.pending_edit)
+        self.assertEqual(self.approved_item.pending_edit["author"], "Updated Author")
 
     def test_approved_item_visible_after_moderation_approval(self):
         """After a moderator approves a pending item, it appears in public views."""
@@ -457,8 +465,9 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         # The picture URL should already be saved (file stored, pending review)
         self.assertTrue(station.picture.startswith(self._PICTURE_URL_PREFIX))
 
-    def test_uploading_image_to_approved_station_resets_to_pending(self):
-        """Uploading a new image to an already-approved station must trigger re-moderation."""
+    def test_uploading_image_to_approved_station_creates_pending_edit(self):
+        """Uploading a new image to an already-approved station stores the picture in
+        pending_edit instead of directly replacing the live picture."""
         self.client.login(username="regular", password=self.password)
         upload = SimpleUploadedFile("update.jpg", b"new-fake-bytes", content_type="image/jpeg")
 
@@ -476,18 +485,20 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_station.refresh_from_db()
+        # Station stays approved and visible; new picture is queued in pending_edit.
         self.assertEqual(
             self.approved_station.moderation_status,
-            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.APPROVED,
         )
-        # The picture must be stored already (saved to disk, awaiting moderator review)
+        self.assertIsNotNone(self.approved_station.pending_edit)
+        # The new picture URL is saved inside pending_edit, not on the live record.
         self.assertTrue(
-            self.approved_station.picture.startswith(self._PICTURE_URL_PREFIX)
+            self.approved_station.pending_edit["picture"].startswith(self._PICTURE_URL_PREFIX)
         )
 
-    def test_station_with_new_image_disappears_from_public_list_until_approved(self):
-        """After uploading an image to an approved station, it should disappear from
-        the public list view until a moderator approves it again."""
+    def test_station_remains_visible_in_public_list_while_edit_is_pending(self):
+        """After uploading an image to an approved station, the station must remain
+        publicly visible (original data) while the edit awaits moderation."""
         self.client.login(username="regular", password=self.password)
         upload = SimpleUploadedFile("another.jpg", b"more-bytes", content_type="image/jpeg")
 
@@ -505,14 +516,14 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
         self.client.logout()
 
-        # Public view must not show the station with the unreviewed image
+        # The original approved station must still appear in the public list view.
         response = self.client.get(reverse("book_stations:bookstation-list"))
 
-        self.assertNotContains(response, self.approved_station.name)
+        self.assertContains(response, self.approved_station.name)
 
-    def test_approved_station_reappears_after_moderator_approves_new_image(self):
-        """After a moderator approves the re-submitted station (with new image), it must
-        become publicly visible again."""
+    def test_approved_station_edit_visible_to_moderator_after_image_upload(self):
+        """After a user uploads a new image to a station, the moderator should see
+        the pending edit in the queue and be able to approve it."""
         self.client.login(username="regular", password=self.password)
         upload = SimpleUploadedFile("reapprove.jpg", b"bytes", content_type="image/jpeg")
         self.client.post(
@@ -529,20 +540,20 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
         self.client.logout()
 
-        # Moderator approves
+        # Moderator approves the pending edit
         self.client.login(username="moderator", password=self.password)
         self.client.post(
             reverse(
-                "moderation:approve-bookstation",
+                "moderation:approve-bookstation-edit",
                 kwargs={"readable_id": self.approved_station.readable_id},
             )
         )
         self.client.logout()
 
-        # Station should now be visible again
-        response = self.client.get(reverse("book_stations:bookstation-list"))
-
-        self.assertContains(response, self.approved_station.name)
+        self.approved_station.refresh_from_db()
+        # After approval, pending_edit is cleared and the picture is applied live.
+        self.assertIsNone(self.approved_station.pending_edit)
+        self.assertTrue(self.approved_station.picture.startswith(self._PICTURE_URL_PREFIX))
 
     def test_moderator_sees_station_with_pending_image_in_queue(self):
         """After a user uploads a new image to a station, the moderator should see
@@ -591,8 +602,9 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         self.client.login(username="moderator", password=self.password)
         response = self.client.get(reverse("moderation:queue"))
 
-        # The queue must include an <img> whose src points to the uploaded picture
-        self.assertContains(response, f'src="{self.approved_station.picture}"')
+        # The queue must include an <img> whose src points to the pending picture.
+        pending_picture = self.approved_station.pending_edit["picture"]
+        self.assertContains(response, f'src="{pending_picture}"')
         self.assertContains(response, "<img")
 
     def test_queue_shows_no_picture_column_placeholder_when_no_image(self):

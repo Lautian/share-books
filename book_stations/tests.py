@@ -504,8 +504,11 @@ class BookStationViewTests(TestCase):
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
-        self.assertEqual(self.station.name, "Riverside Box Updated")
-        self.assertEqual(self.station.description, "Updated description")
+        # The live record stays unchanged while the edit is pending moderation.
+        self.assertEqual(self.station.name, "Riverside Box")
+        self.assertIsNotNone(self.station.pending_edit)
+        self.assertEqual(self.station.pending_edit["name"], "Riverside Box Updated")
+        self.assertEqual(self.station.pending_edit["description"], "Updated description")
 
     def test_non_owner_cannot_edit_or_delete_station(self):
         self.client.login(username="other-station-user", password="StrongPass123")

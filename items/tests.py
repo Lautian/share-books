@@ -325,9 +325,11 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
-        self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
-        self.assertEqual(self.item_here.description, "Updated programming book")
-        self.assertEqual(self.item_here.last_seen_at, self.station)
+        # The live record stays unchanged while the edit is pending moderation.
+        self.assertEqual(self.item_here.title, "Clean Code")
+        self.assertIsNotNone(self.item_here.pending_edit)
+        self.assertEqual(self.item_here.pending_edit["title"], "Clean Code 2nd Edition")
+        self.assertEqual(self.item_here.pending_edit["description"], "Updated programming book")
 
     def test_edit_assigning_current_station_sets_status_to_at_book_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -352,9 +354,10 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_taken.id}),
         )
-        self.assertEqual(self.item_taken.status, Item.Status.AT_BOOK_STATION)
-        self.assertEqual(self.item_taken.current_book_station, self.station)
-        self.assertEqual(self.item_taken.last_seen_at, self.station)
+        # The live record stays unchanged; the new station assignment is in pending_edit.
+        self.assertEqual(self.item_taken.status, Item.Status.TAKEN_OUT)
+        self.assertIsNotNone(self.item_taken.pending_edit)
+        self.assertEqual(self.item_taken.pending_edit["current_book_station_id"], self.station.id)
 
     def test_edit_setting_non_station_status_clears_current_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -379,8 +382,10 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
-        self.assertEqual(self.item_here.status, Item.Status.LOST)
-        self.assertIsNone(self.item_here.current_book_station)
+        # The live record stays unchanged; the LOST status is stored in pending_edit.
+        self.assertEqual(self.item_here.status, Item.Status.AT_BOOK_STATION)
+        self.assertIsNotNone(self.item_here.pending_edit)
+        self.assertEqual(self.item_here.pending_edit["status"], Item.Status.LOST)
 
     def test_edit_without_current_station_keeps_existing_last_seen_history(self):
         self.client.login(username="item-owner", password="StrongPass123")

@@ -12,7 +12,7 @@
         </p>
     </div>
 
-    <!-- Pending Book Stations -->
+    <!-- Pending Book Stations (new, never approved) -->
     <div class="mb-10">
         <h2 class="mb-4 text-2xl font-bold">Book Stations
             <span class="badge badge-warning ml-2">{{ pending_stations|length }}</span>
@@ -85,7 +85,86 @@
         {% endif %}
     </div>
 
-    <!-- Pending Items -->
+    <!-- Pending Book Station Edits (edits to already-approved stations) -->
+    <div class="mb-10">
+        <h2 class="mb-4 text-2xl font-bold">Book Station Edits
+            <span class="badge badge-warning ml-2">{{ station_edits|length }}</span>
+        </h2>
+
+        {% if station_edits %}
+            <div class="overflow-x-auto rounded-2xl border border-base-300/70 bg-base-100/70 shadow">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Station</th>
+                            <th>Edited by</th>
+                            <th>New name</th>
+                            <th>New location</th>
+                            <th>New photo</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for station in station_edits %}
+                            <tr class="hover">
+                                <td>
+                                    <a class="link-hover font-semibold" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+                                        {{ station.name }}
+                                    </a>
+                                    <br>
+                                    <span class="font-mono text-xs text-base-content/60">{{ station.readable_id }}</span>
+                                </td>
+                                <td>{{ station.added_by.username }}</td>
+                                <td>
+                                    {% if station.pending_edit.name != station.name %}
+                                        <span class="text-warning">{{ station.pending_edit.name }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">unchanged</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if station.pending_edit.location != station.location %}
+                                        <span class="text-warning">{{ station.pending_edit.location }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">unchanged</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if station.pending_edit.picture %}
+                                        <a href="{{ station.pending_edit.picture }}" target="_blank" rel="noopener noreferrer">
+                                            <img src="{{ station.pending_edit.picture }}"
+                                                 alt="New photo for {{ station.name }}"
+                                                 class="h-16 w-16 rounded object-cover ring-1 ring-warning">
+                                        </a>
+                                    {% else %}
+                                        <span class="text-base-content/40">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <form method="post" action="{% url 'moderation:approve-bookstation-edit' station.readable_id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">Approve edit</button>
+                                        </form>
+                                        <form method="post" action="{% url 'moderation:reject-bookstation-edit' station.readable_id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject edit</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert border border-base-300 bg-base-100/80 shadow">
+                <span>No book station edits are awaiting moderation.</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pending Items (new, never approved) -->
     <div class="mb-10">
         <h2 class="mb-4 text-2xl font-bold">Items
             <span class="badge badge-warning ml-2">{{ pending_items|length }}</span>
@@ -152,6 +231,75 @@
         {% else %}
             <div class="alert border border-base-300 bg-base-100/80 shadow">
                 <span>No items are awaiting moderation.</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pending Item Edits (edits to already-approved items) -->
+    <div class="mb-10">
+        <h2 class="mb-4 text-2xl font-bold">Item Edits
+            <span class="badge badge-warning ml-2">{{ item_edits|length }}</span>
+        </h2>
+
+        {% if item_edits %}
+            <div class="overflow-x-auto rounded-2xl border border-base-300/70 bg-base-100/70 shadow">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Edited by</th>
+                            <th>New title</th>
+                            <th>New author</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in item_edits %}
+                            <tr class="hover">
+                                <td>
+                                    <a class="link-hover font-semibold" href="{% url 'items:item-detail' item.id %}">
+                                        {{ item.title }}
+                                    </a>
+                                    {% if item.author %}
+                                        <br>
+                                        <span class="text-sm text-base-content/60">{{ item.author }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.added_by.username }}</td>
+                                <td>
+                                    {% if item.pending_edit.title != item.title %}
+                                        <span class="text-warning">{{ item.pending_edit.title }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">unchanged</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.pending_edit.author != item.author %}
+                                        <span class="text-warning">{{ item.pending_edit.author }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">unchanged</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <form method="post" action="{% url 'moderation:approve-item-edit' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">Approve edit</button>
+                                        </form>
+                                        <form method="post" action="{% url 'moderation:reject-item-edit' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject edit</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert border border-base-300 bg-base-100/80 shadow">
+                <span>No item edits are awaiting moderation.</span>
             </div>
         {% endif %}
     </div>

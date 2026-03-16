@@ -449,15 +449,39 @@ def item_create(request):
 def item_edit(request, item_id):
     item = get_object_or_404(Item, pk=item_id, added_by=request.user)
 
+    # Block further edits while any edit (or new submission) is awaiting moderation.
+    if item.moderation_status == Item.ModerationStatus.PENDING or item.pending_edit is not None:
+        return render(
+            request,
+            "items/item_form.html",
+            {
+                "is_edit": True,
+                "item": item,
+                "edit_blocked": True,
+            },
+        )
+
+    # Item is APPROVED with no pending edit — store the edit as a pending diff so
+    # the original live data stays publicly visible while moderation is in progress.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
-            updated_item = form.save(commit=False)
-            updated_item.moderation_status = Item.ModerationStatus.PENDING
-            updated_item.claimed_by = None
-            updated_item.save(reported_by=request.user)
-            form.save_m2m()
-            return redirect("items:item-detail", item_id=updated_item.id)
+            updated = form.save(commit=False)
+            pending_data = {
+                "title": updated.title,
+                "author": updated.author,
+                "thumbnail_url": updated.thumbnail_url,
+                "description": updated.description,
+                "item_type": updated.item_type,
+                "status": updated.status,
+                "current_book_station_id": updated.current_book_station_id,
+                "last_seen_at_id": updated.last_seen_at_id,
+                "last_activity": updated.last_activity.isoformat() if updated.last_activity else None,
+            }
+            item.pending_edit = pending_data
+            item.claimed_by = None
+            item.save(update_fields=["pending_edit", "claimed_by"], create_movement=False)
+            return redirect("items:item-detail", item_id=item.id)
     else:
         form = ItemCreateForm(instance=item)
 
