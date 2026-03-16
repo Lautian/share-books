@@ -7,10 +7,18 @@
     document.addEventListener("DOMContentLoaded", function () {
         const csvTextarea = document.getElementById("id_csv_text");
         const csvFileInput = document.getElementById("id_csv_file");
+        const csvFileBtn = document.getElementById("csv-file-btn");
         const fileNameDisplay = document.getElementById("file-name-display");
 
         if (!csvTextarea || !csvFileInput) {
             return;
+        }
+
+        // Clicking the styled button opens the native file picker.
+        if (csvFileBtn) {
+            csvFileBtn.addEventListener("click", function () {
+                csvFileInput.click();
+            });
         }
 
         csvTextarea.addEventListener("input", function () {
@@ -64,6 +72,9 @@
                 Stations can be referenced by their numeric ID or readable ID.
                 Dates should be in <code class="bg-base-200 px-1 rounded">YYYY-MM-DD</code> format.
             </p>
+            <p class="mt-2 text-sm text-base-content/60">
+                <strong>Limits:</strong> up to {{ max_rows }} rows; uploaded files up to {{ max_file_kb }} KB.
+            </p>
         </header>
 
         {% if form_error %}
@@ -92,25 +103,30 @@
             <div class="divider">OR</div>
 
             <div class="space-y-2">
-                <label class="label-text font-semibold block" for="id_csv_file">
+                <p class="label-text font-semibold">
                     Option 2 — Upload a CSV file
-                </label>
+                </p>
                 <p class="text-sm text-base-content/60">
                     Choose a <code>.csv</code> file from your device. Selecting a file will clear the pasted text.
                 </p>
                 <div class="flex items-center gap-3">
-                    <label
-                        for="id_csv_file"
-                        class="btn btn-outline btn-sm cursor-pointer"
-                    >Choose file</label>
-                    <span id="file-name-display" class="text-sm text-base-content/60">No file chosen</span>
+                    <button
+                        type="button"
+                        id="csv-file-btn"
+                        class="btn btn-outline btn-sm"
+                        aria-controls="id_csv_file"
+                    >Choose file</button>
+                    <span id="file-name-display" class="text-sm text-base-content/60" aria-live="polite">No file chosen</span>
                 </div>
+                {# File input is visually hidden; the button above is the keyboard trigger. #}
                 <input
                     id="id_csv_file"
                     name="csv_file"
                     type="file"
                     accept=".csv,text/csv"
-                    class="hidden"
+                    tabindex="-1"
+                    class="sr-only"
+                    aria-label="Upload CSV file"
                 >
             </div>
 

@@ -1193,3 +1193,75 @@ class ItemBulkAddViewTests(TestCase):
         self.client.login(username="bulk-add-user", password="StrongPass123")
         response = self.client.get(reverse("items:item-create"))
         self.assertContains(response, reverse("items:item-bulk-add"))
+
+    # --- POST: both inputs provided ---
+
+    def test_post_both_inputs_provided_shows_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_content = b"title,author\nDouble Input Book,Author"
+        csv_file = ContentFile(csv_content, name="items.csv")
+        response = self.client.post(
+            self.url, {"csv_text": "title\nSome Book", "csv_file": csv_file}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please use only one input")
+        self.assertFalse(Item.objects.filter(title="Double Input Book").exists())
+        self.assertFalse(Item.objects.filter(title="Some Book").exists())
+
+    # --- POST: file size limit ---
+
+    def test_post_csv_file_exceeding_size_limit_shows_error(self):
+        from items.views import _BULK_CSV_MAX_FILE_BYTES
+
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        oversized_content = b"title,author\n" + b"A Book,Author\n" * (
+            _BULK_CSV_MAX_FILE_BYTES // len(b"A Book,Author\n") + 1
+        )
+        csv_file = ContentFile(oversized_content, name="big.csv")
+        response = self.client.post(self.url, {"csv_file": csv_file})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "exceeds the")
+        self.assertContains(response, "size limit")
+
+    # --- POST: row count limit ---
+
+    def test_post_csv_row_limit_stops_at_250(self):
+        from items.views import _BULK_CSV_MAX_ROWS
+
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        rows = "\n".join(
+            f"Row {i} Title,,MAGAZINE" for i in range(1, _BULK_CSV_MAX_ROWS + 10)
+        )
+        csv_text = f"title,author,item_type\n{rows}"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Row limit")
+        self.assertEqual(Item.objects.filter(added_by=self.user).count(), _BULK_CSV_MAX_ROWS)
+
+    # --- POST: invalid status / item_type ---
+
+    def test_post_csv_invalid_status_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author,status\nStatus Test Book,Author,NOT_A_STATUS"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 row could not be added")
+        self.assertContains(response, "not a valid status")
+        self.assertFalse(Item.objects.filter(title="Status Test Book").exists())
+
+    def test_post_csv_invalid_item_type_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author,item_type\nType Test Book,Author,NOT_A_TYPE"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 row could not be added")
+        self.assertContains(response, "not a valid type")
+        self.assertFalse(Item.objects.filter(title="Type Test Book").exists())
+
+    # --- GET: limits shown on page ---
+
+    def test_get_shows_limits_info(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        response = self.client.get(self.url)
+        self.assertContains(response, "250")
+        self.assertContains(response, "512")

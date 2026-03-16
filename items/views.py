@@ -543,8 +543,18 @@ def item_move(request, item_id):
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
+# Hard limits for bulk CSV upload to prevent DoS and keep processing manageable.
+_BULK_CSV_MAX_ROWS = 250
+_BULK_CSV_MAX_FILE_BYTES = 512 * 1024  # 512 KB
+_BULK_CSV_MAX_TEXT_CHARS = 512 * 1024  # 512 K characters
+
+
 def _process_bulk_csv(csv_content, user):
     """Parse *csv_content* and bulk-create items owned by *user*.
+
+    Rows are processed one at a time to keep memory usage proportional to a
+    single row rather than the entire file.  Processing stops (with an error
+    entry) if more than ``_BULK_CSV_MAX_ROWS`` data rows are present.
 
     Returns a dict with two keys:
     - ``created``: list of dicts ``{row, title, id}`` for each successful row.
@@ -554,39 +564,94 @@ def _process_bulk_csv(csv_content, user):
 
     try:
         reader = csv.DictReader(io.StringIO(csv_content))
-        rows = list(reader)
+        # Trigger header-row parsing so we can detect an empty file early.
+        fieldnames = reader.fieldnames
     except csv.Error as exc:
         results["errors"].append({"row": "—", "error": f"CSV parse error: {exc}"})
         return results
 
-    if not rows:
-        results["errors"].append({"row": "—", "error": "No data rows found in CSV."})
+    if not fieldnames:
+        results["errors"].append({"row": "—", "error": "No header row found in CSV."})
         return results
 
+    row_count = 0
     # Row index starts at 2 because row 1 is the CSV header consumed by DictReader.
-    for row_index, raw_row in enumerate(rows, start=2):
-        # Strip surrounding whitespace from keys and values so minor formatting
-        # differences in the uploaded file don't cause silent mismatches.
-        row = {k.strip(): (v.strip() if v else "") for k, v in raw_row.items()}
+    for row_index, raw_row in enumerate(reader, start=2):
+        row_count += 1
+
+        if row_count > _BULK_CSV_MAX_ROWS:
+            results["errors"].append(
+                {
+                    "row": "—",
+                    "error": (
+                        f"Row limit of {_BULK_CSV_MAX_ROWS} exceeded;"
+                        " remaining rows were not processed."
+                    ),
+                }
+            )
+            break
+
+        # Strip surrounding whitespace from keys and values.  DictReader emits
+        # a ``None`` key when a row has more fields than the header; skip those
+        # extra columns rather than letting k.strip() raise an AttributeError.
+        row = {
+            k.strip(): (v.strip() if v else "")
+            for k, v in raw_row.items()
+            if k is not None
+        }
+
         try:
             title = row.get("title", "")
             if not title:
                 results["errors"].append({"row": row_index, "error": "title is required."})
                 continue
 
+            # Validate status explicitly so that typos surface as a clear
+            # per-row error instead of silently producing an UNKNOWN record.
             raw_status = row.get("status", "")
-            status = raw_status if raw_status in Item.Status.values else Item.Status.UNKNOWN
+            if raw_status and raw_status not in Item.Status.values:
+                valid = ", ".join(Item.Status.values)
+                results["errors"].append(
+                    {
+                        "row": row_index,
+                        "error": (
+                            f"status: '{raw_status}' is not a valid status."
+                            f" Valid values: {valid}."
+                        ),
+                    }
+                )
+                continue
+            status = raw_status if raw_status else Item.Status.UNKNOWN
 
+            # Validate item_type explicitly for the same reason.
             raw_item_type = row.get("item_type", "")
-            item_type = (
-                raw_item_type if raw_item_type in Item.ItemType.values else Item.ItemType.BOOK
-            )
+            if raw_item_type and raw_item_type not in Item.ItemType.values:
+                valid = ", ".join(Item.ItemType.values)
+                results["errors"].append(
+                    {
+                        "row": row_index,
+                        "error": (
+                            f"item_type: '{raw_item_type}' is not a valid type."
+                            f" Valid values: {valid}."
+                        ),
+                    }
+                )
+                continue
+            item_type = raw_item_type if raw_item_type else Item.ItemType.BOOK
 
             current_station = _resolve_station_reference(
                 row.get("current_book_station"), "current_book_station"
             )
-            last_seen_at = _resolve_station_reference(
-                row.get("last_seen_at"), "last_seen_at"
+            # last_seen_at: use the explicitly provided value when present, or
+            # auto-set it to current_station as a convenience default.  Clearing
+            # current_station below (when status != AT_BOOK_STATION) does not
+            # retroactively clear last_seen_at; that field records where the item
+            # was last seen, which outlasts the item leaving the station.
+            raw_last_seen_at = row.get("last_seen_at", "")
+            last_seen_at = (
+                _resolve_station_reference(raw_last_seen_at, "last_seen_at")
+                if raw_last_seen_at
+                else current_station
             )
 
             # Mirror form / API semantics: a chosen station auto-places the item
@@ -599,10 +664,6 @@ def _process_bulk_csv(csv_content, user):
 
             if status != Item.Status.AT_BOOK_STATION:
                 current_station = None
-
-            # last_seen_at always mirrors current_station after status resolution:
-            # the station when placed there, None otherwise.
-            last_seen_at = current_station
 
             item = Item(
                 title=title,
@@ -626,39 +687,95 @@ def _process_bulk_csv(csv_content, user):
             )
             results["errors"].append({"row": row_index, "error": error_msg})
 
+    if row_count == 0:
+        results["errors"].append({"row": "—", "error": "No data rows found in CSV."})
+
     return results
 
 
 @login_required(login_url="users:login")
 def item_bulk_add(request):
     if request.method == "GET":
-        return render(request, "items/item_bulk_add.html", {})
+        return render(
+            request,
+            "items/item_bulk_add.html",
+            {
+                "max_rows": _BULK_CSV_MAX_ROWS,
+                "max_file_kb": _BULK_CSV_MAX_FILE_BYTES // 1024,
+            },
+        )
 
     if request.method == "POST":
         csv_text = request.POST.get("csv_text", "").strip()
         csv_file = request.FILES.get("csv_file")
 
+        ctx_limits = {
+            "max_rows": _BULK_CSV_MAX_ROWS,
+            "max_file_kb": _BULK_CSV_MAX_FILE_BYTES // 1024,
+        }
+
+        if csv_text and csv_file:
+            return render(
+                request,
+                "items/item_bulk_add.html",
+                {
+                    **ctx_limits,
+                    "form_error": (
+                        "Please use only one input: either paste CSV text or upload a file."
+                    ),
+                },
+            )
+
         if not csv_text and not csv_file:
             return render(
                 request,
                 "items/item_bulk_add.html",
-                {"form_error": "Please provide either CSV text or a CSV file."},
+                {**ctx_limits, "form_error": "Please provide either CSV text or a CSV file."},
             )
 
         if csv_file:
+            if csv_file.size > _BULK_CSV_MAX_FILE_BYTES:
+                return render(
+                    request,
+                    "items/item_bulk_add.html",
+                    {
+                        **ctx_limits,
+                        "form_error": (
+                            f"The uploaded file exceeds the {_BULK_CSV_MAX_FILE_BYTES // 1024} KB size limit."
+                        ),
+                    },
+                )
             try:
                 csv_content = csv_file.read().decode("utf-8")
             except UnicodeDecodeError:
                 return render(
                     request,
                     "items/item_bulk_add.html",
-                    {"form_error": "Could not decode the uploaded file. Please use UTF-8 encoding."},
+                    {
+                        **ctx_limits,
+                        "form_error": (
+                            "Could not decode the uploaded file. Please use UTF-8 encoding."
+                        ),
+                    },
                 )
         else:
+            if len(csv_text) > _BULK_CSV_MAX_TEXT_CHARS:
+                return render(
+                    request,
+                    "items/item_bulk_add.html",
+                    {
+                        **ctx_limits,
+                        "form_error": (
+                            f"The pasted CSV text exceeds the {_BULK_CSV_MAX_TEXT_CHARS // 1024} K character limit."
+                        ),
+                    },
+                )
             csv_content = csv_text
 
         results = _process_bulk_csv(csv_content, request.user)
-        return render(request, "items/item_bulk_add.html", {"results": results})
+        return render(
+            request, "items/item_bulk_add.html", {**ctx_limits, "results": results}
+        )
 
     return HttpResponseNotAllowed(["GET", "POST"])
 
