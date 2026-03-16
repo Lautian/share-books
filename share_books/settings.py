@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+from django_recaptcha.constants import TEST_PUBLIC_KEY as _RECAPTCHA_TEST_PUBLIC_KEY
+from django_recaptcha.constants import TEST_PRIVATE_KEY as _RECAPTCHA_TEST_PRIVATE_KEY
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +31,29 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# GitHub Codespaces support
+# When CODESPACE_NAME is set (automatically by Codespaces), requests arrive through
+# a reverse proxy that rewrites the host/scheme.  Enable the proxy-header settings
+# so request.build_absolute_uri() returns the correct public URL
+# (e.g. https://<id>-8000.app.github.dev) rather than http://localhost:8000.
+_codespace_name = os.environ.get('CODESPACE_NAME')
+if _codespace_name:
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    ALLOWED_HOSTS = ['.app.github.dev', 'localhost', '127.0.0.1', '[::1]']
+    # Trust both the public Codespaces URL and localhost (the internal address the
+    # Codespaces proxy forwards to).  Once CSRF_TRUSTED_ORIGINS is set Django
+    # enforces strict origin checking on every POST, so both origins must be listed
+    # or the logout form (whose Origin header the browser reports as the internal
+    # http://localhost:8000 address) will fail with an origin-mismatch error.
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.app.github.dev',
+        'http://localhost',
+        'http://localhost:8000',
+        'http://127.0.0.1',
+        'http://127.0.0.1:8000',
+    ]
+
 
 # Application definition
 
@@ -37,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_recaptcha',
     'core',
     'book_stations',
     'items',
@@ -122,3 +150,30 @@ USE_TZ = True
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Email settings
+# In production set EMAIL_BACKEND and related vars via environment variables.
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    'noreply@sharebooks.example.com',
+)
+
+# Google reCAPTCHA v2 keys
+# Default to Google's public test keys for local development.
+# In production, set RECAPTCHA_PUBLIC_KEY and RECAPTCHA_PRIVATE_KEY via environment variables.
+RECAPTCHA_PUBLIC_KEY = os.environ.get('RECAPTCHA_PUBLIC_KEY', _RECAPTCHA_TEST_PUBLIC_KEY)
+RECAPTCHA_PRIVATE_KEY = os.environ.get('RECAPTCHA_PRIVATE_KEY', _RECAPTCHA_TEST_PRIVATE_KEY)
+
+# Only suppress the test-key system check when DEBUG is True and the test keys are actually
+# in use.  In production (DEBUG=False) or with real keys, the check runs normally.
+_using_recaptcha_test_keys = (
+    RECAPTCHA_PUBLIC_KEY == _RECAPTCHA_TEST_PUBLIC_KEY
+    or RECAPTCHA_PRIVATE_KEY == _RECAPTCHA_TEST_PRIVATE_KEY
+)
+SILENCED_SYSTEM_CHECKS = (
+    ['django_recaptcha.recaptcha_test_key_error'] if DEBUG and _using_recaptcha_test_keys else []
+)

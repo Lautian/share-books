@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+
+{% block title %}Email verified{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body text-center space-y-4">
+            <div class="text-5xl">✅</div>
+            <h1 class="card-title text-3xl justify-center">Email verified!</h1>
+            <p class="text-base-content/75">
+                Your account is now active. You are now logged in.
+            </p>
+            <div class="card-actions justify-center mt-2">
+                <a href="{% url 'users:profile' %}" class="btn btn-primary">Go to your profile</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

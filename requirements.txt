@@ -1,6 +1,7 @@
 asgiref==3.11.1
 Django==6.0.3
 django-debug-toolbar==6.2.0
+django-recaptcha==4.1.0
 openlocationcode==1.0.1
 packaging==26.0
 Pillow==12.1.1
