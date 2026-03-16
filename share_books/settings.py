@@ -31,6 +31,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# GitHub Codespaces support
+# When CODESPACE_NAME is set (automatically by Codespaces), requests arrive through
+# a reverse proxy that rewrites the host/scheme.  Enable the proxy-header settings
+# so request.build_absolute_uri() returns the correct public URL
+# (e.g. https://<id>-8000.app.github.dev) rather than http://localhost:8000.
+_codespace_name = os.environ.get('CODESPACE_NAME')
+if _codespace_name:
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    ALLOWED_HOSTS = ['.app.github.dev', 'localhost', '127.0.0.1', '[::1]']
+    CSRF_TRUSTED_ORIGINS = ['https://*.app.github.dev']
+
 
 # Application definition
 
