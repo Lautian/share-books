@@ -1,0 +1,33 @@
+{% extends "core/base.html" %}
+
+{% block title %}Check your email{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-xl">
+    <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
+        <div class="card-body text-center space-y-4">
+            {% if email_sent %}
+                <div class="text-5xl">📬</div>
+                <h1 class="card-title text-3xl justify-center">Check your email</h1>
+                <p class="text-base-content/75">
+                    We sent a verification link to <strong>{{ email }}</strong>.
+                </p>
+                <p class="text-base-content/75 text-sm">
+                    Click the link in the email to activate your account. The link expires after 3 days.
+                </p>
+            {% else %}
+                <div class="text-5xl">⚠️</div>
+                <h1 class="card-title text-3xl justify-center">Account created</h1>
+                <p class="text-base-content/75">
+                    Your account was created but we were unable to send a verification email to
+                    <strong>{{ email }}</strong>. Please contact support.
+                </p>
+            {% endif %}
+            <p class="text-base-content/75 text-sm">
+                Already have an account?
+                <a href="{% url 'users:login' %}" class="link link-primary">Log in</a>
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
