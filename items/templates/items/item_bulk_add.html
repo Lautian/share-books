@@ -1,0 +1,189 @@
+{% extends "core/base.html" %}
+
+{% block title %}Bulk Add Items{% endblock %}
+
+{% block extra_head %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const csvTextarea = document.getElementById("id_csv_text");
+        const csvFileInput = document.getElementById("id_csv_file");
+        const fileNameDisplay = document.getElementById("file-name-display");
+
+        if (!csvTextarea || !csvFileInput) {
+            return;
+        }
+
+        csvTextarea.addEventListener("input", function () {
+            if (csvTextarea.value.trim()) {
+                csvFileInput.value = "";
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = "No file chosen";
+                }
+            }
+        });
+
+        csvFileInput.addEventListener("change", function () {
+            if (csvFileInput.files.length > 0) {
+                csvTextarea.value = "";
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = csvFileInput.files[0].name;
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl">
+    <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
+        <header class="border-b border-base-300/70 pb-4">
+            <p class="text-sm uppercase tracking-[0.18em] text-success">Contribute</p>
+            <h1 class="mt-2 text-4xl font-bold leading-tight">Bulk Add Items</h1>
+            <p class="mt-3 text-base-content/80">
+                Upload multiple items at once using a CSV file or by pasting CSV text.
+                The first row must be a header row with column names.
+            </p>
+            <p class="mt-2 text-base-content/80">
+                <strong>Required column:</strong> <code class="text-sm bg-base-200 px-1 rounded">title</code>.
+                <strong>Required when item type is Book:</strong> <code class="text-sm bg-base-200 px-1 rounded">author</code>.
+            </p>
+            <p class="mt-2 text-sm text-base-content/60">
+                Optional columns:
+                <code class="bg-base-200 px-1 rounded">author</code>,
+                <code class="bg-base-200 px-1 rounded">item_type</code>,
+                <code class="bg-base-200 px-1 rounded">status</code>,
+                <code class="bg-base-200 px-1 rounded">current_book_station</code>,
+                <code class="bg-base-200 px-1 rounded">last_seen_at</code>,
+                <code class="bg-base-200 px-1 rounded">thumbnail_url</code>,
+                <code class="bg-base-200 px-1 rounded">description</code>,
+                <code class="bg-base-200 px-1 rounded">last_activity</code>.
+                Omitted optional columns are treated as blank.
+            </p>
+            <p class="mt-2 text-sm text-base-content/60">
+                Stations can be referenced by their numeric ID or readable ID.
+                Dates should be in <code class="bg-base-200 px-1 rounded">YYYY-MM-DD</code> format.
+            </p>
+        </header>
+
+        {% if form_error %}
+            <div class="alert alert-error mt-4">{{ form_error }}</div>
+        {% endif %}
+
+        <form class="mt-6 space-y-6" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="space-y-2">
+                <label class="label-text font-semibold block" for="id_csv_text">
+                    Option 1 — Paste CSV text
+                </label>
+                <p class="text-sm text-base-content/60">
+                    Paste your CSV directly below. Typing here will clear any selected file.
+                </p>
+                <textarea
+                    id="id_csv_text"
+                    name="csv_text"
+                    rows="10"
+                    placeholder="title,author,item_type&#10;The Great Gatsby,F. Scott Fitzgerald,BOOK&#10;National Geographic April 2024,,MAGAZINE"
+                    class="textarea textarea-bordered w-full font-mono text-sm"
+                ></textarea>
+            </div>
+
+            <div class="divider">OR</div>
+
+            <div class="space-y-2">
+                <label class="label-text font-semibold block" for="id_csv_file">
+                    Option 2 — Upload a CSV file
+                </label>
+                <p class="text-sm text-base-content/60">
+                    Choose a <code>.csv</code> file from your device. Selecting a file will clear the pasted text.
+                </p>
+                <div class="flex items-center gap-3">
+                    <label
+                        for="id_csv_file"
+                        class="btn btn-outline btn-sm cursor-pointer"
+                    >Choose file</label>
+                    <span id="file-name-display" class="text-sm text-base-content/60">No file chosen</span>
+                </div>
+                <input
+                    id="id_csv_file"
+                    name="csv_file"
+                    type="file"
+                    accept=".csv,text/csv"
+                    class="hidden"
+                >
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2">
+                <button class="btn btn-primary" type="submit">Bulk add</button>
+                <a class="btn btn-outline" href="{% url 'items:item-create' %}">Add single item</a>
+                <a class="btn btn-ghost" href="{% url 'items:item-list' %}">Cancel</a>
+            </div>
+        </form>
+
+        {% if results %}
+            <div class="mt-8 space-y-4">
+                <h2 class="text-xl font-bold">Results</h2>
+
+                {% if results.created %}
+                    <div class="alert alert-success">
+                        <span>{{ results.created|length }} item{{ results.created|length|pluralize }} added successfully.</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th>Row</th>
+                                    <th>Title</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in results.created %}
+                                    <tr>
+                                        <td class="text-base-content/60">{{ entry.row }}</td>
+                                        <td>{{ entry.title }}</td>
+                                        <td>
+                                            <a href="{% url 'items:item-detail' entry.id %}" class="link link-primary text-sm">View</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+
+                {% if results.errors %}
+                    <div class="alert alert-warning">
+                        <span>{{ results.errors|length }} row{{ results.errors|length|pluralize }} could not be added.</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm w-full">
+                            <thead>
+                                <tr>
+                                    <th>Row</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in results.errors %}
+                                    <tr>
+                                        <td class="text-base-content/60">{{ entry.row }}</td>
+                                        <td class="text-error">{{ entry.error }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+
+                {% if not results.created and not results.errors %}
+                    <div class="alert alert-info">
+                        <span>No rows were processed. Please check that your CSV has a header row and at least one data row.</span>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

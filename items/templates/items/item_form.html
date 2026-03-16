@@ -166,6 +166,16 @@
                 {% endif %}
             </div>
         </form>
+
+        {% if not is_edit %}
+        <div class="mt-6 border-t border-base-300/70 pt-6">
+            <h2 class="text-lg font-semibold">Bulk add</h2>
+            <p class="mt-1 text-sm text-base-content/60">
+                Need to add multiple items at once? Use the bulk add tool to upload a CSV file or paste CSV text.
+            </p>
+            <a class="btn btn-outline btn-sm mt-3" href="{% url 'items:item-bulk-add' %}">Bulk add items</a>
+        </div>
+        {% endif %}
     </article>
 </section>
 {% endblock %}

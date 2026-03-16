@@ -2,6 +2,7 @@ from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
@@ -1074,3 +1075,121 @@ class ItemMoveViewTests(TestCase):
         response = self.client.get(url + "?action=take_out")
 
         self.assertEqual(response.status_code, 404)
+
+
+class ItemBulkAddViewTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="bulk-add-user",
+            password="StrongPass123",
+        )
+        self.station = BookStation.objects.create(
+            name="Bulk Station",
+            readable_id="bulk-station",
+            location="Bulk Road",
+            added_by=self.user,
+        )
+        self.url = reverse("items:item-bulk-add")
+
+    # --- GET ---
+
+    def test_get_requires_login(self):
+        response = self.client.get(self.url)
+        self.assertRedirects(response, f"/users/login/?next={self.url}")
+
+    def test_get_renders_bulk_add_page(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bulk Add Items")
+
+    # --- POST: validation ---
+
+    def test_post_requires_login(self):
+        response = self.client.post(self.url, {"csv_text": "title\nA Book"})
+        self.assertRedirects(response, f"/users/login/?next={self.url}")
+
+    def test_post_without_input_shows_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please provide either CSV text or a CSV file")
+
+    # --- POST: CSV text ---
+
+    def test_post_csv_text_creates_items(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author,item_type\nMoby Dick,Herman Melville,BOOK\nNature Mag,,MAGAZINE"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "2 items added successfully")
+        self.assertTrue(Item.objects.filter(title="Moby Dick").exists())
+        self.assertTrue(Item.objects.filter(title="Nature Mag").exists())
+
+    def test_post_csv_text_items_owned_by_logged_in_user(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author\nOwnership Test,Someone"
+        self.client.post(self.url, {"csv_text": csv_text})
+        item = Item.objects.get(title="Ownership Test")
+        self.assertEqual(item.added_by.username, "bulk-add-user")
+
+    def test_post_csv_missing_title_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author\n,No Title Author"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "title is required")
+        self.assertFalse(Item.objects.filter(author="No Title Author").exists())
+
+    def test_post_csv_book_missing_author_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,item_type\nNo Author Book,BOOK"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 row could not be added")
+        self.assertFalse(Item.objects.filter(title="No Author Book").exists())
+
+    def test_post_csv_partial_success_reports_both(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author,item_type\nGood Book,Author A,BOOK\n,Missing Title,BOOK"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 item added successfully")
+        self.assertContains(response, "1 row could not be added")
+
+    def test_post_csv_with_station_places_item_at_station(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = f"title,author,current_book_station\nStation Book,Author B,{self.station.readable_id}"
+        self.client.post(self.url, {"csv_text": csv_text})
+        item = Item.objects.get(title="Station Book")
+        self.assertEqual(item.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(item.current_book_station, self.station)
+
+    def test_post_csv_invalid_station_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author,current_book_station\nBad Station Book,Author C,nonexistent-station"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 row could not be added")
+        self.assertFalse(Item.objects.filter(title="Bad Station Book").exists())
+
+    def test_post_csv_empty_rows_reports_error(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_text = "title,author"
+        response = self.client.post(self.url, {"csv_text": csv_text})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No data rows found in CSV")
+
+    def test_post_csv_file_upload_creates_items(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        csv_content = b"title,author\nFile Upload Book,File Author"
+        csv_file = ContentFile(csv_content, name="items.csv")
+        response = self.client.post(self.url, {"csv_file": csv_file})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "1 item added successfully")
+        self.assertTrue(Item.objects.filter(title="File Upload Book").exists())
+
+    def test_post_csv_link_on_add_item_page(self):
+        self.client.login(username="bulk-add-user", password="StrongPass123")
+        response = self.client.get(reverse("items:item-create"))
+        self.assertContains(response, reverse("items:item-bulk-add"))

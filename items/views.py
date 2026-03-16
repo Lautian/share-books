@@ -1,4 +1,5 @@
 import base64
+import csv
 import io
 import json
 
@@ -538,6 +539,126 @@ def item_move(request, item_id):
             item.save(reported_by=request.user)
 
         return redirect("items:item-detail", item_id=item_id)
+
+    return HttpResponseNotAllowed(["GET", "POST"])
+
+
+def _process_bulk_csv(csv_content, user):
+    """Parse *csv_content* and bulk-create items owned by *user*.
+
+    Returns a dict with two keys:
+    - ``created``: list of dicts ``{row, title, id}`` for each successful row.
+    - ``errors``: list of dicts ``{row, error}`` for each failed row.
+    """
+    results = {"created": [], "errors": []}
+
+    try:
+        reader = csv.DictReader(io.StringIO(csv_content))
+        rows = list(reader)
+    except csv.Error as exc:
+        results["errors"].append({"row": "—", "error": f"CSV parse error: {exc}"})
+        return results
+
+    if not rows:
+        results["errors"].append({"row": "—", "error": "No data rows found in CSV."})
+        return results
+
+    # Row index starts at 2 because row 1 is the CSV header consumed by DictReader.
+    for row_index, raw_row in enumerate(rows, start=2):
+        # Strip surrounding whitespace from keys and values so minor formatting
+        # differences in the uploaded file don't cause silent mismatches.
+        row = {k.strip(): (v.strip() if v else "") for k, v in raw_row.items()}
+        try:
+            title = row.get("title", "")
+            if not title:
+                results["errors"].append({"row": row_index, "error": "title is required."})
+                continue
+
+            raw_status = row.get("status", "")
+            status = raw_status if raw_status in Item.Status.values else Item.Status.UNKNOWN
+
+            raw_item_type = row.get("item_type", "")
+            item_type = (
+                raw_item_type if raw_item_type in Item.ItemType.values else Item.ItemType.BOOK
+            )
+
+            current_station = _resolve_station_reference(
+                row.get("current_book_station"), "current_book_station"
+            )
+            last_seen_at = _resolve_station_reference(
+                row.get("last_seen_at"), "last_seen_at"
+            )
+
+            # Mirror form / API semantics: a chosen station auto-places the item
+            # unless status was explicitly set to something other than AT_BOOK_STATION.
+            status_was_explicitly_set = bool(raw_status)
+            if current_station is not None and not (
+                status_was_explicitly_set and status != Item.Status.AT_BOOK_STATION
+            ):
+                status = Item.Status.AT_BOOK_STATION
+
+            if status != Item.Status.AT_BOOK_STATION:
+                current_station = None
+
+            # last_seen_at always mirrors current_station after status resolution:
+            # the station when placed there, None otherwise.
+            last_seen_at = current_station
+
+            item = Item(
+                title=title,
+                author=row.get("author", ""),
+                thumbnail_url=row.get("thumbnail_url", ""),
+                description=row.get("description", ""),
+                item_type=item_type,
+                status=status,
+                current_book_station=current_station,
+                last_seen_at=last_seen_at,
+                last_activity=_parse_last_activity(row.get("last_activity")),
+                added_by=user,
+            )
+            item.full_clean()
+            item.save(reported_by=user)
+            results["created"].append({"row": row_index, "title": title, "id": item.id})
+        except ValidationError as exc:
+            error_dict = getattr(exc, "message_dict", {"__all__": exc.messages})
+            error_msg = "; ".join(
+                f"{field}: {', '.join(msgs)}" for field, msgs in error_dict.items()
+            )
+            results["errors"].append({"row": row_index, "error": error_msg})
+
+    return results
+
+
+@login_required(login_url="users:login")
+def item_bulk_add(request):
+    if request.method == "GET":
+        return render(request, "items/item_bulk_add.html", {})
+
+    if request.method == "POST":
+        csv_text = request.POST.get("csv_text", "").strip()
+        csv_file = request.FILES.get("csv_file")
+
+        if not csv_text and not csv_file:
+            return render(
+                request,
+                "items/item_bulk_add.html",
+                {"form_error": "Please provide either CSV text or a CSV file."},
+            )
+
+        if csv_file:
+            try:
+                csv_content = csv_file.read().decode("utf-8")
+            except UnicodeDecodeError:
+                return render(
+                    request,
+                    "items/item_bulk_add.html",
+                    {"form_error": "Could not decode the uploaded file. Please use UTF-8 encoding."},
+                )
+        else:
+            csv_content = csv_text
+
+        results = _process_bulk_csv(csv_content, request.user)
+        return render(request, "items/item_bulk_add.html", {"results": results})
 
     return HttpResponseNotAllowed(["GET", "POST"])
 
