@@ -54,6 +54,29 @@ class Item(models.Model):
         related_name="added_items",
     )
 
+    class ModerationStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending moderation"
+        APPROVED = "APPROVED", "Approved"
+
+    moderation_status = models.CharField(
+        max_length=16,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.APPROVED,
+    )
+    claimed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claimed_items",
+    )
+    pending_edit = models.JSONField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Serialised pending edit fields submitted by the owner. None means no edit is awaiting moderation.",
+    )
+
     class Meta:
         db_table = "book_stations_item"
         ordering = ["title", "id"]

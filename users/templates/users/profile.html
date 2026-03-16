@@ -32,9 +32,14 @@
                     <ul class="space-y-2 text-sm">
                         {% for station in added_stations %}
                             <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
-                                <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
-                                    {{ station.name }}
-                                </a>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+                                        {{ station.name }}
+                                    </a>
+                                    {% if station.moderation_status == "PENDING" %}
+                                        <span class="badge badge-warning badge-sm">Awaiting moderation</span>
+                                    {% endif %}
+                                </div>
                                 <p class="text-base-content/70">{{ station.location }}</p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <a class="btn btn-xs btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
@@ -64,9 +69,14 @@
                     <ul class="space-y-2 text-sm">
                         {% for item in added_items %}
                             <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
-                                <a class="font-semibold link-hover" href="{% url 'items:item-detail' item.id %}">
-                                    {{ item.title }}
-                                </a>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <a class="font-semibold link-hover" href="{% url 'items:item-detail' item.id %}">
+                                        {{ item.title }}
+                                    </a>
+                                    {% if item.moderation_status == "PENDING" %}
+                                        <span class="badge badge-warning badge-sm">Awaiting moderation</span>
+                                    {% endif %}
+                                </div>
                                 <p class="text-base-content/70">
                                     {{ item.get_item_type_display }}
                                     {% if item.author %}by {{ item.author }}{% endif %}

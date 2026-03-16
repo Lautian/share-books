@@ -6,6 +6,7 @@ import json
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,6 +14,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
+from moderation.utils import is_moderator
 from movements.models import Movement
 
 from .forms import ItemCreateForm
@@ -227,6 +229,10 @@ def item_list(request):
         return HttpResponseNotAllowed(["GET"])
 
     items = Item.objects.select_related("current_book_station", "last_seen_at").all()
+
+    if not is_moderator(request.user):
+        items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+
     selected_status = request.GET.get("status", "")
     selected_type = request.GET.get("item_type", "")
     selected_station = request.GET.get("station", "")
@@ -268,10 +274,18 @@ def item_detail_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at"),
-        pk=item_id,
-    )
+    if is_moderator(request.user):
+        qs = Item.objects.select_related("current_book_station", "last_seen_at")
+    elif request.user.is_authenticated:
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(added_by=request.user)
+        )
+    else:
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            moderation_status=Item.ModerationStatus.APPROVED
+        )
+    item = get_object_or_404(qs, pk=item_id)
     recent_movements = (
         item.movements.select_related(
             "from_book_station",
@@ -294,10 +308,22 @@ def item_history_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at"),
-        pk=item_id,
-    )
+    if is_moderator(request.user):
+        item = get_object_or_404(
+            Item.objects.select_related("current_book_station", "last_seen_at"),
+            pk=item_id,
+        )
+    else:
+        from django.db.models import Q as _Q
+        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+            _Q(moderation_status=Item.ModerationStatus.APPROVED)
+        )
+        if request.user.is_authenticated:
+            qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
+                _Q(moderation_status=Item.ModerationStatus.APPROVED)
+                | _Q(added_by=request.user)
+            )
+        item = get_object_or_404(qs, pk=item_id)
     movements = list(
         Movement.objects.select_related(
             "from_book_station",
@@ -326,6 +352,8 @@ def item_list_create(request):
         items = Item.objects.select_related(
             "current_book_station", "last_seen_at", "added_by"
         ).all()
+        if not is_moderator(request.user):
+            items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
         status = request.GET.get("status")
         item_type = request.GET.get("item_type")
         station_reference = request.GET.get("station")
@@ -391,6 +419,7 @@ def item_list_create(request):
                 last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
+                moderation_status=Item.ModerationStatus.PENDING,
             )
 
             item.full_clean()
@@ -408,10 +437,10 @@ def item_detail_api(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    item = get_object_or_404(
-        Item.objects.select_related("current_book_station", "last_seen_at", "added_by"),
-        pk=item_id,
-    )
+    qs = Item.objects.select_related("current_book_station", "last_seen_at", "added_by")
+    if not is_moderator(request.user):
+        qs = qs.filter(moderation_status=Item.ModerationStatus.APPROVED)
+    item = get_object_or_404(qs, pk=item_id)
     return JsonResponse(_serialize_item(item))
 
 
@@ -422,6 +451,7 @@ def item_create(request):
         if form.is_valid():
             item = form.save(commit=False)
             item.added_by = request.user
+            item.moderation_status = Item.ModerationStatus.PENDING
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -434,13 +464,39 @@ def item_create(request):
 def item_edit(request, item_id):
     item = get_object_or_404(Item, pk=item_id, added_by=request.user)
 
+    # Block further edits while any edit (or new submission) is awaiting moderation.
+    if item.moderation_status == Item.ModerationStatus.PENDING or item.pending_edit is not None:
+        return render(
+            request,
+            "items/item_form.html",
+            {
+                "is_edit": True,
+                "item": item,
+                "edit_blocked": True,
+            },
+        )
+
+    # Item is APPROVED with no pending edit — store the edit as a pending diff so
+    # the original live data stays publicly visible while moderation is in progress.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
-            updated_item = form.save(commit=False)
-            updated_item.save(reported_by=request.user)
-            form.save_m2m()
-            return redirect("items:item-detail", item_id=updated_item.id)
+            updated = form.save(commit=False)
+            pending_data = {
+                "title": updated.title,
+                "author": updated.author,
+                "thumbnail_url": updated.thumbnail_url,
+                "description": updated.description,
+                "item_type": updated.item_type,
+                "status": updated.status,
+                "current_book_station_id": updated.current_book_station_id,
+                "last_seen_at_id": updated.last_seen_at_id,
+                "last_activity": updated.last_activity.isoformat() if updated.last_activity else None,
+            }
+            item.pending_edit = pending_data
+            item.claimed_by = None
+            item.save(update_fields=["pending_edit", "claimed_by"], create_movement=False)
+            return redirect("items:item-detail", item_id=item.id)
     else:
         form = ItemCreateForm(instance=item)
 

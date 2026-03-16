@@ -6,12 +6,14 @@ from decimal import Decimal, InvalidOperation
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
+from moderation.utils import is_moderator
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
@@ -46,6 +48,9 @@ def bookstation_list(request):
 		)
 	)
 
+	if not is_moderator(request.user):
+		stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+
 	sort_field_map = {
 		"name": ["name"],
 		"location": ["location", "name"],
@@ -79,11 +84,22 @@ def bookstation_detail_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	if is_moderator(request.user):
+		station = get_object_or_404(BookStation, readable_id=readable_id)
+	else:
+		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		if request.user.is_authenticated:
+			qs = BookStation.objects.filter(
+				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(added_by=request.user)
+			)
+		station = get_object_or_404(qs, readable_id=readable_id)
 	items = Item.objects.filter(
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	).order_by("title", "id")
+	if not is_moderator(request.user):
+		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
 	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 	return render(
@@ -152,6 +168,8 @@ def plus_code_decode_api(request):
 def bookstation_list_create(request):
 	if request.method == "GET":
 		stations = BookStation.objects.select_related("added_by").all()
+		if not is_moderator(request.user):
+			stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
@@ -175,6 +193,7 @@ def bookstation_list_create(request):
 			longitude=_to_decimal(payload.get("longitude")),
 			location=payload.get("location", ""),
 			added_by=request.user,
+			moderation_status=BookStation.ModerationStatus.PENDING,
 		)
 
 		try:
@@ -192,10 +211,10 @@ def bookstation_detail_api(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(
-		BookStation.objects.select_related("added_by"),
-		readable_id=readable_id,
-	)
+	qs = BookStation.objects.select_related("added_by")
+	if not is_moderator(request.user):
+		qs = qs.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+	station = get_object_or_404(qs, readable_id=readable_id)
 	return JsonResponse(_serialize_bookstation(station))
 
 
@@ -203,7 +222,17 @@ def bookstation_inventory_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	if is_moderator(request.user):
+		station = get_object_or_404(BookStation, readable_id=readable_id)
+	else:
+		import django.db.models as _m
+		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		if request.user.is_authenticated:
+			qs = BookStation.objects.filter(
+				_m.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| _m.Q(added_by=request.user)
+			)
+		station = get_object_or_404(qs, readable_id=readable_id)
 	sort_by = request.GET.get("sort_by", "title")
 	sort_dir = request.GET.get("sort_dir")
 	if sort_dir is None:
@@ -236,6 +265,10 @@ def bookstation_inventory_page(request, readable_id):
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	)
+
+	if not is_moderator(request.user):
+		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+
 	sort_field_map = {
 		"title": ["title", "id"],
 		"author": ["author", "title", "id"],
@@ -275,6 +308,7 @@ def bookstation_create(request):
 		if form.is_valid():
 			station = form.save(commit=False)
 			station.added_by = request.user
+			station.moderation_status = BookStation.ModerationStatus.PENDING
 			station.save()
 			return redirect(
 				"book_stations:bookstation-detail",
@@ -294,13 +328,39 @@ def bookstation_edit(request, readable_id):
 		added_by=request.user,
 	)
 
+	# Block further edits while any edit (or new submission) is awaiting moderation.
+	if station.moderation_status == BookStation.ModerationStatus.PENDING or station.pending_edit is not None:
+		return render(
+			request,
+			"book_stations/bookstation_form.html",
+			{
+				"is_edit": True,
+				"station": station,
+				"edit_blocked": True,
+			},
+		)
+
+	# Station is APPROVED with no pending edit — the edit is stored as a pending diff
+	# so the original live data stays publicly visible while moderation is in progress.
 	if request.method == "POST":
 		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
 		if form.is_valid():
-			updated_station = form.save()
+			# Build the pending snapshot from the validated form data.
+			updated = form.save(commit=False)
+			pending_data = {
+				"name": updated.name,
+				"location": updated.location,
+				"description": updated.description,
+				"latitude": str(updated.latitude) if updated.latitude is not None else None,
+				"longitude": str(updated.longitude) if updated.longitude is not None else None,
+				"picture": updated.picture,
+			}
+			station.pending_edit = pending_data
+			station.claimed_by = None
+			station.save(update_fields=["pending_edit", "claimed_by"])
 			return redirect(
 				"book_stations:bookstation-detail",
-				readable_id=updated_station.readable_id,
+				readable_id=station.readable_id,
 			)
 	else:
 		form = BookStationCreateForm(instance=station)

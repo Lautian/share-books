@@ -73,6 +73,9 @@
                         <li><a href="{% url 'users:profile' %}">Profile</a></li>
                         <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                         <li><a href="{% url 'items:item-create' %}">Add item</a></li>
+                        {% if user.is_staff or user.is_superuser %}
+                            <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
+                        {% endif %}
                         <li>
                             <form method="post" action="{% url 'users:logout' %}">
                                 {% csrf_token %}
@@ -97,6 +100,9 @@
                     <li><a href="{% url 'users:profile' %}">Profile</a></li>
                     <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                     <li><a href="{% url 'items:item-create' %}">Add item</a></li>
+                    {% if user.is_staff or user.is_superuser %}
+                        <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
+                    {% endif %}
                     <li>
                         <form method="post" action="{% url 'users:logout' %}">
                             {% csrf_token %}
