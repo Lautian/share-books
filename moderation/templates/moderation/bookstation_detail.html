@@ -75,12 +75,12 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-success">Approve</button>
                 </form>
-                {% if station.claimed_by %}
+                {% if station.claimed_by == request.user %}
                     <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline btn-warning">Unclaim</button>
                     </form>
-                {% else %}
+                {% elif not station.claimed_by %}
                     <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline">Claim</button>

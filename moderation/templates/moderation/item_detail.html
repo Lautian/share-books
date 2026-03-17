@@ -85,12 +85,12 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-success">Approve</button>
                 </form>
-                {% if item.claimed_by %}
+                {% if item.claimed_by == request.user %}
                     <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline btn-warning">Unclaim</button>
                     </form>
-                {% else %}
+                {% elif not item.claimed_by %}
                     <form method="post" action="{% url 'moderation:claim-item' item.id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline">Claim</button>

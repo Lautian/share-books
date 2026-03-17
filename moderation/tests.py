@@ -983,6 +983,24 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
         self.pending_station.refresh_from_db()
         self.assertEqual(self.pending_station.claimed_by, self.moderator)
 
+    def test_different_moderator_cannot_unclaim_another_moderators_station(self):
+        User = self.pending_station.added_by.__class__
+        second_moderator = User.objects.create_user(
+            username="mod2", password=self.password, is_staff=True
+        )
+        self.client.login(username="mod2", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.pending_station.refresh_from_db()
+        self.assertEqual(self.pending_station.claimed_by, self.moderator)
+
     def test_queue_shows_unclaim_button_for_claimed_station(self):
         self.client.login(username="moderator", password=self.password)
 

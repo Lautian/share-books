@@ -293,7 +293,7 @@ def unclaim_bookstation(request, readable_id):
         BookStation,
         readable_id=readable_id,
         moderation_status=BookStation.ModerationStatus.PENDING,
-        claimed_by__isnull=False,
+        claimed_by=request.user,
     )
     station.claimed_by = None
     station.save(update_fields=["claimed_by"])
@@ -310,7 +310,7 @@ def unclaim_item(request, item_id):
         Item,
         pk=item_id,
         moderation_status=Item.ModerationStatus.PENDING,
-        claimed_by__isnull=False,
+        claimed_by=request.user,
     )
     item.claimed_by = None
     item.save(update_fields=["claimed_by"])

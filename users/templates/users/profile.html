@@ -99,12 +99,12 @@
         </article>
     </div>
 
-    {% if claimed_stations is not None or claimed_items is not None %}
+    {% if total_claims is not None %}
     <div class="card border border-warning/40 bg-base-100/75 shadow-xl">
         <div class="card-body">
             <div class="flex items-center gap-3">
                 <h2 class="card-title text-2xl">Your moderation claims</h2>
-                <span class="badge badge-warning">{{ claimed_stations|length|add:claimed_items|length }}</span>
+                <span class="badge badge-warning">{{ total_claims }}</span>
             </div>
             <p class="text-sm text-base-content/70">Items and stations you have claimed for moderation review.</p>
 
