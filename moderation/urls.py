@@ -47,6 +47,11 @@ urlpatterns = [
         name="reject-reported-bookstation",
     ),
     path("items/<int:item_id>/", views.moderate_pending_item, name="moderate-item"),
+    path(
+        "stations/<slug:readable_id>/claim-reported/",
+        views.claim_reported_bookstation,
+        name="claim-reported-bookstation",
+    ),
     path("items/<int:item_id>/claim/", views.claim_item, name="claim-item"),
     path("items/<int:item_id>/unclaim/", views.unclaim_item, name="unclaim-item"),
     path("items/<int:item_id>/approve/", views.approve_item, name="approve-item"),
@@ -69,5 +74,10 @@ urlpatterns = [
         "items/<int:item_id>/reject-reported/",
         views.reject_reported_item,
         name="reject-reported-item",
+    ),
+    path(
+        "items/<int:item_id>/claim-reported/",
+        views.claim_reported_item,
+        name="claim-reported-item",
     ),
 ]

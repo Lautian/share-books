@@ -756,7 +756,20 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
 
         self.assertRedirects(response, reverse("moderation:queue"))
         self.approved_item.refresh_from_db()
-        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+
+    def test_moderator_can_claim_reported_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse("moderation:claim-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.claimed_by, self.moderator)
 
     def test_regular_user_cannot_approve_reported_item(self):
         self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
@@ -891,8 +904,24 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         self.assertRedirects(response, reverse("moderation:queue"))
         self.approved_station.refresh_from_db()
         self.assertEqual(
-            self.approved_station.moderation_status, BookStation.ModerationStatus.PENDING
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REJECTED
         )
+
+    def test_moderator_can_claim_reported_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse(
+                "moderation:claim-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_station.refresh_from_db()
+        self.assertEqual(self.approved_station.claimed_by, self.moderator)
 
     def test_regular_user_cannot_approve_reported_station(self):
         self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
