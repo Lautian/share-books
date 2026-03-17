@@ -1263,6 +1263,44 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_approve_reported_station_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:approve-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_STATION_APPROVED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.APPROVED)
+        self.assertEqual(log.book_station, self.approved_station)
+
+    def test_reject_reported_station_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:reject-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_STATION_REJECTED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.REJECTED)
+        self.assertEqual(log.book_station, self.approved_station)
+
 
 class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
     """Tests for the unclaim action."""

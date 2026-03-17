@@ -58,6 +58,11 @@ urlpatterns = [
     ),
     path("items/<int:item_id>/claim/", views.claim_item, name="claim-item"),
     path("items/<int:item_id>/unclaim/", views.unclaim_item, name="unclaim-item"),
+    path(
+        "items/<int:item_id>/",
+        views.moderate_pending_item,
+        name="moderate-item",
+    ),
     path("items/<int:item_id>/approve/", views.approve_item, name="approve-item"),
     path("items/<int:item_id>/reject/", views.reject_item, name="reject-item"),
     path(
