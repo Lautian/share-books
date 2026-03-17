@@ -866,6 +866,33 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         response = self.client.post(
             reverse(
                 "moderation:reject-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(BookStation.objects.filter(readable_id=self.approved_station.readable_id).exists())
+
+    def test_queue_shows_reject_button_for_pending_item(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(
+            response,
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id}),
+        )
+
+    def test_queue_shows_reject_button_for_pending_station(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(
+            response,
+            reverse("moderation:reject-bookstation", kwargs={"readable_id": self.pending_station.readable_id}),
+        )
+
 
 class ReportItemTests(ModerationSetUpMixin, TestCase):
     """Tests for the report item feature."""
@@ -1107,6 +1134,9 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.PENDING
         )
 
     def test_get_request_to_report_station_returns_405(self):
