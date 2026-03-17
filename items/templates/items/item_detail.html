@@ -32,6 +32,14 @@
             <a class="btn btn-sm btn-warning btn-outline" href="{% url 'items:item-move' item.id %}?action=take_out">Take Out</a>
             <a class="btn btn-sm btn-success btn-outline" href="{% url 'items:item-move' item.id %}?action=put_in">Put In</a>
             <a class="btn btn-sm btn-error btn-outline" href="{% url 'items:item-move' item.id %}?action=mark_lost">Mark Lost</a>
+            {% if item.moderation_status != "REPORTED" %}
+                <form method="post" action="{% url 'items:item-report' item.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-warning">Report</button>
+                </form>
+            {% else %}
+                <span class="btn btn-sm btn-warning btn-disabled">Reported</span>
+            {% endif %}
         {% else %}
             <a class="btn btn-sm btn-outline" href="{% url 'users:login' %}?next={% url 'items:item-detail' item.id %}">Log in to move item</a>
         {% endif %}
@@ -54,6 +62,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     Pending moderation
+                </div>
+            {% elif item.moderation_status == "REPORTED" %}
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-error/20 px-3 py-1 text-sm font-semibold text-error-content ring-1 ring-error/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    Reported
                 </div>
             {% endif %}
             <p class="mt-3 text-lg text-base-content/80">

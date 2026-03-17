@@ -57,6 +57,7 @@ class Item(models.Model):
     class ModerationStatus(models.TextChoices):
         PENDING = "PENDING", "Pending moderation"
         APPROVED = "APPROVED", "Approved"
+        REPORTED = "REPORTED", "Reported"
 
     moderation_status = models.CharField(
         max_length=16,

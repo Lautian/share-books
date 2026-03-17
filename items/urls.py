@@ -12,6 +12,7 @@ urlpatterns = [
     path("<int:item_id>/move/", views.item_move, name="item-move"),
     path("<int:item_id>/edit/", views.item_edit, name="item-edit"),
     path("<int:item_id>/delete/", views.item_delete, name="item-delete"),
+    path("<int:item_id>/report/", views.item_report, name="item-report"),
     path("<int:item_id>/qr/", views.item_qr_code, name="item-qr"),
     path("<int:item_id>/", views.item_detail_page, name="item-detail"),
     path("api/", views.item_list_create, name="item-list-create"),

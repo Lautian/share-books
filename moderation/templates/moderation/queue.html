@@ -303,5 +303,121 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- Reported Book Stations -->
+    <div class="mb-10">
+        <h2 class="mb-4 text-2xl font-bold">Reported Book Stations
+            <span class="badge badge-error ml-2">{{ reported_stations|length }}</span>
+        </h2>
+
+        {% if reported_stations %}
+            <div class="overflow-x-auto rounded-2xl border border-base-300/70 bg-base-100/70 shadow">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Added by</th>
+                            <th>Location</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for station in reported_stations %}
+                            <tr class="hover">
+                                <td>
+                                    <a class="link-hover font-semibold" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
+                                        {{ station.name }}
+                                    </a>
+                                    <br>
+                                    <span class="font-mono text-xs text-base-content/60">{{ station.readable_id }}</span>
+                                </td>
+                                <td>{{ station.added_by.username }}</td>
+                                <td>{{ station.location }}</td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <form method="post" action="{% url 'moderation:approve-reported-bookstation' station.readable_id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                        </form>
+                                        <form method="post" action="{% url 'moderation:reject-reported-bookstation' station.readable_id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert border border-base-300 bg-base-100/80 shadow">
+                <span>No book stations have been reported.</span>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Reported Items -->
+    <div class="mb-10">
+        <h2 class="mb-4 text-2xl font-bold">Reported Items
+            <span class="badge badge-error ml-2">{{ reported_items|length }}</span>
+        </h2>
+
+        {% if reported_items %}
+            <div class="overflow-x-auto rounded-2xl border border-base-300/70 bg-base-100/70 shadow">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Added by</th>
+                            <th>Book station</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in reported_items %}
+                            <tr class="hover">
+                                <td>
+                                    <a class="link-hover font-semibold" href="{% url 'items:item-detail' item.id %}">
+                                        {{ item.title }}
+                                    </a>
+                                    {% if item.author %}
+                                        <br>
+                                        <span class="text-sm text-base-content/60">{{ item.author }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge badge-ghost">{{ item.get_item_type_display }}</span></td>
+                                <td>{{ item.added_by.username }}</td>
+                                <td>
+                                    {% if item.current_book_station %}
+                                        {{ item.current_book_station.name }}
+                                    {% else %}
+                                        <span class="text-base-content/40">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-2">
+                                        <form method="post" action="{% url 'moderation:approve-reported-item' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                        </form>
+                                        <form method="post" action="{% url 'moderation:reject-reported-item' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert border border-base-300 bg-base-100/80 shadow">
+                <span>No items have been reported.</span>
+            </div>
+        {% endif %}
+    </div>
 </section>
 {% endblock %}

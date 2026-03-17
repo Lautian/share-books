@@ -231,7 +231,10 @@ def item_list(request):
     items = Item.objects.select_related("current_book_station", "last_seen_at").all()
 
     if not is_moderator(request.user):
-        items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+        items = items.filter(
+            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.REPORTED)
+        )
 
     selected_status = request.GET.get("status", "")
     selected_type = request.GET.get("item_type", "")
@@ -279,11 +282,13 @@ def item_detail_page(request, item_id):
     elif request.user.is_authenticated:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
             Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.REPORTED)
             | Q(added_by=request.user)
         )
     else:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            moderation_status=Item.ModerationStatus.APPROVED
+            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
     item = get_object_or_404(qs, pk=item_id)
     recent_movements = (
@@ -845,6 +850,18 @@ def _generate_qr_png_bytes(url):
     img.save(buf, format="PNG")
     buf.seek(0)
     return buf.read()
+
+
+@login_required(login_url="users:login")
+def item_report(request, item_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(Item, pk=item_id)
+    if item.moderation_status != Item.ModerationStatus.REPORTED:
+        item.moderation_status = Item.ModerationStatus.REPORTED
+        item.save(update_fields=["moderation_status"], create_movement=False)
+    return redirect("items:item-detail", item_id=item_id)
 
 
 def item_qr_code(request, item_id):
