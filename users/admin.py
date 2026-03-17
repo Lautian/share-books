@@ -3,6 +3,7 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
+from django.db.models import Exists, OuterRef
 
 from moderation.utils import MODERATOR_GROUP_NAME
 
@@ -12,11 +13,9 @@ User = get_user_model()
 @admin.action(description="Assign selected users to Moderators group")
 def assign_moderator_role(modeladmin, request, queryset):
     moderator_group, _ = Group.objects.get_or_create(name=MODERATOR_GROUP_NAME)
-    assigned_count = 0
-    for user in queryset:
-        if not user.groups.filter(pk=moderator_group.pk).exists():
-            user.groups.add(moderator_group)
-            assigned_count += 1
+    users_to_add = list(queryset.exclude(groups=moderator_group))
+    assigned_count = len(users_to_add)
+    moderator_group.user_set.add(*users_to_add)
     messages.success(request, f"Assigned moderator role to {assigned_count} user(s).")
 
 
@@ -27,11 +26,9 @@ def remove_moderator_role(modeladmin, request, queryset):
         messages.info(request, "Moderators group does not exist yet.")
         return
 
-    removed_count = 0
-    for user in queryset:
-        if user.groups.filter(pk=moderator_group.pk).exists():
-            user.groups.remove(moderator_group)
-            removed_count += 1
+    users_to_remove = list(queryset.filter(groups=moderator_group))
+    removed_count = len(users_to_remove)
+    moderator_group.user_set.remove(*users_to_remove)
     messages.success(request, f"Removed moderator role from {removed_count} user(s).")
 
 
@@ -42,9 +39,17 @@ class UserAdmin(DjangoUserAdmin):
         remove_moderator_role,
     ]
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        moderator_subquery = Group.objects.filter(
+            name=MODERATOR_GROUP_NAME,
+            user=OuterRef("pk"),
+        )
+        return qs.annotate(_is_moderator_member=Exists(moderator_subquery))
+
     @admin.display(boolean=True, description="Moderator")
     def has_moderator_role(self, obj):
-        return obj.groups.filter(name=MODERATOR_GROUP_NAME).exists()
+        return obj._is_moderator_member
 
 
 try:
