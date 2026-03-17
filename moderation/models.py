@@ -5,9 +5,11 @@ from django.db import models
 class ModerationLog(models.Model):
     class Action(models.TextChoices):
         ITEM_APPROVED = "ITEM_APPROVED", "Item approved"
+        ITEM_REJECTED = "ITEM_REJECTED", "Item rejected"
         ITEM_EDIT_APPROVED = "ITEM_EDIT_APPROVED", "Item edit approved"
         ITEM_EDIT_REJECTED = "ITEM_EDIT_REJECTED", "Item edit rejected"
         STATION_APPROVED = "STATION_APPROVED", "Station approved"
+        STATION_REJECTED = "STATION_REJECTED", "Station rejected"
         STATION_EDIT_APPROVED = "STATION_EDIT_APPROVED", "Station edit approved"
         STATION_EDIT_REJECTED = "STATION_EDIT_REJECTED", "Station edit rejected"
 

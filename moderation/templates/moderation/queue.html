@@ -71,6 +71,10 @@
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                         </form>
+                                        <form method="post" action="{% url 'moderation:reject-bookstation' station.readable_id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -220,6 +224,10 @@
                                         <form method="post" action="{% url 'moderation:approve-item' item.id %}">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                        </form>
+                                        <form method="post" action="{% url 'moderation:reject-item' item.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
                                         </form>
                                     </div>
                                 </td>

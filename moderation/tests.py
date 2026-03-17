@@ -769,3 +769,127 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 
         self.assertFalse(self.ModerationLog.objects.filter(item=self.pending_item).exists())
 
+
+class ModerationRejectTests(ModerationSetUpMixin, TestCase):
+    """Tests for the reject action on newly created (PENDING) items and stations."""
+
+    def test_reject_item_deletes_item(self):
+        self.client.login(username="moderator", password=self.password)
+        item_id = self.pending_item.id
+
+        response = self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": item_id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertFalse(Item.objects.filter(pk=item_id).exists())
+
+    def test_reject_item_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.ITEM_REJECTED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
+
+    def test_reject_bookstation_deletes_station(self):
+        self.client.login(username="moderator", password=self.password)
+        readable_id = self.pending_station.readable_id
+
+        response = self.client.post(
+            reverse(
+                "moderation:reject-bookstation",
+                kwargs={"readable_id": readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertFalse(BookStation.objects.filter(readable_id=readable_id).exists())
+
+    def test_reject_bookstation_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:reject-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.STATION_REJECTED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.PENDING)
+
+    def test_regular_user_cannot_reject_item(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Item.objects.filter(pk=self.pending_item.id).exists())
+
+    def test_regular_user_cannot_reject_bookstation(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:reject-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(BookStation.objects.filter(readable_id=self.pending_station.readable_id).exists())
+
+    def test_reject_item_only_works_on_pending(self):
+        """Attempting to reject an already-approved item returns 404."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Item.objects.filter(pk=self.approved_item.id).exists())
+
+    def test_reject_bookstation_only_works_on_pending(self):
+        """Attempting to reject an already-approved station returns 404."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:reject-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(BookStation.objects.filter(readable_id=self.approved_station.readable_id).exists())
+
+    def test_queue_shows_reject_button_for_pending_item(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(
+            response,
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id}),
+        )
+
+    def test_queue_shows_reject_button_for_pending_station(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(
+            response,
+            reverse("moderation:reject-bookstation", kwargs={"readable_id": self.pending_station.readable_id}),
+        )
+

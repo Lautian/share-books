@@ -97,6 +97,29 @@ def approve_bookstation(request, readable_id):
 
 
 @moderator_required
+def reject_bookstation(request, readable_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.PENDING,
+    )
+    from_status = station.moderation_status
+    # Log before deleting so the FK is populated; SET_NULL will clear it after deletion.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.STATION_REJECTED,
+        from_status=from_status,
+        to_status="DELETED",
+    )
+    station.delete()
+    return redirect("moderation:queue")
+
+
+@moderator_required
 def claim_item(request, item_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -133,6 +156,29 @@ def approve_item(request, item_id):
         from_status=from_status,
         to_status=item.moderation_status,
     )
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def reject_item(request, item_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.PENDING,
+    )
+    from_status = item.moderation_status
+    # Log before deleting so the FK is populated; SET_NULL will clear it after deletion.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.ITEM_REJECTED,
+        from_status=from_status,
+        to_status="DELETED",
+    )
+    item.delete()
     return redirect("moderation:queue")
 
 
