@@ -713,6 +713,32 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
         self.approved_item.refresh_from_db()
         self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REPORTED)
 
+    def test_cannot_report_rejected_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REJECTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+
+    def test_cannot_report_pending_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.PENDING
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.PENDING)
+
     def test_get_request_to_report_item_returns_405(self):
         self.client.login(username="other", password=self.password)
 
@@ -847,6 +873,42 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         self.approved_station.refresh_from_db()
         self.assertEqual(
             self.approved_station.moderation_status, BookStation.ModerationStatus.REPORTED
+        )
+
+    def test_cannot_report_rejected_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REJECTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REJECTED
+        )
+
+    def test_cannot_report_pending_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.PENDING
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.PENDING
         )
 
     def test_get_request_to_report_station_returns_405(self):

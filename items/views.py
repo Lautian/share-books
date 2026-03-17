@@ -857,7 +857,11 @@ def item_report(request, item_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    item = get_object_or_404(Item, pk=item_id)
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status__in=[Item.ModerationStatus.APPROVED, Item.ModerationStatus.REPORTED],
+    )
     if item.moderation_status != Item.ModerationStatus.REPORTED:
         item.moderation_status = Item.ModerationStatus.REPORTED
         item.save(update_fields=["moderation_status"], create_movement=False)

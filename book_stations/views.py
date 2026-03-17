@@ -428,7 +428,11 @@ def bookstation_report(request, readable_id):
 	if request.method != "POST":
 		return HttpResponseNotAllowed(["POST"])
 
-	station = get_object_or_404(BookStation, readable_id=readable_id)
+	station = get_object_or_404(
+		BookStation,
+		readable_id=readable_id,
+		moderation_status__in=[BookStation.ModerationStatus.APPROVED, BookStation.ModerationStatus.REPORTED],
+	)
 	if station.moderation_status != BookStation.ModerationStatus.REPORTED:
 		station.moderation_status = BookStation.ModerationStatus.REPORTED
 		station.save(update_fields=["moderation_status"])
