@@ -73,7 +73,7 @@
                         <li><a href="{% url 'users:profile' %}">Profile</a></li>
                         <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                         <li><a href="{% url 'items:item-create' %}">Add item</a></li>
-                        {% if user.is_staff or user.is_superuser %}
+                        {% if user_is_moderator %}
                             <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
                         {% endif %}
                         <li>
@@ -100,7 +100,7 @@
                     <li><a href="{% url 'users:profile' %}">Profile</a></li>
                     <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                     <li><a href="{% url 'items:item-create' %}">Add item</a></li>
-                    {% if user.is_staff or user.is_superuser %}
+                    {% if user_is_moderator %}
                         <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
                     {% endif %}
                     <li>
