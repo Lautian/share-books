@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from book_stations.models import BookStation
 from items.models import Item
+from moderation.models import ModerationLog
 from moderation.utils import is_moderator
 
 
@@ -81,9 +82,17 @@ def approve_bookstation(request, readable_id):
         readable_id=readable_id,
         moderation_status=BookStation.ModerationStatus.PENDING,
     )
+    from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.APPROVED
     station.claimed_by = None
     station.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.STATION_APPROVED,
+        from_status=from_status,
+        to_status=station.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -113,9 +122,17 @@ def approve_item(request, item_id):
         pk=item_id,
         moderation_status=Item.ModerationStatus.PENDING,
     )
+    from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.APPROVED
     item.claimed_by = None
     item.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.ITEM_APPROVED,
+        from_status=from_status,
+        to_status=item.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -142,6 +159,14 @@ def approve_bookstation_edit(request, readable_id):
     station.picture = data.get("picture", station.picture)
     station.pending_edit = None
     station.save()
+    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.STATION_EDIT_APPROVED,
+        from_status=station.moderation_status,
+        to_status=station.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -159,6 +184,14 @@ def reject_bookstation_edit(request, readable_id):
     )
     station.pending_edit = None
     station.save(update_fields=["pending_edit"])
+    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.STATION_EDIT_REJECTED,
+        from_status=station.moderation_status,
+        to_status=station.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -189,6 +222,14 @@ def approve_item_edit(request, item_id):
         item.last_activity = date.fromisoformat(raw_date)
     item.pending_edit = None
     item.save(create_movement=False)
+    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.ITEM_EDIT_APPROVED,
+        from_status=item.moderation_status,
+        to_status=item.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -206,5 +247,13 @@ def reject_item_edit(request, item_id):
     )
     item.pending_edit = None
     item.save(update_fields=["pending_edit"])
+    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.ITEM_EDIT_REJECTED,
+        from_status=item.moderation_status,
+        to_status=item.moderation_status,
+    )
     return redirect("moderation:queue")
 

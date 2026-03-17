@@ -664,3 +664,108 @@ class ModerationNavLinkTests(ModerationSetUpMixin, TestCase):
 
         self.assertContains(response, reverse("moderation:queue"))
 
+
+class ModerationLogTests(ModerationSetUpMixin, TestCase):
+    """Tests that moderation decisions are recorded in ModerationLog."""
+
+    def setUp(self):
+        super().setUp()
+        from moderation.models import ModerationLog
+        self.ModerationLog = ModerationLog
+
+    def test_approve_item_creates_log_entry(self):
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:approve-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        log = self.ModerationLog.objects.get(item=self.pending_item)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.ITEM_APPROVED)
+        self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(log.to_status, Item.ModerationStatus.APPROVED)
+
+    def test_approve_bookstation_creates_log_entry(self):
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:approve-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        log = self.ModerationLog.objects.get(book_station=self.pending_station)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.STATION_APPROVED)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.PENDING)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.APPROVED)
+
+    def test_approve_item_edit_creates_log_entry(self):
+        self.approved_item.pending_edit = {"title": "New Title"}
+        self.approved_item.save(update_fields=["pending_edit"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:approve-item-edit", kwargs={"item_id": self.approved_item.id})
+        )
+
+        log = self.ModerationLog.objects.get(item=self.approved_item)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.ITEM_EDIT_APPROVED)
+
+    def test_reject_item_edit_creates_log_entry(self):
+        self.approved_item.pending_edit = {"title": "New Title"}
+        self.approved_item.save(update_fields=["pending_edit"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:reject-item-edit", kwargs={"item_id": self.approved_item.id})
+        )
+
+        log = self.ModerationLog.objects.get(item=self.approved_item)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.ITEM_EDIT_REJECTED)
+
+    def test_approve_bookstation_edit_creates_log_entry(self):
+        self.approved_station.pending_edit = {"name": "New Name", "location": "New Location"}
+        self.approved_station.save(update_fields=["pending_edit"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:approve-bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = self.ModerationLog.objects.get(book_station=self.approved_station)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.STATION_EDIT_APPROVED)
+
+    def test_reject_bookstation_edit_creates_log_entry(self):
+        self.approved_station.pending_edit = {"name": "New Name", "location": "New Location"}
+        self.approved_station.save(update_fields=["pending_edit"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:reject-bookstation-edit",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = self.ModerationLog.objects.get(book_station=self.approved_station)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.action, self.ModerationLog.Action.STATION_EDIT_REJECTED)
+
+    def test_no_log_entry_on_claim_item(self):
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:claim-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        self.assertFalse(self.ModerationLog.objects.filter(item=self.pending_item).exists())
+
