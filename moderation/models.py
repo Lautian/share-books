@@ -12,6 +12,10 @@ class ModerationLog(models.Model):
         STATION_REJECTED = "STATION_REJECTED", "Station rejected"
         STATION_EDIT_APPROVED = "STATION_EDIT_APPROVED", "Station edit approved"
         STATION_EDIT_REJECTED = "STATION_EDIT_REJECTED", "Station edit rejected"
+        REPORTED_ITEM_APPROVED = "REPORTED_ITEM_APPROVED", "Reported item approved"
+        REPORTED_ITEM_REJECTED = "REPORTED_ITEM_REJECTED", "Reported item rejected"
+        REPORTED_STATION_APPROVED = "REPORTED_STATION_APPROVED", "Reported station approved"
+        REPORTED_STATION_REJECTED = "REPORTED_STATION_REJECTED", "Reported station rejected"
 
     moderator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -32,7 +36,7 @@ class ModerationLog(models.Model):
         blank=True,
         related_name="moderation_logs",
     )
-    action = models.CharField(max_length=32, choices=Action)
+    action = models.CharField(max_length=32, choices=Action.choices)
     from_status = models.CharField(max_length=32, blank=True)
     to_status = models.CharField(max_length=32, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)

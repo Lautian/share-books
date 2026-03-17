@@ -773,16 +773,16 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 class ModerationRejectTests(ModerationSetUpMixin, TestCase):
     """Tests for the reject action on newly created (PENDING) items and stations."""
 
-    def test_reject_item_deletes_item(self):
+    def test_reject_item_sets_status_to_rejected(self):
         self.client.login(username="moderator", password=self.password)
-        item_id = self.pending_item.id
 
         response = self.client.post(
-            reverse("moderation:reject-item", kwargs={"item_id": item_id})
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
         )
 
         self.assertRedirects(response, reverse("moderation:queue"))
-        self.assertFalse(Item.objects.filter(pk=item_id).exists())
+        self.pending_item.refresh_from_db()
+        self.assertEqual(self.pending_item.moderation_status, Item.ModerationStatus.REJECTED)
 
     def test_reject_item_creates_log_entry(self):
         from moderation.models import ModerationLog
@@ -795,20 +795,22 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         log = ModerationLog.objects.get(action=ModerationLog.Action.ITEM_REJECTED)
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
+        self.assertEqual(log.item, self.pending_item)
 
-    def test_reject_bookstation_deletes_station(self):
+    def test_reject_bookstation_sets_status_to_rejected(self):
         self.client.login(username="moderator", password=self.password)
-        readable_id = self.pending_station.readable_id
 
         response = self.client.post(
             reverse(
                 "moderation:reject-bookstation",
-                kwargs={"readable_id": readable_id},
+                kwargs={"readable_id": self.pending_station.readable_id},
             )
         )
 
         self.assertRedirects(response, reverse("moderation:queue"))
-        self.assertFalse(BookStation.objects.filter(readable_id=readable_id).exists())
+        self.pending_station.refresh_from_db()
+        self.assertEqual(self.pending_station.moderation_status, BookStation.ModerationStatus.REJECTED)
 
     def test_reject_bookstation_creates_log_entry(self):
         from moderation.models import ModerationLog
@@ -824,6 +826,8 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         log = ModerationLog.objects.get(action=ModerationLog.Action.STATION_REJECTED)
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, BookStation.ModerationStatus.PENDING)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.REJECTED)
+        self.assertEqual(log.book_station, self.pending_station)
 
     def test_regular_user_cannot_reject_item(self):
         self.client.login(username="regular", password=self.password)
@@ -1036,6 +1040,38 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_approve_reported_item_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:approve-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_ITEM_APPROVED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, Item.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, Item.ModerationStatus.APPROVED)
+        self.assertEqual(log.item, self.approved_item)
+
+    def test_reject_reported_item_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:reject-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_ITEM_REJECTED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, Item.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
+        self.assertEqual(log.item, self.approved_item)
+
 
 class ReportBookStationTests(ModerationSetUpMixin, TestCase):
     """Tests for the report bookstation feature."""
@@ -1226,3 +1262,41 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_approve_reported_station_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:approve-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_STATION_APPROVED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.APPROVED)
+        self.assertEqual(log.book_station, self.approved_station)
+
+    def test_reject_reported_station_creates_log_entry(self):
+        from moderation.models import ModerationLog
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse(
+                "moderation:reject-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_STATION_REJECTED)
+        self.assertEqual(log.moderator, self.moderator)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.REPORTED)
+        self.assertEqual(log.to_status, BookStation.ModerationStatus.REJECTED)
+        self.assertEqual(log.book_station, self.approved_station)

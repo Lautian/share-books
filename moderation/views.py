@@ -117,15 +117,16 @@ def reject_bookstation(request, readable_id):
         moderation_status=BookStation.ModerationStatus.PENDING,
     )
     from_status = station.moderation_status
-    # Log before deleting so the FK is populated; SET_NULL will clear it after deletion.
+    station.moderation_status = BookStation.ModerationStatus.REJECTED
+    station.claimed_by = None
+    station.save(update_fields=["moderation_status", "claimed_by"])
     ModerationLog.objects.create(
         moderator=request.user,
         book_station=station,
         action=ModerationLog.Action.STATION_REJECTED,
         from_status=from_status,
-        to_status="DELETED",
+        to_status=station.moderation_status,
     )
-    station.delete()
     return redirect("moderation:queue")
 
 
@@ -180,15 +181,16 @@ def reject_item(request, item_id):
         moderation_status=Item.ModerationStatus.PENDING,
     )
     from_status = item.moderation_status
-    # Log before deleting so the FK is populated; SET_NULL will clear it after deletion.
+    item.moderation_status = Item.ModerationStatus.REJECTED
+    item.claimed_by = None
+    item.save(update_fields=["moderation_status", "claimed_by"])
     ModerationLog.objects.create(
         moderator=request.user,
         item=item,
         action=ModerationLog.Action.ITEM_REJECTED,
         from_status=from_status,
-        to_status="DELETED",
+        to_status=item.moderation_status,
     )
-    item.delete()
     return redirect("moderation:queue")
 
 
@@ -325,9 +327,17 @@ def approve_reported_bookstation(request, readable_id):
         readable_id=readable_id,
         moderation_status=BookStation.ModerationStatus.REPORTED,
     )
+    from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.APPROVED
     station.claimed_by = None
     station.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.REPORTED_STATION_APPROVED,
+        from_status=from_status,
+        to_status=station.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -342,9 +352,17 @@ def reject_reported_bookstation(request, readable_id):
         readable_id=readable_id,
         moderation_status=BookStation.ModerationStatus.REPORTED,
     )
+    from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.REJECTED
     station.claimed_by = None
     station.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        book_station=station,
+        action=ModerationLog.Action.REPORTED_STATION_REJECTED,
+        from_status=from_status,
+        to_status=station.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -376,9 +394,17 @@ def approve_reported_item(request, item_id):
         pk=item_id,
         moderation_status=Item.ModerationStatus.REPORTED,
     )
+    from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.APPROVED
     item.claimed_by = None
     item.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.REPORTED_ITEM_APPROVED,
+        from_status=from_status,
+        to_status=item.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
@@ -393,9 +419,17 @@ def reject_reported_item(request, item_id):
         pk=item_id,
         moderation_status=Item.ModerationStatus.REPORTED,
     )
+    from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.REJECTED
     item.claimed_by = None
     item.save(update_fields=["moderation_status", "claimed_by"])
+    ModerationLog.objects.create(
+        moderator=request.user,
+        item=item,
+        action=ModerationLog.Action.REPORTED_ITEM_REJECTED,
+        from_status=from_status,
+        to_status=item.moderation_status,
+    )
     return redirect("moderation:queue")
 
 
