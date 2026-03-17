@@ -30,6 +30,7 @@ urlpatterns = [
         views.bookstation_inventory_page,
         name="bookstation-inventory",
     ),
+    path("<slug:readable_id>/report/", views.bookstation_report, name="bookstation-report"),
     path("<slug:readable_id>/qr/", views.bookstation_qr_code, name="bookstation-qr"),
     path("<slug:readable_id>/", views.bookstation_detail_page, name="bookstation-detail"),
 ]
