@@ -1,12 +1,14 @@
 import tempfile
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from book_stations.models import BookStation
 from items.models import Item
+from moderation.utils import MODERATOR_GROUP_NAME
 
 
 class ModerationSetUpMixin:
@@ -57,7 +59,7 @@ class ModerationSetUpMixin:
 
 
 class ModerationQueueAccessTests(ModerationSetUpMixin, TestCase):
-    """Tests that the moderation queue is only accessible to staff users."""
+    """Tests that the moderation queue is only accessible to moderators."""
 
     def test_anonymous_user_is_redirected_to_login(self):
         response = self.client.get(reverse("moderation:queue"))
@@ -74,6 +76,16 @@ class ModerationQueueAccessTests(ModerationSetUpMixin, TestCase):
 
     def test_moderator_can_access_queue(self):
         self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "moderation/queue.html")
+
+    def test_user_in_moderators_group_can_access_queue(self):
+        moderators_group, _ = Group.objects.get_or_create(name=MODERATOR_GROUP_NAME)
+        self.other_user.groups.add(moderators_group)
+        self.client.login(username="other", password=self.password)
 
         response = self.client.get(reverse("moderation:queue"))
 
