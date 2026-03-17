@@ -179,7 +179,10 @@ def bookstation_list_create(request):
 	if request.method == "GET":
 		stations = BookStation.objects.select_related("added_by").all()
 		if not is_moderator(request.user):
-			stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+			stations = stations.filter(
+				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+			)
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
@@ -223,7 +226,10 @@ def bookstation_detail_api(request, readable_id):
 
 	qs = BookStation.objects.select_related("added_by")
 	if not is_moderator(request.user):
-		qs = qs.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		qs = qs.filter(
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 	station = get_object_or_404(qs, readable_id=readable_id)
 	return JsonResponse(_serialize_bookstation(station))
 
@@ -235,13 +241,13 @@ def bookstation_inventory_page(request, readable_id):
 	if is_moderator(request.user):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
-		import django.db.models as _m
-		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		visibility_filter = (
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 		if request.user.is_authenticated:
-			qs = BookStation.objects.filter(
-				_m.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-				| _m.Q(added_by=request.user)
-			)
+			visibility_filter |= models.Q(added_by=request.user)
+		qs = BookStation.objects.filter(visibility_filter)
 		station = get_object_or_404(qs, readable_id=readable_id)
 	sort_by = request.GET.get("sort_by", "title")
 	sort_dir = request.GET.get("sort_dir")
@@ -277,7 +283,10 @@ def bookstation_inventory_page(request, readable_id):
 	)
 
 	if not is_moderator(request.user):
-		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+		items = items.filter(
+			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
+		)
 
 	sort_field_map = {
 		"title": ["title", "id"],
