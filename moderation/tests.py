@@ -629,3 +629,38 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         # Should NOT contain an <img> for the no-picture station
         self.assertNotContains(response, f'alt="Photo of {self.pending_station.name}"')
 
+
+class ModerationNavLinkTests(ModerationSetUpMixin, TestCase):
+    """Tests that the moderation nav link is visible to moderators and hidden from others."""
+
+    def _get_home(self):
+        return self.client.get(reverse("book_stations:bookstation-list"))
+
+    def test_nav_link_hidden_for_anonymous(self):
+        response = self._get_home()
+
+        self.assertNotContains(response, reverse("moderation:queue"))
+
+    def test_nav_link_hidden_for_regular_user(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self._get_home()
+
+        self.assertNotContains(response, reverse("moderation:queue"))
+
+    def test_nav_link_visible_for_staff_user(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self._get_home()
+
+        self.assertContains(response, reverse("moderation:queue"))
+
+    def test_nav_link_visible_for_group_moderator_without_staff(self):
+        moderators_group, _ = Group.objects.get_or_create(name=MODERATOR_GROUP_NAME)
+        self.other_user.groups.add(moderators_group)
+        self.client.login(username="other", password=self.password)
+
+        response = self._get_home()
+
+        self.assertContains(response, reverse("moderation:queue"))
+
