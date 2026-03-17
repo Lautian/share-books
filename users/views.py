@@ -11,6 +11,7 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from book_stations.models import BookStation
 from items.models import Item
+from moderation.utils import is_moderator
 
 from .forms import SignupForm
 from .tokens import email_verification_token
@@ -103,13 +104,22 @@ def verify_email(request, uidb64, token):
 def profile(request):
     added_stations = BookStation.objects.filter(added_by=request.user).order_by("name")
     added_items = Item.objects.filter(added_by=request.user).order_by("title", "id")
-    return render(
-        request,
-        "users/profile.html",
-        {
-            "added_stations": added_stations,
-            "added_items": added_items,
-        },
-    )
+
+    context = {
+        "added_stations": added_stations,
+        "added_items": added_items,
+    }
+
+    if is_moderator(request.user):
+        context["claimed_stations"] = BookStation.objects.filter(
+            claimed_by=request.user,
+            moderation_status=BookStation.ModerationStatus.PENDING,
+        ).order_by("name")
+        context["claimed_items"] = Item.objects.filter(
+            claimed_by=request.user,
+            moderation_status=Item.ModerationStatus.PENDING,
+        ).order_by("title", "id")
+
+    return render(request, "users/profile.html", context)
 
 

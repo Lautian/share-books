@@ -1,0 +1,94 @@
+{% extends "core/base.html" %}
+
+{% block title %}Review: {{ station.name }}{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-4xl space-y-6">
+    <div class="mb-2">
+        <a class="btn btn-ghost btn-sm" href="{% url 'moderation:queue' %}">← Back to queue</a>
+    </div>
+
+    <div class="rounded-2xl border border-base-300/70 bg-base-100/70 p-6 shadow-xl backdrop-blur-sm md:p-8">
+        <p class="text-sm uppercase tracking-[0.18em] text-warning">Pending moderation</p>
+        <h1 class="mt-2 text-4xl font-bold leading-tight">{{ station.name }}</h1>
+        <p class="mt-1 font-mono text-sm text-base-content/60">{{ station.readable_id }}</p>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-xl">Details</h2>
+                <dl class="space-y-3 text-sm">
+                    <div>
+                        <dt class="font-semibold text-base-content/60">Added by</dt>
+                        <dd>{{ station.added_by.username }}</dd>
+                    </div>
+                    <div>
+                        <dt class="font-semibold text-base-content/60">Location</dt>
+                        <dd>{{ station.location|default:"—" }}</dd>
+                    </div>
+                    {% if station.latitude and station.longitude %}
+                    <div>
+                        <dt class="font-semibold text-base-content/60">Coordinates</dt>
+                        <dd>{{ station.latitude }}, {{ station.longitude }}</dd>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <dt class="font-semibold text-base-content/60">Description</dt>
+                        <dd>{{ station.description|default:"—" }}</dd>
+                    </div>
+                    <div>
+                        <dt class="font-semibold text-base-content/60">Claimed by</dt>
+                        <dd>
+                            {% if station.claimed_by %}
+                                <span class="badge badge-info">{{ station.claimed_by.username }}</span>
+                            {% else %}
+                                <span class="text-base-content/40">Unclaimed</span>
+                            {% endif %}
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </article>
+
+        <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-xl">Photo</h2>
+                {% if station.picture_url %}
+                    <a href="{{ station.picture_url }}" target="_blank" rel="noopener noreferrer">
+                        <img src="{{ station.picture_url }}"
+                             alt="Photo of {{ station.name }}"
+                             class="rounded-lg object-cover ring-1 ring-base-300 max-h-64 w-full">
+                    </a>
+                {% else %}
+                    <p class="text-base-content/40">No photo provided.</p>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+
+    <div class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-xl">Moderation actions</h2>
+            <div class="flex flex-wrap gap-3 mt-2">
+                <form method="post" action="{% url 'moderation:approve-bookstation' station.readable_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Approve</button>
+                </form>
+                {% if station.claimed_by %}
+                    <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-warning">Unclaim</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline">Claim</button>
+                    </form>
+                {% endif %}
+                <a class="btn btn-ghost" href="{% url 'moderation:queue' %}">Back to queue</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

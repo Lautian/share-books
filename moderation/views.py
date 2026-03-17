@@ -282,3 +282,59 @@ def reject_reported_item(request, item_id):
     item.save(update_fields=["moderation_status"])
     return redirect("moderation:queue")
 
+
+@moderator_required
+def unclaim_bookstation(request, readable_id):
+    """Unclaim a BookStation so another moderator can pick it up."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.PENDING,
+        claimed_by__isnull=False,
+    )
+    station.claimed_by = None
+    station.save(update_fields=["claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def unclaim_item(request, item_id):
+    """Unclaim an Item so another moderator can pick it up."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.PENDING,
+        claimed_by__isnull=False,
+    )
+    item.claimed_by = None
+    item.save(update_fields=["claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def moderate_pending_bookstation(request, readable_id):
+    """Detail view for a pending BookStation, showing full info and moderation actions."""
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.PENDING,
+    )
+    return render(request, "moderation/bookstation_detail.html", {"station": station})
+
+
+@moderator_required
+def moderate_pending_item(request, item_id):
+    """Detail view for a pending Item, showing full info and moderation actions."""
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.PENDING,
+    )
+    return render(request, "moderation/item_detail.html", {"item": item})
+

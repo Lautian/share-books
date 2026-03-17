@@ -35,7 +35,9 @@
                         {% for station in pending_stations %}
                             <tr class="hover">
                                 <td>
-                                    <span class="font-semibold">{{ station.name }}</span>
+                                    <a class="link-hover font-semibold" href="{% url 'moderation:moderate-bookstation' station.readable_id %}">
+                                        {{ station.name }}
+                                    </a>
                                     <br>
                                     <span class="font-mono text-xs text-base-content/60">{{ station.readable_id }}</span>
                                 </td>
@@ -61,7 +63,12 @@
                                 </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
-                                        {% if not station.claimed_by %}
+                                        {% if station.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                                            </form>
+                                        {% else %}
                                             <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline">Claim</button>
@@ -187,7 +194,9 @@
                         {% for item in pending_items %}
                             <tr class="hover">
                                 <td>
-                                    <span class="font-semibold">{{ item.title }}</span>
+                                    <a class="link-hover font-semibold" href="{% url 'moderation:moderate-item' item.id %}">
+                                        {{ item.title }}
+                                    </a>
                                     {% if item.author %}
                                         <br>
                                         <span class="text-sm text-base-content/60">{{ item.author }}</span>
@@ -211,7 +220,12 @@
                                 </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
-                                        {% if not item.claimed_by %}
+                                        {% if item.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                                            </form>
+                                        {% else %}
                                             <form method="post" action="{% url 'moderation:claim-item' item.id %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline">Claim</button>
