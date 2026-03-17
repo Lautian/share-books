@@ -357,22 +357,18 @@ def unclaim_item(request, item_id):
 
 @moderator_required
 def moderate_pending_bookstation(request, readable_id):
-    """Detail view for a pending BookStation, showing full info and moderation actions."""
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.PENDING,
-    )
-    return render(request, "moderation/bookstation_detail.html", {"station": station})
+    """Redirect to the regular BookStation detail page.
+
+    The regular detail page shows a moderation panel for moderators viewing PENDING stations.
+    """
+    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 @moderator_required
 def moderate_pending_item(request, item_id):
-    """Detail view for a pending Item, showing full info and moderation actions."""
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.PENDING,
-    )
-    return render(request, "moderation/item_detail.html", {"item": item})
+    """Redirect to the regular Item detail page.
+
+    The regular detail page shows a moderation panel for moderators viewing PENDING items.
+    """
+    return redirect("items:item-detail", item_id=item_id)
 

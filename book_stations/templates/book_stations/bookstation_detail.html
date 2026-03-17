@@ -438,6 +438,35 @@
         {% endif %}
     </div>
 
+    {% if user_is_moderator and station.moderation_status == "PENDING" %}
+    <div class="mb-5 rounded-2xl border border-warning/40 bg-base-100/80 p-4 shadow-xl">
+        <p class="text-xs uppercase tracking-[0.18em] text-warning mb-3">Moderation actions</p>
+        <div class="flex flex-wrap items-center gap-2">
+            <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
+            <form method="post" action="{% url 'moderation:approve-bookstation' station.readable_id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            </form>
+            {% if station.claimed_by == request.user %}
+                <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                </form>
+            {% elif not station.claimed_by %}
+                <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline">Claim</button>
+                </form>
+            {% endif %}
+            {% if station.claimed_by %}
+                <span class="self-center text-sm text-base-content/70">
+                    Claimed by: <span class="badge badge-info">{{ station.claimed_by.username }}</span>
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <article class="detail-shell rounded-3xl p-6 shadow-2xl backdrop-blur-sm md:p-8">
         <header class="mb-6 border-b border-base-300/70 pb-5">
             <p class="text-sm uppercase tracking-[0.2em] text-success">Book station detail</p>

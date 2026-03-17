@@ -1063,7 +1063,7 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
 class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
     """Tests for the moderation detail views for pending stations and items."""
 
-    def test_moderate_pending_bookstation_accessible_to_moderator(self):
+    def test_moderate_pending_bookstation_redirects_to_detail(self):
         self.client.login(username="moderator", password=self.password)
 
         response = self.client.get(
@@ -1073,11 +1073,13 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "moderation/bookstation_detail.html")
-        self.assertContains(response, self.pending_station.name)
+        expected_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+        self.assertRedirects(response, expected_url)
 
-    def test_moderate_pending_item_accessible_to_moderator(self):
+    def test_moderate_pending_item_redirects_to_detail(self):
         self.client.login(username="moderator", password=self.password)
 
         response = self.client.get(
@@ -1087,9 +1089,11 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "moderation/item_detail.html")
-        self.assertContains(response, self.pending_item.title)
+        expected_url = reverse(
+            "items:item-detail",
+            kwargs={"item_id": self.pending_item.id},
+        )
+        self.assertRedirects(response, expected_url)
 
     def test_moderate_bookstation_returns_403_for_regular_user(self):
         self.client.login(username="regular", password=self.password)
@@ -1115,30 +1119,6 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
 
         self.assertEqual(response.status_code, 403)
 
-    def test_moderate_bookstation_returns_404_for_non_pending(self):
-        self.client.login(username="moderator", password=self.password)
-
-        response = self.client.get(
-            reverse(
-                "moderation:moderate-bookstation",
-                kwargs={"readable_id": self.approved_station.readable_id},
-            )
-        )
-
-        self.assertEqual(response.status_code, 404)
-
-    def test_moderate_item_returns_404_for_non_pending(self):
-        self.client.login(username="moderator", password=self.password)
-
-        response = self.client.get(
-            reverse(
-                "moderation:moderate-item",
-                kwargs={"item_id": self.approved_item.id},
-            )
-        )
-
-        self.assertEqual(response.status_code, 404)
-
     def test_detail_view_shows_approve_button(self):
         self.client.login(username="moderator", password=self.password)
 
@@ -1146,7 +1126,8 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
             reverse(
                 "moderation:moderate-bookstation",
                 kwargs={"readable_id": self.pending_station.readable_id},
-            )
+            ),
+            follow=True,
         )
 
         self.assertContains(response, "Approve")
@@ -1158,7 +1139,8 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
             reverse(
                 "moderation:moderate-bookstation",
                 kwargs={"readable_id": self.pending_station.readable_id},
-            )
+            ),
+            follow=True,
         )
 
         self.assertContains(response, "Claim")
@@ -1172,10 +1154,77 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
             reverse(
                 "moderation:moderate-bookstation",
                 kwargs={"readable_id": self.pending_station.readable_id},
-            )
+            ),
+            follow=True,
         )
 
         self.assertContains(response, "Unclaim")
+
+    def test_detail_view_uses_regular_bookstation_template(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "book_stations/bookstation_detail.html")
+        self.assertContains(response, self.pending_station.name)
+
+    def test_detail_view_uses_regular_item_template(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.pending_item.id},
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_detail.html")
+        self.assertContains(response, self.pending_item.title)
+
+    def test_moderation_panel_hidden_for_non_pending_bookstation(self):
+        """Moderation actions panel must not appear on an already-approved station."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approve_url = reverse(
+            "moderation:approve-bookstation",
+            kwargs={"readable_id": self.approved_station.readable_id},
+        )
+        self.assertNotContains(response, approve_url)
+
+    def test_moderation_panel_hidden_for_non_pending_item(self):
+        """Moderation actions panel must not appear on an already-approved item."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "items:item-detail",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approve_url = reverse(
+            "moderation:approve-item",
+            kwargs={"item_id": self.approved_item.id},
+        )
+        self.assertNotContains(response, approve_url)
 
 
 class ModerationProfileClaimedItemsTests(ModerationSetUpMixin, TestCase):
