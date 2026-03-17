@@ -318,6 +318,7 @@
                             <th>Name</th>
                             <th>Added by</th>
                             <th>Location</th>
+                            <th>Claimed by</th>
                             <th class="text-right">Actions</th>
                         </tr>
                     </thead>
@@ -333,8 +334,21 @@
                                 </td>
                                 <td>{{ station.added_by.username }}</td>
                                 <td>{{ station.location }}</td>
+                                <td>
+                                    {% if station.claimed_by %}
+                                        <span class="badge badge-info">{{ station.claimed_by.username }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">—</span>
+                                    {% endif %}
+                                </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
+                                        {% if not station.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:claim-reported-bookstation' station.readable_id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline">Claim</button>
+                                            </form>
+                                        {% endif %}
                                         <form method="post" action="{% url 'moderation:approve-reported-bookstation' station.readable_id %}">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
@@ -372,6 +386,7 @@
                             <th>Type</th>
                             <th>Added by</th>
                             <th>Book station</th>
+                            <th>Claimed by</th>
                             <th class="text-right">Actions</th>
                         </tr>
                     </thead>
@@ -396,8 +411,21 @@
                                         <span class="text-base-content/40">—</span>
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if item.claimed_by %}
+                                        <span class="badge badge-info">{{ item.claimed_by.username }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/40">—</span>
+                                    {% endif %}
+                                </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
+                                        {% if not item.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:claim-reported-item' item.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline">Claim</button>
+                                            </form>
+                                        {% endif %}
                                         <form method="post" action="{% url 'moderation:approve-reported-item' item.id %}">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>

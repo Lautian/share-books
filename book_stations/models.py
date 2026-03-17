@@ -36,6 +36,7 @@ class BookStation(models.Model):
 		PENDING = "PENDING", "Pending moderation"
 		APPROVED = "APPROVED", "Approved"
 		REPORTED = "REPORTED", "Reported"
+		REJECTED = "REJECTED", "Rejected"
 
 	moderation_status = models.CharField(
 		max_length=16,
