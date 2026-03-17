@@ -27,6 +27,11 @@ urlpatterns = [
         name="approve-bookstation",
     ),
     path(
+        "stations/<slug:readable_id>/reject/",
+        views.reject_bookstation,
+        name="reject-bookstation",
+    ),
+    path(
         "stations/<slug:readable_id>/approve-edit/",
         views.approve_bookstation_edit,
         name="approve-bookstation-edit",
@@ -46,7 +51,6 @@ urlpatterns = [
         views.reject_reported_bookstation,
         name="reject-reported-bookstation",
     ),
-    path("items/<int:item_id>/", views.moderate_pending_item, name="moderate-item"),
     path(
         "stations/<slug:readable_id>/claim-reported/",
         views.claim_reported_bookstation,
@@ -55,6 +59,7 @@ urlpatterns = [
     path("items/<int:item_id>/claim/", views.claim_item, name="claim-item"),
     path("items/<int:item_id>/unclaim/", views.unclaim_item, name="unclaim-item"),
     path("items/<int:item_id>/approve/", views.approve_item, name="approve-item"),
+    path("items/<int:item_id>/reject/", views.reject_item, name="reject-item"),
     path(
         "items/<int:item_id>/approve-edit/",
         views.approve_item_edit,
