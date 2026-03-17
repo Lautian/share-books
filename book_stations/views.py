@@ -49,7 +49,10 @@ def bookstation_list(request):
 	)
 
 	if not is_moderator(request.user):
-		stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		stations = stations.filter(
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 
 	sort_field_map = {
 		"name": ["name"],
@@ -87,10 +90,14 @@ def bookstation_detail_page(request, readable_id):
 	if is_moderator(request.user):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
-		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		qs = BookStation.objects.filter(
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 		if request.user.is_authenticated:
 			qs = BookStation.objects.filter(
 				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 				| models.Q(added_by=request.user)
 			)
 		station = get_object_or_404(qs, readable_id=readable_id)
@@ -99,7 +106,10 @@ def bookstation_detail_page(request, readable_id):
 		current_book_station=station,
 	).order_by("title", "id")
 	if not is_moderator(request.user):
-		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+		items = items.filter(
+			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
+		)
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
 	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 	return render(
@@ -169,7 +179,10 @@ def bookstation_list_create(request):
 	if request.method == "GET":
 		stations = BookStation.objects.select_related("added_by").all()
 		if not is_moderator(request.user):
-			stations = stations.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+			stations = stations.filter(
+				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+			)
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
@@ -213,7 +226,10 @@ def bookstation_detail_api(request, readable_id):
 
 	qs = BookStation.objects.select_related("added_by")
 	if not is_moderator(request.user):
-		qs = qs.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		qs = qs.filter(
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 	station = get_object_or_404(qs, readable_id=readable_id)
 	return JsonResponse(_serialize_bookstation(station))
 
@@ -225,13 +241,13 @@ def bookstation_inventory_page(request, readable_id):
 	if is_moderator(request.user):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
-		import django.db.models as _m
-		qs = BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.APPROVED)
+		visibility_filter = (
+			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
+		)
 		if request.user.is_authenticated:
-			qs = BookStation.objects.filter(
-				_m.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-				| _m.Q(added_by=request.user)
-			)
+			visibility_filter |= models.Q(added_by=request.user)
+		qs = BookStation.objects.filter(visibility_filter)
 		station = get_object_or_404(qs, readable_id=readable_id)
 	sort_by = request.GET.get("sort_by", "title")
 	sort_dir = request.GET.get("sort_dir")
@@ -267,7 +283,10 @@ def bookstation_inventory_page(request, readable_id):
 	)
 
 	if not is_moderator(request.user):
-		items = items.filter(moderation_status=Item.ModerationStatus.APPROVED)
+		items = items.filter(
+			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
+		)
 
 	sort_field_map = {
 		"title": ["title", "id"],
@@ -411,6 +430,22 @@ def _generate_qr_png_bytes(url):
 	img.save(buf, format="PNG")
 	buf.seek(0)
 	return buf.read()
+
+
+@login_required(login_url="users:login")
+def bookstation_report(request, readable_id):
+	if request.method != "POST":
+		return HttpResponseNotAllowed(["POST"])
+
+	station = get_object_or_404(
+		BookStation,
+		readable_id=readable_id,
+		moderation_status__in=[BookStation.ModerationStatus.APPROVED, BookStation.ModerationStatus.REPORTED],
+	)
+	if station.moderation_status != BookStation.ModerationStatus.REPORTED:
+		station.moderation_status = BookStation.ModerationStatus.REPORTED
+		station.save(update_fields=["moderation_status"])
+	return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 def bookstation_qr_code(request, readable_id):

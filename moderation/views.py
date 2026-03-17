@@ -43,6 +43,14 @@ def moderation_queue(request):
         pending_edit__isnull=False,
     ).select_related("added_by", "current_book_station").order_by("title", "id")
 
+    reported_stations = BookStation.objects.filter(
+        moderation_status=BookStation.ModerationStatus.REPORTED
+    ).select_related("added_by", "claimed_by").order_by("name")
+
+    reported_items = Item.objects.filter(
+        moderation_status=Item.ModerationStatus.REPORTED
+    ).select_related("added_by", "claimed_by", "current_book_station").order_by("title", "id")
+
     return render(
         request,
         "moderation/queue.html",
@@ -51,6 +59,8 @@ def moderation_queue(request):
             "pending_items": pending_items,
             "station_edits": station_edits,
             "item_edits": item_edits,
+            "reported_stations": reported_stations,
+            "reported_items": reported_items,
         },
     )
 
@@ -206,5 +216,107 @@ def reject_item_edit(request, item_id):
     )
     item.pending_edit = None
     item.save(update_fields=["pending_edit"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def approve_reported_bookstation(request, readable_id):
+    """Dismiss a report on a BookStation, restoring it to approved."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.REPORTED,
+    )
+    station.moderation_status = BookStation.ModerationStatus.APPROVED
+    station.claimed_by = None
+    station.save(update_fields=["moderation_status", "claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def reject_reported_bookstation(request, readable_id):
+    """Reject a reported BookStation."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.REPORTED,
+    )
+    station.moderation_status = BookStation.ModerationStatus.REJECTED
+    station.claimed_by = None
+    station.save(update_fields=["moderation_status", "claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def claim_reported_bookstation(request, readable_id):
+    """Claim a reported BookStation for review."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status=BookStation.ModerationStatus.REPORTED,
+        claimed_by__isnull=True,
+    )
+    station.claimed_by = request.user
+    station.save(update_fields=["claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def approve_reported_item(request, item_id):
+    """Dismiss a report on an Item, restoring it to approved."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.REPORTED,
+    )
+    item.moderation_status = Item.ModerationStatus.APPROVED
+    item.claimed_by = None
+    item.save(update_fields=["moderation_status", "claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def reject_reported_item(request, item_id):
+    """Reject a reported Item."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.REPORTED,
+    )
+    item.moderation_status = Item.ModerationStatus.REJECTED
+    item.claimed_by = None
+    item.save(update_fields=["moderation_status", "claimed_by"])
+    return redirect("moderation:queue")
+
+
+@moderator_required
+def claim_reported_item(request, item_id):
+    """Claim a reported Item for review."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status=Item.ModerationStatus.REPORTED,
+        claimed_by__isnull=True,
+    )
+    item.claimed_by = request.user
+    item.save(update_fields=["claimed_by"])
     return redirect("moderation:queue")
 

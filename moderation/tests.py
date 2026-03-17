@@ -664,3 +664,337 @@ class ModerationNavLinkTests(ModerationSetUpMixin, TestCase):
 
         self.assertContains(response, reverse("moderation:queue"))
 
+
+
+class ReportItemTests(ModerationSetUpMixin, TestCase):
+    """Tests for the report item feature."""
+
+    def test_anonymous_user_is_redirected_when_reporting_item(self):
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
+
+    def test_logged_in_user_can_report_item(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REPORTED)
+
+    def test_reporting_item_redirects_to_item_detail(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.approved_item.id}),
+        )
+
+    def test_reporting_already_reported_item_is_idempotent(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REPORTED)
+
+    def test_cannot_report_rejected_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REJECTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+
+    def test_cannot_report_pending_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.PENDING
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.PENDING)
+
+    def test_get_request_to_report_item_returns_405(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.get(
+            reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_reported_item_appears_in_moderation_queue(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(response, self.approved_item.title)
+        self.assertContains(response, "Reported Items")
+
+    def test_moderator_can_approve_reported_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse("moderation:approve-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.APPROVED)
+
+    def test_moderator_can_reject_reported_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse("moderation:reject-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+
+    def test_moderator_can_claim_reported_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse("moderation:claim-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.claimed_by, self.moderator)
+
+    def test_regular_user_cannot_approve_reported_item(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse("moderation:approve-reported-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+
+class ReportBookStationTests(ModerationSetUpMixin, TestCase):
+    """Tests for the report bookstation feature."""
+
+    def test_anonymous_user_is_redirected_when_reporting_station(self):
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
+
+    def test_logged_in_user_can_report_station(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REPORTED
+        )
+
+    def test_reporting_station_redirects_to_station_detail(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+        )
+
+    def test_reporting_already_reported_station_is_idempotent(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REPORTED
+        )
+
+    def test_cannot_report_rejected_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REJECTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REJECTED
+        )
+
+    def test_cannot_report_pending_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.PENDING
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.PENDING
+        )
+
+    def test_get_request_to_report_station_returns_405(self):
+        self.client.login(username="other", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-report",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_reported_station_appears_in_moderation_queue(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(response, self.approved_station.name)
+        self.assertContains(response, "Reported Book Stations")
+
+    def test_moderator_can_approve_reported_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse(
+                "moderation:approve-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.APPROVED
+        )
+
+    def test_moderator_can_reject_reported_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse(
+                "moderation:reject-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_station.refresh_from_db()
+        self.assertEqual(
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REJECTED
+        )
+
+    def test_moderator_can_claim_reported_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="moderator", password=self.password)
+        response = self.client.post(
+            reverse(
+                "moderation:claim-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_station.refresh_from_db()
+        self.assertEqual(self.approved_station.claimed_by, self.moderator)
+
+    def test_regular_user_cannot_approve_reported_station(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+
+        self.client.login(username="other", password=self.password)
+        response = self.client.post(
+            reverse(
+                "moderation:approve-reported-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
