@@ -113,11 +113,17 @@ def profile(request):
     if is_moderator(request.user):
         claimed_stations = BookStation.objects.filter(
             claimed_by=request.user,
-            moderation_status=BookStation.ModerationStatus.PENDING,
+            moderation_status__in=[
+                BookStation.ModerationStatus.PENDING,
+                BookStation.ModerationStatus.REPORTED,
+            ],
         ).order_by("name")
         claimed_items = Item.objects.filter(
             claimed_by=request.user,
-            moderation_status=Item.ModerationStatus.PENDING,
+            moderation_status__in=[
+                Item.ModerationStatus.PENDING,
+                Item.ModerationStatus.REPORTED,
+            ],
         ).order_by("title", "id")
         context["claimed_stations"] = claimed_stations
         context["claimed_items"] = claimed_items

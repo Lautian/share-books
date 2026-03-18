@@ -83,7 +83,10 @@ def claim_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.PENDING,
+        moderation_status__in=[
+            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.REPORTED,
+        ],
         claimed_by__isnull=True,
     )
     station.claimed_by = request.user
@@ -99,16 +102,24 @@ def approve_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.PENDING,
+        moderation_status__in=[
+            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.REPORTED,
+        ],
     )
     from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.APPROVED
     station.claimed_by = None
     station.save(update_fields=["moderation_status", "claimed_by"])
+    action = (
+        ModerationLog.Action.REPORTED_STATION_APPROVED
+        if from_status == BookStation.ModerationStatus.REPORTED
+        else ModerationLog.Action.STATION_APPROVED
+    )
     ModerationLog.objects.create(
         moderator=request.user,
         book_station=station,
-        action=ModerationLog.Action.STATION_APPROVED,
+        action=action,
         from_status=from_status,
         to_status=station.moderation_status,
     )
@@ -123,16 +134,24 @@ def reject_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.PENDING,
+        moderation_status__in=[
+            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.REPORTED,
+        ],
     )
     from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.REJECTED
     station.claimed_by = None
     station.save(update_fields=["moderation_status", "claimed_by"])
+    action = (
+        ModerationLog.Action.REPORTED_STATION_REJECTED
+        if from_status == BookStation.ModerationStatus.REPORTED
+        else ModerationLog.Action.STATION_REJECTED
+    )
     ModerationLog.objects.create(
         moderator=request.user,
         book_station=station,
-        action=ModerationLog.Action.STATION_REJECTED,
+        action=action,
         from_status=from_status,
         to_status=station.moderation_status,
     )
@@ -147,7 +166,10 @@ def claim_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status=Item.ModerationStatus.PENDING,
+        moderation_status__in=[
+            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.REPORTED,
+        ],
         claimed_by__isnull=True,
     )
     item.claimed_by = request.user
@@ -163,16 +185,24 @@ def approve_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status=Item.ModerationStatus.PENDING,
+        moderation_status__in=[
+            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.REPORTED,
+        ],
     )
     from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.APPROVED
     item.claimed_by = None
     item.save(update_fields=["moderation_status", "claimed_by"])
+    action = (
+        ModerationLog.Action.REPORTED_ITEM_APPROVED
+        if from_status == Item.ModerationStatus.REPORTED
+        else ModerationLog.Action.ITEM_APPROVED
+    )
     ModerationLog.objects.create(
         moderator=request.user,
         item=item,
-        action=ModerationLog.Action.ITEM_APPROVED,
+        action=action,
         from_status=from_status,
         to_status=item.moderation_status,
     )
@@ -187,16 +217,24 @@ def reject_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status=Item.ModerationStatus.PENDING,
+        moderation_status__in=[
+            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.REPORTED,
+        ],
     )
     from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.REJECTED
     item.claimed_by = None
     item.save(update_fields=["moderation_status", "claimed_by"])
+    action = (
+        ModerationLog.Action.REPORTED_ITEM_REJECTED
+        if from_status == Item.ModerationStatus.REPORTED
+        else ModerationLog.Action.ITEM_REJECTED
+    )
     ModerationLog.objects.create(
         moderator=request.user,
         item=item,
-        action=ModerationLog.Action.ITEM_REJECTED,
+        action=action,
         from_status=from_status,
         to_status=item.moderation_status,
     )
@@ -322,140 +360,6 @@ def reject_item_edit(request, item_id):
         from_status=item.moderation_status,
         to_status=item.moderation_status,
     )
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def approve_reported_bookstation(request, readable_id):
-    """Dismiss a report on a BookStation, restoring it to approved."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.REPORTED,
-    )
-    from_status = station.moderation_status
-    station.moderation_status = BookStation.ModerationStatus.APPROVED
-    station.claimed_by = None
-    station.save(update_fields=["moderation_status", "claimed_by"])
-    ModerationLog.objects.create(
-        moderator=request.user,
-        book_station=station,
-        action=ModerationLog.Action.REPORTED_STATION_APPROVED,
-        from_status=from_status,
-        to_status=station.moderation_status,
-    )
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def reject_reported_bookstation(request, readable_id):
-    """Reject a reported BookStation."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.REPORTED,
-    )
-    from_status = station.moderation_status
-    station.moderation_status = BookStation.ModerationStatus.REJECTED
-    station.claimed_by = None
-    station.save(update_fields=["moderation_status", "claimed_by"])
-    ModerationLog.objects.create(
-        moderator=request.user,
-        book_station=station,
-        action=ModerationLog.Action.REPORTED_STATION_REJECTED,
-        from_status=from_status,
-        to_status=station.moderation_status,
-    )
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def claim_reported_bookstation(request, readable_id):
-    """Claim a reported BookStation for review."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.REPORTED,
-        claimed_by__isnull=True,
-    )
-    station.claimed_by = request.user
-    station.save(update_fields=["claimed_by"])
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def approve_reported_item(request, item_id):
-    """Dismiss a report on an Item, restoring it to approved."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.REPORTED,
-    )
-    from_status = item.moderation_status
-    item.moderation_status = Item.ModerationStatus.APPROVED
-    item.claimed_by = None
-    item.save(update_fields=["moderation_status", "claimed_by"])
-    ModerationLog.objects.create(
-        moderator=request.user,
-        item=item,
-        action=ModerationLog.Action.REPORTED_ITEM_APPROVED,
-        from_status=from_status,
-        to_status=item.moderation_status,
-    )
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def reject_reported_item(request, item_id):
-    """Reject a reported Item."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.REPORTED,
-    )
-    from_status = item.moderation_status
-    item.moderation_status = Item.ModerationStatus.REJECTED
-    item.claimed_by = None
-    item.save(update_fields=["moderation_status", "claimed_by"])
-    ModerationLog.objects.create(
-        moderator=request.user,
-        item=item,
-        action=ModerationLog.Action.REPORTED_ITEM_REJECTED,
-        from_status=from_status,
-        to_status=item.moderation_status,
-    )
-    return _redirect_to_next(request, reverse("moderation:queue"))
-
-
-@moderator_required
-def claim_reported_item(request, item_id):
-    """Claim a reported Item for review."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.REPORTED,
-        claimed_by__isnull=True,
-    )
-    item.claimed_by = request.user
-    item.save(update_fields=["claimed_by"])
     return _redirect_to_next(request, reverse("moderation:queue"))
 
 

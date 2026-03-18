@@ -377,19 +377,25 @@
                                 </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
-                                        {% if not station.claimed_by %}
-                                            <form method="post" action="{% url 'moderation:claim-reported-bookstation' station.readable_id %}">
+                                        {% if station.claimed_by == request.user %}
+                                            <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.path }}">
+                                                <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                                            </form>
+                                        {% elif not station.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="next" value="{{ request.path }}">
                                                 <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                                             </form>
                                         {% endif %}
-                                        <form method="post" action="{% url 'moderation:approve-reported-bookstation' station.readable_id %}">
+                                        <form method="post" action="{% url 'moderation:approve-bookstation' station.readable_id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next" value="{{ request.path }}">
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                         </form>
-                                        <form method="post" action="{% url 'moderation:reject-reported-bookstation' station.readable_id %}">
+                                        <form method="post" action="{% url 'moderation:reject-bookstation' station.readable_id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next" value="{{ request.path }}">
                                             <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
@@ -457,19 +463,25 @@
                                 </td>
                                 <td class="text-right">
                                     <div class="flex justify-end gap-2">
-                                        {% if not item.claimed_by %}
-                                            <form method="post" action="{% url 'moderation:claim-reported-item' item.id %}">
+                                        {% if item.claimed_by == request.user %}
+                                            <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="next" value="{{ request.path }}">
+                                                <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                                            </form>
+                                        {% elif not item.claimed_by %}
+                                            <form method="post" action="{% url 'moderation:claim-item' item.id %}">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="next" value="{{ request.path }}">
                                                 <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                                             </form>
                                         {% endif %}
-                                        <form method="post" action="{% url 'moderation:approve-reported-item' item.id %}">
+                                        <form method="post" action="{% url 'moderation:approve-item' item.id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next" value="{{ request.path }}">
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                         </form>
-                                        <form method="post" action="{% url 'moderation:reject-reported-item' item.id %}">
+                                        <form method="post" action="{% url 'moderation:reject-item' item.id %}">
                                             {% csrf_token %}
                                             <input type="hidden" name="next" value="{{ request.path }}">
                                             <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
