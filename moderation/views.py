@@ -407,8 +407,17 @@ def unclaim_item(request, item_id):
 def moderate_pending_bookstation(request, readable_id):
     """Redirect to the regular BookStation detail page.
 
-    The regular detail page shows a moderation panel for moderators viewing PENDING stations.
+    The regular detail page shows a moderation panel for moderators viewing PENDING or REPORTED stations.
+    Returns 404 if the station does not exist or is no longer in a reviewable state.
     """
+    get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status__in=[
+            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.REPORTED,
+        ],
+    )
     return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
@@ -416,7 +425,16 @@ def moderate_pending_bookstation(request, readable_id):
 def moderate_pending_item(request, item_id):
     """Redirect to the regular Item detail page.
 
-    The regular detail page shows a moderation panel for moderators viewing PENDING items.
+    The regular detail page shows a moderation panel for moderators viewing PENDING or REPORTED items.
+    Returns 404 if the item does not exist or is no longer in a reviewable state.
     """
+    get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status__in=[
+            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.REPORTED,
+        ],
+    )
     return redirect("items:item-detail", item_id=item_id)
 

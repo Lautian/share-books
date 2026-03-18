@@ -1539,6 +1539,66 @@ class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_moderate_approved_bookstation_returns_404(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_moderate_approved_item_returns_404(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_moderate_reported_bookstation_redirects_to_detail(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        expected_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.approved_station.readable_id},
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_moderate_reported_item_redirects_to_detail(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        expected_url = reverse(
+            "items:item-detail",
+            kwargs={"item_id": self.approved_item.id},
+        )
+        self.assertRedirects(response, expected_url)
+
     def test_detail_view_shows_approve_button(self):
         self.client.login(username="moderator", password=self.password)
 
