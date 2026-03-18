@@ -285,7 +285,13 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+        )
         self.pending_station.refresh_from_db()
         self.assertEqual(self.pending_station.claimed_by, self.moderator)
 
@@ -296,7 +302,10 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:claim-item", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.pending_item.id}),
+        )
         self.pending_item.refresh_from_db()
         self.assertEqual(self.pending_item.claimed_by, self.moderator)
 
@@ -1025,7 +1034,10 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:claim-reported-item", kwargs={"item_id": self.approved_item.id})
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.approved_item.id}),
+        )
         self.approved_item.refresh_from_db()
         self.assertEqual(self.approved_item.claimed_by, self.moderator)
 
@@ -1245,7 +1257,13 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            ),
+        )
         self.approved_station.refresh_from_db()
         self.assertEqual(self.approved_station.claimed_by, self.moderator)
 
@@ -1322,7 +1340,13 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+        )
         self.pending_station.refresh_from_db()
         self.assertIsNone(self.pending_station.claimed_by)
 
@@ -1333,7 +1357,10 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertRedirects(response, reverse("moderation:queue"))
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.pending_item.id}),
+        )
         self.pending_item.refresh_from_db()
         self.assertIsNone(self.pending_item.claimed_by)
 

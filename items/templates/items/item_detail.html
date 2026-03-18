@@ -54,6 +54,10 @@
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
             </form>
+            <form method="post" action="{% url 'moderation:reject-item' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
+            </form>
             {% if item.claimed_by == request.user %}
                 <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
                     {% csrf_token %}
@@ -61,6 +65,37 @@
                 </form>
             {% elif not item.claimed_by %}
                 <form method="post" action="{% url 'moderation:claim-item' item.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline">Claim</button>
+                </form>
+            {% endif %}
+            {% if item.claimed_by %}
+                <span class="self-center text-sm text-base-content/70">
+                    Claimed by: <span class="badge badge-info">{{ item.claimed_by.username }}</span>
+                </span>
+            {% endif %}
+        </div>
+    </div>
+    {% elif user_is_moderator and item.moderation_status == "REPORTED" %}
+    <div class="mb-5 rounded-2xl border border-error/40 bg-base-100/80 p-4 shadow-xl">
+        <p class="text-xs uppercase tracking-[0.18em] text-error mb-3">Moderation actions</p>
+        <div class="flex flex-wrap items-center gap-2">
+            <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
+            <form method="post" action="{% url 'moderation:approve-reported-item' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <form method="post" action="{% url 'moderation:reject-reported-item' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
+            </form>
+            {% if item.claimed_by == request.user %}
+                <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
+                </form>
+            {% elif not item.claimed_by %}
+                <form method="post" action="{% url 'moderation:claim-reported-item' item.id %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                 </form>

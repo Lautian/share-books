@@ -79,7 +79,7 @@ def claim_bookstation(request, readable_id):
     )
     station.claimed_by = request.user
     station.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 @moderator_required
@@ -143,7 +143,7 @@ def claim_item(request, item_id):
     )
     item.claimed_by = request.user
     item.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("items:item-detail", item_id=item_id)
 
 
 @moderator_required
@@ -380,7 +380,7 @@ def claim_reported_bookstation(request, readable_id):
     )
     station.claimed_by = request.user
     station.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 @moderator_required
@@ -447,7 +447,7 @@ def claim_reported_item(request, item_id):
     )
     item.claimed_by = request.user
     item.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("items:item-detail", item_id=item_id)
 
 
 @moderator_required
@@ -459,12 +459,15 @@ def unclaim_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.PENDING,
+        moderation_status__in=[
+            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.REPORTED,
+        ],
         claimed_by=request.user,
     )
     station.claimed_by = None
     station.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 @moderator_required
@@ -476,12 +479,15 @@ def unclaim_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status=Item.ModerationStatus.PENDING,
+        moderation_status__in=[
+            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.REPORTED,
+        ],
         claimed_by=request.user,
     )
     item.claimed_by = None
     item.save(update_fields=["claimed_by"])
-    return redirect("moderation:queue")
+    return redirect("items:item-detail", item_id=item_id)
 
 
 @moderator_required
