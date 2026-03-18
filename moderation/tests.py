@@ -289,6 +289,23 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
         self.pending_station.refresh_from_db()
         self.assertEqual(self.pending_station.claimed_by, self.moderator)
 
+    def test_claim_bookstation_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+
+        response = self.client.post(
+            reverse(
+                "moderation:claim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
+
     def test_claim_item_assigns_moderator(self):
         self.client.login(username="moderator", password=self.password)
 
@@ -299,6 +316,17 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
         self.assertRedirects(response, reverse("moderation:queue"))
         self.pending_item.refresh_from_db()
         self.assertEqual(self.pending_item.claimed_by, self.moderator)
+
+    def test_claim_item_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
+
+        response = self.client.post(
+            reverse("moderation:claim-item", kwargs={"item_id": self.pending_item.id}),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
 
     def test_regular_user_cannot_claim_bookstation(self):
         self.client.login(username="regular", password=self.password)
@@ -1300,3 +1328,582 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         self.assertEqual(log.from_status, BookStation.ModerationStatus.REPORTED)
         self.assertEqual(log.to_status, BookStation.ModerationStatus.REJECTED)
         self.assertEqual(log.book_station, self.approved_station)
+
+
+class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
+    """Tests for the unclaim action."""
+
+    def setUp(self):
+        super().setUp()
+        self.pending_station.claimed_by = self.moderator
+        self.pending_station.save(update_fields=["claimed_by"])
+        self.pending_item.claimed_by = self.moderator
+        self.pending_item.save(update_fields=["claimed_by"])
+
+    def test_unclaim_bookstation_clears_claimed_by(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.pending_station.refresh_from_db()
+        self.assertIsNone(self.pending_station.claimed_by)
+
+    def test_unclaim_item_clears_claimed_by(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.pending_item.refresh_from_db()
+        self.assertIsNone(self.pending_item.claimed_by)
+
+    def test_unclaim_bookstation_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
+
+    def test_unclaim_item_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
+
+        response = self.client.post(
+            reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id}),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
+
+    def test_unclaim_bookstation_returns_404_if_not_claimed(self):
+        self.pending_station.claimed_by = None
+        self.pending_station.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_unclaim_item_returns_404_if_not_claimed(self):
+        self.pending_item.claimed_by = None
+        self.pending_item.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_regular_user_cannot_unclaim_bookstation(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.pending_station.refresh_from_db()
+        self.assertEqual(self.pending_station.claimed_by, self.moderator)
+
+    def test_different_moderator_cannot_unclaim_another_moderators_station(self):
+        User = self.pending_station.added_by.__class__
+        second_moderator = User.objects.create_user(
+            username="mod2", password=self.password, is_staff=True
+        )
+        self.client.login(username="mod2", password=self.password)
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.pending_station.refresh_from_db()
+        self.assertEqual(self.pending_station.claimed_by, self.moderator)
+
+    def test_queue_shows_unclaim_button_for_claimed_station(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        self.assertContains(response, "Unclaim")
+
+    def test_queue_pending_station_name_is_a_link(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        expected_url = reverse(
+            "moderation:moderate-bookstation",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+        self.assertContains(response, expected_url)
+
+    def test_queue_pending_item_name_is_a_link(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        expected_url = reverse(
+            "moderation:moderate-item",
+            kwargs={"item_id": self.pending_item.id},
+        )
+        self.assertContains(response, expected_url)
+
+
+class ModerationDetailViewTests(ModerationSetUpMixin, TestCase):
+    """Tests for the moderation detail views for pending stations and items."""
+
+    def test_moderate_pending_bookstation_redirects_to_detail(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        expected_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_moderate_pending_item_redirects_to_detail(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.pending_item.id},
+            )
+        )
+
+        expected_url = reverse(
+            "items:item-detail",
+            kwargs={"item_id": self.pending_item.id},
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_moderate_bookstation_returns_403_for_regular_user(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_moderate_item_returns_403_for_regular_user(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.pending_item.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_moderate_approved_bookstation_returns_404(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_moderate_approved_item_returns_404(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_moderate_reported_bookstation_redirects_to_detail(self):
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        expected_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.approved_station.readable_id},
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_moderate_reported_item_redirects_to_detail(self):
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        expected_url = reverse(
+            "items:item-detail",
+            kwargs={"item_id": self.approved_item.id},
+        )
+        self.assertRedirects(response, expected_url)
+
+    def test_detail_view_shows_approve_button(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            follow=True,
+        )
+
+        self.assertContains(response, "Approve")
+
+    def test_detail_view_shows_claim_button_when_unclaimed(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            follow=True,
+        )
+
+        self.assertContains(response, "Claim")
+
+    def test_detail_view_shows_unclaim_button_when_claimed(self):
+        self.pending_station.claimed_by = self.moderator
+        self.pending_station.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            follow=True,
+        )
+
+        self.assertContains(response, "Unclaim")
+
+    def test_detail_view_uses_regular_bookstation_template(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "book_stations/bookstation_detail.html")
+        self.assertContains(response, self.pending_station.name)
+
+    def test_detail_view_uses_regular_item_template(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "moderation:moderate-item",
+                kwargs={"item_id": self.pending_item.id},
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "items/item_detail.html")
+        self.assertContains(response, self.pending_item.title)
+
+    def test_moderation_panel_hidden_for_non_pending_bookstation(self):
+        """Moderation actions panel must not appear on an already-approved station."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.approved_station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approve_url = reverse(
+            "moderation:approve-bookstation",
+            kwargs={"readable_id": self.approved_station.readable_id},
+        )
+        self.assertNotContains(response, approve_url)
+
+    def test_moderation_panel_hidden_for_non_pending_item(self):
+        """Moderation actions panel must not appear on an already-approved item."""
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(
+            reverse(
+                "items:item-detail",
+                kwargs={"item_id": self.approved_item.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        approve_url = reverse(
+            "moderation:approve-item",
+            kwargs={"item_id": self.approved_item.id},
+        )
+        self.assertNotContains(response, approve_url)
+
+
+class ModerationProfileClaimedItemsTests(ModerationSetUpMixin, TestCase):
+    """Tests that the profile page shows items claimed for moderation."""
+
+    def test_profile_shows_claimed_items_section_for_moderator(self):
+        self.pending_station.claimed_by = self.moderator
+        self.pending_station.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertContains(response, "moderation claims")
+        self.assertContains(response, self.pending_station.name)
+
+    def test_profile_shows_claimed_items_for_moderator(self):
+        self.pending_item.claimed_by = self.moderator
+        self.pending_item.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertContains(response, self.pending_item.title)
+
+    def test_profile_hides_claimed_section_for_regular_user(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertNotContains(response, "moderation claims")
+
+    def test_profile_shows_empty_claims_section_for_moderator_with_no_claims(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertContains(response, "moderation claims")
+        self.assertContains(response, "You have not claimed any items for moderation")
+
+
+class UnifiedModerationFlowTests(ModerationSetUpMixin, TestCase):
+    """Tests that PENDING and REPORTED items use the same claim/approve/reject flow."""
+
+    def setUp(self):
+        super().setUp()
+        # Make approved_station and approved_item REPORTED so we can test the unified flow.
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.save(update_fields=["moderation_status"])
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.save(update_fields=["moderation_status"])
+
+    # --- claim via unified URL ---
+
+    def test_claim_reported_bookstation_via_unified_url(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:claim-bookstation", kwargs={"readable_id": self.approved_station.readable_id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_station.refresh_from_db()
+        self.assertEqual(self.approved_station.claimed_by, self.moderator)
+
+    def test_claim_reported_item_via_unified_url(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.post(
+            reverse("moderation:claim-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.assertRedirects(response, reverse("moderation:queue"))
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.claimed_by, self.moderator)
+
+    # --- approve via unified URL records correct log action ---
+
+    def test_approve_reported_bookstation_via_unified_url_records_reported_log_action(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:approve-bookstation", kwargs={"readable_id": self.approved_station.readable_id})
+        )
+
+        self.approved_station.refresh_from_db()
+        self.assertEqual(self.approved_station.moderation_status,
+                         BookStation.ModerationStatus.APPROVED)
+        log = ModerationLog.objects.get(book_station=self.approved_station)
+        self.assertEqual(log.action, ModerationLog.Action.REPORTED_STATION_APPROVED)
+
+    def test_approve_reported_item_via_unified_url_records_reported_log_action(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:approve-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.APPROVED)
+        log = ModerationLog.objects.get(item=self.approved_item)
+        self.assertEqual(log.action, ModerationLog.Action.REPORTED_ITEM_APPROVED)
+
+    def test_reject_reported_bookstation_via_unified_url_records_reported_log_action(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:reject-bookstation", kwargs={"readable_id": self.approved_station.readable_id})
+        )
+
+        self.approved_station.refresh_from_db()
+        self.assertEqual(self.approved_station.moderation_status,
+                         BookStation.ModerationStatus.REJECTED)
+        log = ModerationLog.objects.get(book_station=self.approved_station)
+        self.assertEqual(log.action, ModerationLog.Action.REPORTED_STATION_REJECTED)
+
+    def test_reject_reported_item_via_unified_url_records_reported_log_action(self):
+        from moderation.models import ModerationLog
+        self.client.login(username="moderator", password=self.password)
+
+        self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.approved_item.id})
+        )
+
+        self.approved_item.refresh_from_db()
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+        log = ModerationLog.objects.get(item=self.approved_item)
+        self.assertEqual(log.action, ModerationLog.Action.REPORTED_ITEM_REJECTED)
+
+    # --- queue shows Unclaim button for claimed reported items ---
+
+    def test_queue_shows_unclaim_button_for_claimed_reported_station(self):
+        self.approved_station.claimed_by = self.moderator
+        self.approved_station.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        unclaim_url = reverse("moderation:unclaim-bookstation", kwargs={"readable_id": self.approved_station.readable_id})
+        self.assertContains(response, unclaim_url)
+
+    def test_queue_shows_unclaim_button_for_claimed_reported_item(self):
+        self.approved_item.claimed_by = self.moderator
+        self.approved_item.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        unclaim_url = reverse("moderation:unclaim-item", kwargs={"item_id": self.approved_item.id})
+        self.assertContains(response, unclaim_url)
+
+    # --- queue does NOT show claim button when station/item is already claimed ---
+
+    def test_queue_hides_claim_button_for_reported_station_claimed_by_another(self):
+        self.approved_station.claimed_by = self.other_user
+        self.approved_station.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        claim_url = reverse("moderation:claim-bookstation", kwargs={"readable_id": self.approved_station.readable_id})
+        self.assertNotContains(response, claim_url)
+
+    def test_queue_hides_claim_button_for_reported_item_claimed_by_another(self):
+        self.approved_item.claimed_by = self.other_user
+        self.approved_item.save(update_fields=["claimed_by"])
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:queue"))
+
+        claim_url = reverse("moderation:claim-item", kwargs={"item_id": self.approved_item.id})
+        self.assertNotContains(response, claim_url)
+
+
+class ModerationProfileClaimedReportedItemsTests(ModerationSetUpMixin, TestCase):
+    """Tests that the profile page shows REPORTED items claimed by the moderator (Bug 2 fix)."""
+
+    def setUp(self):
+        super().setUp()
+        self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED
+        self.approved_station.claimed_by = self.moderator
+        self.approved_station.save(update_fields=["moderation_status", "claimed_by"])
+
+        self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
+        self.approved_item.claimed_by = self.moderator
+        self.approved_item.save(update_fields=["moderation_status", "claimed_by"])
+
+    def test_profile_shows_claimed_reported_station(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertContains(response, self.approved_station.name)
+
+    def test_profile_shows_claimed_reported_item(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("users:profile"))
+
+        self.assertContains(response, self.approved_item.title)

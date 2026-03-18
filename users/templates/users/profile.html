@@ -98,5 +98,76 @@
             </div>
         </article>
     </div>
+
+    {% if user_is_moderator %}
+    <div class="card border border-warning/40 bg-base-100/75 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center gap-3">
+                <h2 class="card-title text-2xl">Your moderation claims</h2>
+                <span class="badge badge-warning">{{ total_claims }}</span>
+            </div>
+            <p class="text-sm text-base-content/70">Items and stations you have claimed for moderation review.</p>
+
+            {% if claimed_stations %}
+                <h3 class="mt-4 font-semibold text-base-content/80">Stations</h3>
+                <ul class="space-y-2 text-sm">
+                    {% for station in claimed_stations %}
+                        <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a class="font-semibold link-hover" href="{% url 'moderation:moderate-bookstation' station.readable_id %}">
+                                    {{ station.name }}
+                                </a>
+                                <span class="badge badge-warning badge-sm">Pending</span>
+                            </div>
+                            <p class="text-base-content/70">{{ station.location }}</p>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <a class="btn btn-xs btn-outline" href="{% url 'moderation:moderate-bookstation' station.readable_id %}">
+                                    Review
+                                </a>
+                                <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-xs btn-outline btn-warning">Unclaim</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if claimed_items %}
+                <h3 class="mt-4 font-semibold text-base-content/80">Items</h3>
+                <ul class="space-y-2 text-sm">
+                    {% for item in claimed_items %}
+                        <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a class="font-semibold link-hover" href="{% url 'moderation:moderate-item' item.id %}">
+                                    {{ item.title }}
+                                </a>
+                                <span class="badge badge-warning badge-sm">Pending</span>
+                            </div>
+                            <p class="text-base-content/70">
+                                {{ item.get_item_type_display }}
+                                {% if item.author %}by {{ item.author }}{% endif %}
+                            </p>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                <a class="btn btn-xs btn-outline" href="{% url 'moderation:moderate-item' item.id %}">
+                                    Review
+                                </a>
+                                <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-xs btn-outline btn-warning">Unclaim</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if not claimed_stations and not claimed_items %}
+                <p class="text-base-content/75">You have not claimed any items for moderation.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </section>
 {% endblock %}
