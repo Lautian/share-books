@@ -285,15 +285,26 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(
-            response,
-            reverse(
-                "book_stations:bookstation-detail",
-                kwargs={"readable_id": self.pending_station.readable_id},
-            ),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.pending_station.refresh_from_db()
         self.assertEqual(self.pending_station.claimed_by, self.moderator)
+
+    def test_claim_bookstation_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+
+        response = self.client.post(
+            reverse(
+                "moderation:claim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
 
     def test_claim_item_assigns_moderator(self):
         self.client.login(username="moderator", password=self.password)
@@ -302,12 +313,20 @@ class ModerationClaimTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:claim-item", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertRedirects(
-            response,
-            reverse("items:item-detail", kwargs={"item_id": self.pending_item.id}),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.pending_item.refresh_from_db()
         self.assertEqual(self.pending_item.claimed_by, self.moderator)
+
+    def test_claim_item_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
+
+        response = self.client.post(
+            reverse("moderation:claim-item", kwargs={"item_id": self.pending_item.id}),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
 
     def test_regular_user_cannot_claim_bookstation(self):
         self.client.login(username="regular", password=self.password)
@@ -1034,10 +1053,7 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:claim-reported-item", kwargs={"item_id": self.approved_item.id})
         )
 
-        self.assertRedirects(
-            response,
-            reverse("items:item-detail", kwargs={"item_id": self.approved_item.id}),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.approved_item.refresh_from_db()
         self.assertEqual(self.approved_item.claimed_by, self.moderator)
 
@@ -1257,13 +1273,7 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(
-            response,
-            reverse(
-                "book_stations:bookstation-detail",
-                kwargs={"readable_id": self.approved_station.readable_id},
-            ),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.approved_station.refresh_from_db()
         self.assertEqual(self.approved_station.claimed_by, self.moderator)
 
@@ -1340,13 +1350,7 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertRedirects(
-            response,
-            reverse(
-                "book_stations:bookstation-detail",
-                kwargs={"readable_id": self.pending_station.readable_id},
-            ),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.pending_station.refresh_from_db()
         self.assertIsNone(self.pending_station.claimed_by)
 
@@ -1357,12 +1361,37 @@ class ModerationUnclaimTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertRedirects(
-            response,
-            reverse("items:item-detail", kwargs={"item_id": self.pending_item.id}),
-        )
+        self.assertRedirects(response, reverse("moderation:queue"))
         self.pending_item.refresh_from_db()
         self.assertIsNone(self.pending_item.claimed_by)
+
+    def test_unclaim_bookstation_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.pending_station.readable_id},
+        )
+
+        response = self.client.post(
+            reverse(
+                "moderation:unclaim-bookstation",
+                kwargs={"readable_id": self.pending_station.readable_id},
+            ),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
+
+    def test_unclaim_item_respects_next_parameter(self):
+        self.client.login(username="moderator", password=self.password)
+        detail_url = reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
+
+        response = self.client.post(
+            reverse("moderation:unclaim-item", kwargs={"item_id": self.pending_item.id}),
+            data={"next": detail_url},
+        )
+
+        self.assertRedirects(response, detail_url)
 
     def test_unclaim_bookstation_returns_404_if_not_claimed(self):
         self.pending_station.claimed_by = None

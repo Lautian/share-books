@@ -4,11 +4,20 @@ from decimal import Decimal
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from book_stations.models import BookStation
 from items.models import Item
 from moderation.models import ModerationLog
 from moderation.utils import is_moderator
+
+
+def _redirect_to_next(request, fallback):
+    """Redirect to the POST 'next' parameter if it's a safe local URL, else use fallback."""
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+    return redirect(fallback)
 
 
 def moderator_required(view_func):
@@ -79,7 +88,7 @@ def claim_bookstation(request, readable_id):
     )
     station.claimed_by = request.user
     station.save(update_fields=["claimed_by"])
-    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -103,7 +112,7 @@ def approve_bookstation(request, readable_id):
         from_status=from_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -127,7 +136,7 @@ def reject_bookstation(request, readable_id):
         from_status=from_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -143,7 +152,7 @@ def claim_item(request, item_id):
     )
     item.claimed_by = request.user
     item.save(update_fields=["claimed_by"])
-    return redirect("items:item-detail", item_id=item_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -167,7 +176,7 @@ def approve_item(request, item_id):
         from_status=from_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -191,7 +200,7 @@ def reject_item(request, item_id):
         from_status=from_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -225,7 +234,7 @@ def approve_bookstation_edit(request, readable_id):
         from_status=station.moderation_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -250,7 +259,7 @@ def reject_bookstation_edit(request, readable_id):
         from_status=station.moderation_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -288,7 +297,7 @@ def approve_item_edit(request, item_id):
         from_status=item.moderation_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -313,7 +322,7 @@ def reject_item_edit(request, item_id):
         from_status=item.moderation_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -338,7 +347,7 @@ def approve_reported_bookstation(request, readable_id):
         from_status=from_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -363,7 +372,7 @@ def reject_reported_bookstation(request, readable_id):
         from_status=from_status,
         to_status=station.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -380,7 +389,7 @@ def claim_reported_bookstation(request, readable_id):
     )
     station.claimed_by = request.user
     station.save(update_fields=["claimed_by"])
-    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -405,7 +414,7 @@ def approve_reported_item(request, item_id):
         from_status=from_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -430,7 +439,7 @@ def reject_reported_item(request, item_id):
         from_status=from_status,
         to_status=item.moderation_status,
     )
-    return redirect("moderation:queue")
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -447,7 +456,7 @@ def claim_reported_item(request, item_id):
     )
     item.claimed_by = request.user
     item.save(update_fields=["claimed_by"])
-    return redirect("items:item-detail", item_id=item_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -467,7 +476,7 @@ def unclaim_bookstation(request, readable_id):
     )
     station.claimed_by = None
     station.save(update_fields=["claimed_by"])
-    return redirect("book_stations:bookstation-detail", readable_id=readable_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required
@@ -487,7 +496,7 @@ def unclaim_item(request, item_id):
     )
     item.claimed_by = None
     item.save(update_fields=["claimed_by"])
-    return redirect("items:item-detail", item_id=item_id)
+    return _redirect_to_next(request, reverse("moderation:queue"))
 
 
 @moderator_required

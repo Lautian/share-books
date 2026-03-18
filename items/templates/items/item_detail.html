@@ -35,6 +35,7 @@
             {% if item.moderation_status != "REPORTED" %}
                 <form method="post" action="{% url 'items:item-report' item.id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-warning">Report</button>
                 </form>
             {% else %}
@@ -52,20 +53,24 @@
             <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
             <form method="post" action="{% url 'moderation:approve-item' item.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
             </form>
             <form method="post" action="{% url 'moderation:reject-item' item.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if item.claimed_by == request.user %}
                 <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
                 </form>
             {% elif not item.claimed_by %}
                 <form method="post" action="{% url 'moderation:claim-item' item.id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                 </form>
             {% endif %}
@@ -83,20 +88,24 @@
             <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
             <form method="post" action="{% url 'moderation:approve-reported-item' item.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
             </form>
             <form method="post" action="{% url 'moderation:reject-reported-item' item.id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if item.claimed_by == request.user %}
                 <form method="post" action="{% url 'moderation:unclaim-item' item.id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
                 </form>
             {% elif not item.claimed_by %}
                 <form method="post" action="{% url 'moderation:claim-reported-item' item.id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                 </form>
             {% endif %}

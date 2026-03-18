@@ -430,6 +430,7 @@
             {% if station.moderation_status != "REPORTED" %}
                 <form method="post" action="{% url 'book_stations:bookstation-report' station.readable_id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-warning">Report</button>
                 </form>
             {% else %}
@@ -445,20 +446,24 @@
             <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
             <form method="post" action="{% url 'moderation:approve-bookstation' station.readable_id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
             </form>
             <form method="post" action="{% url 'moderation:reject-bookstation' station.readable_id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if station.claimed_by == request.user %}
                 <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
                 </form>
             {% elif not station.claimed_by %}
                 <form method="post" action="{% url 'moderation:claim-bookstation' station.readable_id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                 </form>
             {% endif %}
@@ -476,20 +481,24 @@
             <a class="btn btn-sm btn-ghost" href="{% url 'moderation:queue' %}">← Back to queue</a>
             <form method="post" action="{% url 'moderation:approve-reported-bookstation' station.readable_id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
             </form>
             <form method="post" action="{% url 'moderation:reject-reported-bookstation' station.readable_id %}">
                 {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if station.claimed_by == request.user %}
                 <form method="post" action="{% url 'moderation:unclaim-bookstation' station.readable_id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline btn-warning">Unclaim</button>
                 </form>
             {% elif not station.claimed_by %}
                 <form method="post" action="{% url 'moderation:claim-reported-bookstation' station.readable_id %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <button type="submit" class="btn btn-sm btn-outline">Claim</button>
                 </form>
             {% endif %}
