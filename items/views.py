@@ -428,7 +428,16 @@ def item_list_create(request):
                 last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
-                moderation_status=Item.ModerationStatus.APPROVED,
+            )
+            api_moderation = auto_moderate_item(
+                title=item.title,
+                author=item.author,
+                description=item.description,
+            )
+            item.moderation_status = (
+                Item.ModerationStatus.PENDING
+                if api_moderation["has_bad_language"]
+                else Item.ModerationStatus.APPROVED
             )
 
             item.full_clean()
@@ -510,8 +519,10 @@ def item_edit(request, item_id):
             },
         )
 
-    # Item is APPROVED with no pending edit — store the edit as a pending diff so
-    # the original live data stays publicly visible while moderation is in progress.
+    # Item is APPROVED with no pending edit.
+    # When auto-moderation passes the edit is saved directly.
+    # When auto-moderation flags the content the edit is stored as a pending diff
+    # so the original live data stays publicly visible while moderation is in progress.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():

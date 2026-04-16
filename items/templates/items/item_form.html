@@ -81,8 +81,9 @@
         }
 
         const flaggedFields = "{{ flagged_fields|join:', '|escapejs }}";
+        const visibilityMessage = "{% if is_edit %}Submitting will require moderator approval before your changes become visible on the site. The current item will remain visible until then.{% else %}Submitting will require moderator approval before the item becomes visible on the site.{% endif %}";
         const confirmed = window.confirm(
-            `There's questionable content in fields ${flaggedFields}. Submitting will require moderator approval before the item becomes visible on the site.\n\nPress OK to submit for moderation, or Cancel to continue editing.`
+            `There's questionable content in fields ${flaggedFields}. ${visibilityMessage}\n\nPress OK to submit for moderation, or Cancel to continue editing.`
         );
 
         if (confirmed) {

@@ -654,6 +654,26 @@ class ItemViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("current_book_station", response.json()["errors"])
 
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title"])
+    def test_post_items_api_sets_pending_when_auto_moderation_flags_content(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+        payload = {
+            "title": "Flagged API Title",
+            "author": "Some Author",
+            "item_type": Item.ItemType.BOOK,
+            "status": Item.Status.UNKNOWN,
+        }
+
+        response = self.client.post(
+            reverse("items:item-list-create"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_item = Item.objects.get(title="Flagged API Title")
+        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.PENDING)
+
 
 class ItemCreateFormViewTests(TestCase):
     def setUp(self):
