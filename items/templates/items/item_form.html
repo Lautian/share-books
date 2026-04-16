@@ -76,15 +76,13 @@
     document.addEventListener("DOMContentLoaded", function () {
         const confirmationInput = document.getElementById("id_confirm_flagged_content");
         const form = confirmationInput ? confirmationInput.form : null;
-        if (!confirmationInput || !form) {
+        if (!form) {
             return;
         }
 
         const flaggedFields = "{{ flagged_fields|join:', '|escapejs }}";
         const confirmed = window.confirm(
-            "There's questionable content in fields " + flaggedFields + ". "
-            + "Submitting will require moderator approval before the item becomes visible on the site.\n\n"
-            + "Press OK to submit for moderation, or Cancel to continue editing."
+            `There's questionable content in fields ${flaggedFields}. Submitting will require moderator approval before the item becomes visible on the site.\n\nPress OK to submit for moderation, or Cancel to continue editing.`
         );
 
         if (confirmed) {
