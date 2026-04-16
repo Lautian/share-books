@@ -1906,3 +1906,60 @@ class ModerationProfileClaimedReportedItemsTests(ModerationSetUpMixin, TestCase)
         response = self.client.get(reverse("users:profile"))
 
         self.assertContains(response, self.approved_item.title)
+
+
+class AutoModerationStubTests(TestCase):
+    """Unit tests for the auto-moderation stub in moderation/auto_moderation.py."""
+
+    def test_stub_returns_no_bad_language_by_default(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="A Fine Title",
+            author="A. Author",
+            description="A perfectly innocent description.",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_stub_flags_configured_fields(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Trigger",
+            author="Author",
+            description="Trigger",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+        self.assertIn("description", result["flagged_fields"])
+        self.assertNotIn("author", result["flagged_fields"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["unknown_field"])
+    def test_stub_ignores_unknown_field_names(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS="author")
+    def test_stub_accepts_string_setting_as_single_field(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["author"])

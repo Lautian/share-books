@@ -4,7 +4,6 @@ import io
 import json
 
 import qrcode
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -15,29 +14,12 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
+from moderation.auto_moderation import auto_moderate_item
 from moderation.utils import is_moderator
 from movements.models import Movement
 
 from .forms import ItemCreateForm
 from .models import Item
-
-
-def _auto_moderate_item_stub(*, title, author, description):
-    """Stub auto-moderation verdict for item text fields."""
-    configured_fields = getattr(settings, "ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS", [])
-    if isinstance(configured_fields, str):
-        configured_fields = [configured_fields]
-
-    allowed_fields = {"title", "author", "description"}
-    flagged_fields = []
-    for field in configured_fields:
-        if field in allowed_fields and field not in flagged_fields:
-            flagged_fields.append(field)
-
-    return {
-        "has_bad_language": bool(flagged_fields),
-        "flagged_fields": flagged_fields,
-    }
 
 
 def _serialize_item(item):
@@ -480,7 +462,7 @@ def item_create(request):
         form = ItemCreateForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
-            auto_moderation = _auto_moderate_item_stub(
+            auto_moderation = auto_moderate_item(
                 title=item.title,
                 author=item.author,
                 description=item.description,
@@ -534,7 +516,7 @@ def item_edit(request, item_id):
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
             updated = form.save(commit=False)
-            auto_moderation = _auto_moderate_item_stub(
+            auto_moderation = auto_moderate_item(
                 title=updated.title,
                 author=updated.author,
                 description=updated.description,
