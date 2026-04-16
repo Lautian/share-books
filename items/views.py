@@ -4,6 +4,7 @@ import io
 import json
 
 import qrcode
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -19,6 +20,24 @@ from movements.models import Movement
 
 from .forms import ItemCreateForm
 from .models import Item
+
+
+def _auto_moderate_item_stub(*, title, author, description):
+    """Stub auto-moderation verdict for item text fields."""
+    configured_fields = getattr(settings, "ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS", [])
+    if isinstance(configured_fields, str):
+        configured_fields = [configured_fields]
+
+    allowed_fields = {"title", "author", "description"}
+    flagged_fields = []
+    for field in configured_fields:
+        if field in allowed_fields and field not in flagged_fields:
+            flagged_fields.append(field)
+
+    return {
+        "has_bad_language": bool(flagged_fields),
+        "flagged_fields": flagged_fields,
+    }
 
 
 def _serialize_item(item):
@@ -427,7 +446,7 @@ def item_list_create(request):
                 last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
-                moderation_status=Item.ModerationStatus.PENDING,
+                moderation_status=Item.ModerationStatus.APPROVED,
             )
 
             item.full_clean()
@@ -461,8 +480,30 @@ def item_create(request):
         form = ItemCreateForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
+            auto_moderation = _auto_moderate_item_stub(
+                title=item.title,
+                author=item.author,
+                description=item.description,
+            )
+            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
+
+            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
+                return render(
+                    request,
+                    "items/item_form.html",
+                    {
+                        "form": form,
+                        "moderation_confirmation_required": True,
+                        "flagged_fields": auto_moderation["flagged_fields"],
+                    },
+                )
+
             item.added_by = request.user
-            item.moderation_status = Item.ModerationStatus.PENDING
+            item.moderation_status = (
+                Item.ModerationStatus.PENDING
+                if auto_moderation["has_bad_language"]
+                else Item.ModerationStatus.APPROVED
+            )
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -493,6 +534,30 @@ def item_edit(request, item_id):
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
             updated = form.save(commit=False)
+            auto_moderation = _auto_moderate_item_stub(
+                title=updated.title,
+                author=updated.author,
+                description=updated.description,
+            )
+            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
+
+            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
+                return render(
+                    request,
+                    "items/item_form.html",
+                    {
+                        "form": form,
+                        "is_edit": True,
+                        "item": item,
+                        "moderation_confirmation_required": True,
+                        "flagged_fields": auto_moderation["flagged_fields"],
+                    },
+                )
+
+            if not auto_moderation["has_bad_language"]:
+                updated.save(reported_by=request.user)
+                return redirect("items:item-detail", item_id=item.id)
+
             pending_data = {
                 "title": updated.title,
                 "author": updated.author,

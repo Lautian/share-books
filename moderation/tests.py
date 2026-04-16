@@ -363,7 +363,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
             station.moderation_status, BookStation.ModerationStatus.PENDING
         )
 
-    def test_create_item_through_form_is_pending(self):
+    def test_create_item_through_form_is_approved(self):
         self.client.login(username="regular", password=self.password)
 
         response = self.client.post(
@@ -377,7 +377,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         item = Item.objects.get(title="Brand New Book")
-        self.assertEqual(item.moderation_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(item.moderation_status, Item.ModerationStatus.APPROVED)
 
     def test_edit_approved_bookstation_creates_pending_edit(self):
         """Editing an approved station stores a pending_edit instead of resetting to PENDING."""
@@ -404,8 +404,8 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         self.assertIsNotNone(self.approved_station.pending_edit)
         self.assertEqual(self.approved_station.pending_edit["location"], "Updated Location")
 
-    def test_edit_approved_item_creates_pending_edit(self):
-        """Editing an approved item stores a pending_edit instead of resetting to PENDING."""
+    def test_edit_approved_item_updates_live_record(self):
+        """Editing an approved item updates live fields when auto-moderation passes."""
         self.client.login(username="regular", password=self.password)
 
         self.client.post(
@@ -419,12 +419,11 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_item.refresh_from_db()
-        # Item stays approved and visible; changes are queued in pending_edit.
         self.assertEqual(
             self.approved_item.moderation_status, Item.ModerationStatus.APPROVED
         )
-        self.assertIsNotNone(self.approved_item.pending_edit)
-        self.assertEqual(self.approved_item.pending_edit["author"], "Updated Author")
+        self.assertIsNone(self.approved_item.pending_edit)
+        self.assertEqual(self.approved_item.author, "Updated Author")
 
     def test_approved_item_visible_after_moderation_approval(self):
         """After a moderator approves a pending item, it appears in public views."""
