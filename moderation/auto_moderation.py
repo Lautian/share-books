@@ -30,6 +30,8 @@ def auto_moderate_item(*, title: str, author: str, description: str) -> dict:
     configured_fields = getattr(settings, "ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS", [])
     if isinstance(configured_fields, str):
         configured_fields = [configured_fields]
+    elif not configured_fields:
+        configured_fields = []
 
     allowed_fields = {"title", "author", "description"}
     flagged_fields = []

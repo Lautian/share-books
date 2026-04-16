@@ -1963,3 +1963,16 @@ class AutoModerationStubTests(TestCase):
 
         self.assertTrue(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], ["author"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=None)
+    def test_stub_handles_none_setting_gracefully(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])
