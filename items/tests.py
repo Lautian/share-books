@@ -774,6 +774,26 @@ class ItemCreateFormViewTests(TestCase):
         )
         self.assertEqual(created_item.moderation_status, Item.ModerationStatus.PENDING)
 
+    def test_item_create_form_url_content_requires_confirmation(self):
+        self.client.login(username="form-user", password=self.password)
+
+        first_response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Read this: https://example.com/offer",
+                "author": "Some Author",
+                "item_type": Item.ItemType.BOOK,
+                "status": Item.Status.UNKNOWN,
+                "description": "",
+            },
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertContains(first_response, "Questionable content detected")
+        self.assertFalse(
+            Item.objects.filter(title="Read this: https://example.com/offer").exists()
+        )
+
     def test_item_create_form_sets_status_when_current_station_is_selected(self):
         self.client.login(username="form-user", password=self.password)
 

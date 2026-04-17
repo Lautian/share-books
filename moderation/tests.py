@@ -1908,10 +1908,10 @@ class ModerationProfileClaimedReportedItemsTests(ModerationSetUpMixin, TestCase)
         self.assertContains(response, self.approved_item.title)
 
 
-class AutoModerationStubTests(TestCase):
-    """Unit tests for the auto-moderation stub in moderation/auto_moderation.py."""
+class AutoModerationTests(TestCase):
+    """Unit tests for item auto-moderation checks."""
 
-    def test_stub_returns_no_bad_language_by_default(self):
+    def test_returns_no_flags_for_clean_content(self):
         from moderation.auto_moderation import auto_moderate_item
 
         result = auto_moderate_item(
@@ -1923,56 +1923,52 @@ class AutoModerationStubTests(TestCase):
         self.assertFalse(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], [])
 
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
-    def test_stub_flags_configured_fields(self):
+    def test_flags_urls_and_links(self):
         from moderation.auto_moderation import auto_moderate_item
 
         result = auto_moderate_item(
-            title="Trigger",
+            title="Read this at https://example.com",
             author="Author",
-            description="Trigger",
+            description="",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["title"])
+
+    def test_flags_unsuitable_language(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="This description contains porn content.",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["description"])
+
+    def test_flags_commercial_spam_language(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Limited time offer - buy now",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["title"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_setting_can_still_force_flagged_fields(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
         )
 
         self.assertTrue(result["has_bad_language"])
         self.assertIn("title", result["flagged_fields"])
         self.assertIn("description", result["flagged_fields"])
-        self.assertNotIn("author", result["flagged_fields"])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["unknown_field"])
-    def test_stub_ignores_unknown_field_names(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertFalse(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], [])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS="author")
-    def test_stub_accepts_string_setting_as_single_field(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertTrue(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], ["author"])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=None)
-    def test_stub_handles_none_setting_gracefully(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertFalse(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], [])
