@@ -71,6 +71,27 @@
         statusField.addEventListener("change", handleStatusChange);
         handleCurrentStationChange();
     });
+
+    {% if moderation_confirmation_required and flagged_fields %}
+    document.addEventListener("DOMContentLoaded", function () {
+        const confirmationInput = document.getElementById("id_confirm_flagged_content");
+        const form = confirmationInput ? confirmationInput.form : null;
+        if (!form) {
+            return;
+        }
+
+        const flaggedFields = "{{ flagged_fields|join:', '|escapejs }}";
+        const visibilityMessage = "{% if is_edit %}Submitting will require moderator approval before your changes become visible on the site. The current item will remain visible until then.{% else %}Submitting will require moderator approval before the item becomes visible on the site.{% endif %}";
+        const confirmed = window.confirm(
+            `There's questionable content in fields ${flaggedFields}. ${visibilityMessage}\n\nPress OK to submit for moderation, or Cancel to continue editing.`
+        );
+
+        if (confirmed) {
+            confirmationInput.value = "1";
+            form.submit();
+        }
+    });
+    {% endif %}
 </script>
 {% endblock %}
 
@@ -104,9 +125,21 @@
 
         <form class="mt-6 space-y-4" method="post">
             {% csrf_token %}
+            <input type="hidden" name="confirm_flagged_content" id="id_confirm_flagged_content" value="">
 
             {% if form.non_field_errors %}
                 <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% if moderation_confirmation_required and flagged_fields %}
+                <div class="alert alert-warning">
+                    <div>
+                        <p class="font-semibold">Questionable content detected</p>
+                        <p class="text-sm">
+                            There's questionable content in fields {{ flagged_fields|join:", " }}.
+                            Submitting will require moderator approval before the item becomes visible on the site.
+                        </p>
+                    </div>
+                </div>
             {% endif %}
 
             <label class="form-control w-full">
@@ -174,6 +207,11 @@
                 <button class="btn btn-primary" type="submit">
                     {% if is_edit %}Save changes{% else %}Create item{% endif %}
                 </button>
+                {% if moderation_confirmation_required and flagged_fields %}
+                    <button class="btn btn-warning" type="submit" name="confirm_flagged_content" value="1">
+                        Submit and require moderation
+                    </button>
+                {% endif %}
                 {% if is_edit %}
                     <a class="btn btn-outline" href="{% url 'items:item-detail' item.id %}">Cancel</a>
                 {% else %}

@@ -14,6 +14,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
+from moderation.auto_moderation import auto_moderate_item
 from moderation.utils import is_moderator
 from movements.models import Movement
 
@@ -427,7 +428,16 @@ def item_list_create(request):
                 last_seen_at=last_seen_at,
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
-                moderation_status=Item.ModerationStatus.PENDING,
+            )
+            api_moderation = auto_moderate_item(
+                title=item.title,
+                author=item.author,
+                description=item.description,
+            )
+            item.moderation_status = (
+                Item.ModerationStatus.PENDING
+                if api_moderation["has_bad_language"]
+                else Item.ModerationStatus.APPROVED
             )
 
             item.full_clean()
@@ -461,8 +471,30 @@ def item_create(request):
         form = ItemCreateForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
+            auto_moderation = auto_moderate_item(
+                title=item.title,
+                author=item.author,
+                description=item.description,
+            )
+            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
+
+            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
+                return render(
+                    request,
+                    "items/item_form.html",
+                    {
+                        "form": form,
+                        "moderation_confirmation_required": True,
+                        "flagged_fields": auto_moderation["flagged_fields"],
+                    },
+                )
+
             item.added_by = request.user
-            item.moderation_status = Item.ModerationStatus.PENDING
+            item.moderation_status = (
+                Item.ModerationStatus.PENDING
+                if auto_moderation["has_bad_language"]
+                else Item.ModerationStatus.APPROVED
+            )
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -487,12 +519,38 @@ def item_edit(request, item_id):
             },
         )
 
-    # Item is APPROVED with no pending edit — store the edit as a pending diff so
-    # the original live data stays publicly visible while moderation is in progress.
+    # Item is APPROVED with no pending edit.
+    # When auto-moderation passes the edit is saved directly.
+    # When auto-moderation flags the content the edit is stored as a pending diff
+    # so the original live data stays publicly visible while moderation is in progress.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
             updated = form.save(commit=False)
+            auto_moderation = auto_moderate_item(
+                title=updated.title,
+                author=updated.author,
+                description=updated.description,
+            )
+            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
+
+            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
+                return render(
+                    request,
+                    "items/item_form.html",
+                    {
+                        "form": form,
+                        "is_edit": True,
+                        "item": item,
+                        "moderation_confirmation_required": True,
+                        "flagged_fields": auto_moderation["flagged_fields"],
+                    },
+                )
+
+            if not auto_moderation["has_bad_language"]:
+                updated.save(reported_by=request.user)
+                return redirect("items:item-detail", item_id=item.id)
+
             pending_data = {
                 "title": updated.title,
                 "author": updated.author,

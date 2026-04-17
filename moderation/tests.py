@@ -363,7 +363,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
             station.moderation_status, BookStation.ModerationStatus.PENDING
         )
 
-    def test_create_item_through_form_is_pending(self):
+    def test_create_item_through_form_is_approved(self):
         self.client.login(username="regular", password=self.password)
 
         response = self.client.post(
@@ -377,7 +377,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         item = Item.objects.get(title="Brand New Book")
-        self.assertEqual(item.moderation_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(item.moderation_status, Item.ModerationStatus.APPROVED)
 
     def test_edit_approved_bookstation_creates_pending_edit(self):
         """Editing an approved station stores a pending_edit instead of resetting to PENDING."""
@@ -404,8 +404,8 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         self.assertIsNotNone(self.approved_station.pending_edit)
         self.assertEqual(self.approved_station.pending_edit["location"], "Updated Location")
 
-    def test_edit_approved_item_creates_pending_edit(self):
-        """Editing an approved item stores a pending_edit instead of resetting to PENDING."""
+    def test_edit_approved_item_updates_live_record(self):
+        """Editing an approved item updates live fields when auto-moderation passes."""
         self.client.login(username="regular", password=self.password)
 
         self.client.post(
@@ -419,12 +419,11 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_item.refresh_from_db()
-        # Item stays approved and visible; changes are queued in pending_edit.
         self.assertEqual(
             self.approved_item.moderation_status, Item.ModerationStatus.APPROVED
         )
-        self.assertIsNotNone(self.approved_item.pending_edit)
-        self.assertEqual(self.approved_item.pending_edit["author"], "Updated Author")
+        self.assertIsNone(self.approved_item.pending_edit)
+        self.assertEqual(self.approved_item.author, "Updated Author")
 
     def test_approved_item_visible_after_moderation_approval(self):
         """After a moderator approves a pending item, it appears in public views."""
@@ -1907,3 +1906,73 @@ class ModerationProfileClaimedReportedItemsTests(ModerationSetUpMixin, TestCase)
         response = self.client.get(reverse("users:profile"))
 
         self.assertContains(response, self.approved_item.title)
+
+
+class AutoModerationStubTests(TestCase):
+    """Unit tests for the auto-moderation stub in moderation/auto_moderation.py."""
+
+    def test_stub_returns_no_bad_language_by_default(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="A Fine Title",
+            author="A. Author",
+            description="A perfectly innocent description.",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_stub_flags_configured_fields(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Trigger",
+            author="Author",
+            description="Trigger",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+        self.assertIn("description", result["flagged_fields"])
+        self.assertNotIn("author", result["flagged_fields"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["unknown_field"])
+    def test_stub_ignores_unknown_field_names(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS="author")
+    def test_stub_accepts_string_setting_as_single_field(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["author"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=None)
+    def test_stub_handles_none_setting_gracefully(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertFalse(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], [])

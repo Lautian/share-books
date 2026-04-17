@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from book_stations.models import BookStation
@@ -325,11 +325,9 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
-        # The live record stays unchanged while the edit is pending moderation.
-        self.assertEqual(self.item_here.title, "Clean Code")
-        self.assertIsNotNone(self.item_here.pending_edit)
-        self.assertEqual(self.item_here.pending_edit["title"], "Clean Code 2nd Edition")
-        self.assertEqual(self.item_here.pending_edit["description"], "Updated programming book")
+        self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
+        self.assertEqual(self.item_here.description, "Updated programming book")
+        self.assertIsNone(self.item_here.pending_edit)
 
     def test_edit_assigning_current_station_sets_status_to_at_book_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -354,10 +352,8 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_taken.id}),
         )
-        # The live record stays unchanged; the new station assignment is in pending_edit.
-        self.assertEqual(self.item_taken.status, Item.Status.TAKEN_OUT)
-        self.assertIsNotNone(self.item_taken.pending_edit)
-        self.assertEqual(self.item_taken.pending_edit["current_book_station_id"], self.station.id)
+        self.assertEqual(self.item_taken.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(self.item_taken.current_book_station, self.station)
 
     def test_edit_setting_non_station_status_clears_current_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -382,10 +378,62 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
-        # The live record stays unchanged; the LOST status is stored in pending_edit.
-        self.assertEqual(self.item_here.status, Item.Status.AT_BOOK_STATION)
+        self.assertEqual(self.item_here.status, Item.Status.LOST)
+        self.assertIsNone(self.item_here.current_book_station)
+        self.assertIsNone(self.item_here.pending_edit)
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_flagged_edit_requires_confirmation_before_pending_review(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+
+        first_response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+            data={
+                "title": "Flagged Title",
+                "author": "Robert C. Martin",
+                "item_type": Item.ItemType.BOOK,
+                "thumbnail_url": "",
+                "description": "Flagged description",
+                "status": Item.Status.AT_BOOK_STATION,
+                "current_book_station": self.station.id,
+                "last_seen_at": self.station.id,
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertContains(first_response, "Questionable content detected")
+        self.assertFalse(
+            Item.objects.filter(
+                pk=self.item_here.pk,
+                moderation_status=Item.ModerationStatus.PENDING,
+            ).exists()
+        )
+
+        confirmed_response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+            data={
+                "title": "Flagged Title",
+                "author": "Robert C. Martin",
+                "item_type": Item.ItemType.BOOK,
+                "thumbnail_url": "",
+                "description": "Flagged description",
+                "status": Item.Status.AT_BOOK_STATION,
+                "current_book_station": self.station.id,
+                "last_seen_at": self.station.id,
+                "last_activity": "2026-03-09",
+                "confirm_flagged_content": "1",
+            },
+        )
+
+        self.item_here.refresh_from_db()
+        self.assertRedirects(
+            confirmed_response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertEqual(self.item_here.moderation_status, Item.ModerationStatus.APPROVED)
         self.assertIsNotNone(self.item_here.pending_edit)
-        self.assertEqual(self.item_here.pending_edit["status"], Item.Status.LOST)
+        self.assertEqual(self.item_here.pending_edit["title"], "Flagged Title")
 
     def test_edit_without_current_station_keeps_existing_last_seen_history(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -606,6 +654,26 @@ class ItemViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("current_book_station", response.json()["errors"])
 
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title"])
+    def test_post_items_api_sets_pending_when_auto_moderation_flags_content(self):
+        self.client.login(username="item-owner", password="StrongPass123")
+        payload = {
+            "title": "Flagged API Title",
+            "author": "Some Author",
+            "item_type": Item.ItemType.BOOK,
+            "status": Item.Status.UNKNOWN,
+        }
+
+        response = self.client.post(
+            reverse("items:item-list-create"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        created_item = Item.objects.get(title="Flagged API Title")
+        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.PENDING)
+
 
 class ItemCreateFormViewTests(TestCase):
     def setUp(self):
@@ -664,8 +732,47 @@ class ItemCreateFormViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": created_item.id}),
         )
+        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.APPROVED)
         self.assertEqual(created_item.added_by, self.user)
         self.assertEqual(created_item.thumbnail_url, "https://example.com/digest.jpg")
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_item_create_form_flagged_content_requires_confirmation(self):
+        self.client.login(username="form-user", password=self.password)
+
+        first_response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Flagged Create Title",
+                "author": "Some Author",
+                "item_type": Item.ItemType.BOOK,
+                "status": Item.Status.UNKNOWN,
+                "description": "Flagged create description",
+            },
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertContains(first_response, "Questionable content detected")
+        self.assertFalse(Item.objects.filter(title="Flagged Create Title").exists())
+
+        confirmed_response = self.client.post(
+            reverse("items:item-create"),
+            data={
+                "title": "Flagged Create Title",
+                "author": "Some Author",
+                "item_type": Item.ItemType.BOOK,
+                "status": Item.Status.UNKNOWN,
+                "description": "Flagged create description",
+                "confirm_flagged_content": "1",
+            },
+        )
+
+        created_item = Item.objects.get(title="Flagged Create Title")
+        self.assertRedirects(
+            confirmed_response,
+            reverse("items:item-detail", kwargs={"item_id": created_item.id}),
+        )
+        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.PENDING)
 
     def test_item_create_form_sets_status_when_current_station_is_selected(self):
         self.client.login(username="form-user", password=self.password)
