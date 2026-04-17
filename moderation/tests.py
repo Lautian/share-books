@@ -2061,6 +2061,16 @@ class AutoModerationTests(TestCase):
         self.assertTrue(result["has_bad_language"])
         self.assertIn("title", result["flagged_fields"])
 
+    def test_flags_symbol_only_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        # 🖕 is in the EN bad-word list; it contains no \w characters so the
+        # word-boundary trick doesn't apply – the symbol-only branch must handle it.
+        result = auto_moderate_item(title="Read this 🖕", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
     # --- Junk-text detection ---
 
     def test_flags_repeated_characters(self):

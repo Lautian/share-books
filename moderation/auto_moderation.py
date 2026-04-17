@@ -61,12 +61,37 @@ def _load_terms_from_json(filename: str) -> list[str]:
 
 
 def _build_word_boundary_pattern(terms: list[str]) -> re.Pattern | None:
-    """Compile a single regex that matches any term on word boundaries."""
+    """Compile a regex that matches word-like terms and symbol-only terms safely.
+
+    Word-like terms (containing at least one ``\\w`` character) are wrapped with
+    ``(?<!\\w)...(?!\\w)`` to avoid partial-word matches.  Symbol-only terms
+    (e.g. emoji such as ``🖕``) don't contain word characters so ``\\b`` would
+    never match them; they are instead placed in a plain alternation.
+    """
     if not terms:
         return None
-    escaped = [re.escape(t) for t in terms]
+
+    word_like_terms: list[str] = []
+    symbol_only_terms: list[str] = []
+    for term in terms:
+        if re.search(r"\w", term, re.UNICODE):
+            word_like_terms.append(re.escape(term))
+        else:
+            symbol_only_terms.append(re.escape(term))
+
+    pattern_parts: list[str] = []
+    if word_like_terms:
+        pattern_parts.append(
+            r"(?<!\w)(?:" + "|".join(word_like_terms) + r")(?!\w)"
+        )
+    if symbol_only_terms:
+        pattern_parts.append(r"(?:" + "|".join(symbol_only_terms) + r")")
+
+    if not pattern_parts:
+        return None
+
     return re.compile(
-        r"\b(?:" + "|".join(escaped) + r")\b",
+        "|".join(pattern_parts),
         re.IGNORECASE | re.UNICODE,
     )
 
@@ -118,8 +143,10 @@ _SOCIAL_MEDIA_PATTERNS = (
         r"(?:\.(?:com|me|net))?/\S+",
         re.IGNORECASE,
     ),
-    # WhatsApp / international phone numbers: + followed by 10–16 total digits
-    re.compile(r"\+\d[\d\s().-]{9,14}"),
+    # WhatsApp / international phone numbers: + followed by 10–16 actual digits
+    # The lookahead counts only digit characters so spaces and punctuation used
+    # as separators don't inflate the digit tally.
+    re.compile(r"\+(?=(?:[\s().-]*\d){10,16}(?![\d\s().-]*\d))[\d\s().-]*\d"),
 )
 
 
