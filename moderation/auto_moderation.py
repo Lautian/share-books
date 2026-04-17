@@ -40,8 +40,19 @@ _RESOURCES_DIR = Path(__file__).parent / "resources"
 
 def _load_terms_from_json(filename: str) -> list[str]:
     path = _RESOURCES_DIR / filename
-    with path.open(encoding="utf-8") as fh:
-        data = json.load(fh)
+    try:
+        with path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Auto-moderation resource file not found: {path}. "
+            "Ensure the moderation/resources/ directory is present."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"Auto-moderation resource file is malformed JSON: {path}. "
+            f"Parse error: {exc}"
+        ) from exc
     terms: set[str] = set()
     for lang_terms in data.values():
         terms.update(t.strip() for t in lang_terms if t.strip())
@@ -107,8 +118,8 @@ _SOCIAL_MEDIA_PATTERNS = (
         r"(?:\.(?:com|me|net))?/\S+",
         re.IGNORECASE,
     ),
-    # WhatsApp / international phone numbers: +XX followed by 6–15 digits
-    re.compile(r"\+\d[\d\s().-]{6,16}", re.IGNORECASE),
+    # WhatsApp / international phone numbers: + followed by 10–16 total digits
+    re.compile(r"\+\d[\d\s().-]{9,14}", re.IGNORECASE),
 )
 
 
@@ -120,21 +131,21 @@ _SOCIAL_MEDIA_PATTERNS = (
 # or description: runs of repeated characters and emoji floods.
 
 # Unicode ranges that cover the vast majority of emoji characters.
+# Uses three well-defined blocks; kept separate to avoid over-large combined ranges.
 _EMOJI_RE = re.compile(
-    "[\U0001F300-\U0001F9FF"  # Misc Symbols and Pictographs / Emoticons / Transport
-    "\U0001FA00-\U0001FAFF"  # Chess / Extended Symbols
-    "\U00002600-\U000027BF"  # Misc Symbols / Dingbats
-    "\U0001F004\U0001F0CF"   # Mahjong / Playing card joker
-    "\U0000200D"             # Zero-width joiner (part of compound emoji)
-    "]",
+    "(?:"
+    "[\U0001F300-\U0001F9FF]"  # Misc Symbols, Pictographs, Emoticons, Transport
+    "|[\U0001FA00-\U0001FAFF]"  # Chess Symbols / Extended Symbols and Pictographs
+    "|[\U00002600-\U000027BF]"  # Misc Symbols / Dingbats
+    ")",
     re.UNICODE,
 )
 
 _EMOJI_THRESHOLD = 3  # flag if 3 or more emoji characters appear
 
 _JUNK_PATTERNS = (
-    # 5+ identical characters in a row: "looooool", "!!!!!!", "aaaaaaa"
-    re.compile(r"(.)\1{4,}", re.UNICODE),
+    # 5+ identical non-whitespace characters in a row: "looooool", "!!!!!!", "aaaaaaa"
+    re.compile(r"(\S)\1{4,}", re.UNICODE),
 )
 
 
