@@ -1,0 +1,11 @@
+bad_words.json
+--------------
+Word lists sourced from the LDNOOBW project:
+  https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
+
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+Languages included: English (en), Dutch (nl), German (de), French (fr), Spanish (es)
+
+spam_phrases.json
+-----------------
+Curated list of commercial spam phrases in the same five languages.
