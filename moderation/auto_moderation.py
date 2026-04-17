@@ -119,7 +119,7 @@ _SOCIAL_MEDIA_PATTERNS = (
         re.IGNORECASE,
     ),
     # WhatsApp / international phone numbers: + followed by 10–16 total digits
-    re.compile(r"\+\d[\d\s().-]{9,14}", re.IGNORECASE),
+    re.compile(r"\+\d[\d\s().-]{9,14}"),
 )
 
 

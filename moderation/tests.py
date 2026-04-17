@@ -2079,7 +2079,7 @@ class AutoModerationTests(TestCase):
         self.assertTrue(result["has_bad_language"])
         self.assertIn("title", result["flagged_fields"])
 
-    def test_clean_text_with_one_or_two_emojis_not_flagged(self):
+    def test_clean_text_with_single_emoji_not_flagged(self):
         from moderation.auto_moderation import auto_moderate_item
 
         result = auto_moderate_item(title="Great book 📚", author="Author", description="")
