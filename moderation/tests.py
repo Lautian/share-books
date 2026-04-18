@@ -1908,10 +1908,12 @@ class ModerationProfileClaimedReportedItemsTests(ModerationSetUpMixin, TestCase)
         self.assertContains(response, self.approved_item.title)
 
 
-class AutoModerationStubTests(TestCase):
-    """Unit tests for the auto-moderation stub in moderation/auto_moderation.py."""
+class AutoModerationTests(TestCase):
+    """Unit tests for item auto-moderation checks."""
 
-    def test_stub_returns_no_bad_language_by_default(self):
+    # --- clean content ---
+
+    def test_returns_no_flags_for_clean_content(self):
         from moderation.auto_moderation import auto_moderate_item
 
         result = auto_moderate_item(
@@ -1923,56 +1925,189 @@ class AutoModerationStubTests(TestCase):
         self.assertFalse(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], [])
 
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
-    def test_stub_flags_configured_fields(self):
+    # --- URL / link detection ---
+
+    def test_flags_https_url(self):
         from moderation.auto_moderation import auto_moderate_item
 
         result = auto_moderate_item(
-            title="Trigger",
+            title="Read this at https://example.com",
             author="Author",
-            description="Trigger",
+            description="",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["title"])
+
+    def test_flags_bare_domain(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Visit myshop.com for deals",
+            author="Author",
+            description="",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    # --- Unsuitable language (multilingual word lists) ---
+
+    def test_flags_english_profanity(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="This description contains porn content.",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["description"])
+
+    def test_flags_dutch_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Kut boek", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_german_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Scheiße!", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_french_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Merde alors", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_spanish_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Mierda de libro", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    # --- Commercial / spam language detection ---
+
+    def test_flags_english_spam_phrase(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Limited time offer - buy now",
+            author="Author",
+            description="Description",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["title"])
+
+    def test_flags_dutch_spam_phrase(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Klik hier voor informatie", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_german_spam_phrase(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Jetzt kaufen und sparen", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    # --- Social-media account / handle detection ---
+
+    def test_flags_at_username_handle(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="DM me @myshop123", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_instagram_profile_link(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Follow us on instagram.com/mystore",
+            author="",
+            description="",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_whatsapp_phone_number(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Order via WhatsApp +31612345678",
+            author="",
+            description="",
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_symbol_only_bad_word(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        # 🖕 is in the EN bad-word list; it contains no \w characters so the
+        # word-boundary trick doesn't apply – the symbol-only branch must handle it.
+        result = auto_moderate_item(title="Read this 🖕", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    # --- Junk-text detection ---
+
+    def test_flags_repeated_characters(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Heyyyyyy looooool", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_flags_emoji_flood(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="🔥🔥🔥 Amazing deal 🚀🚀🚀", author="", description="")
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertIn("title", result["flagged_fields"])
+
+    def test_clean_text_with_single_emoji_not_flagged(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(title="Great book 📚", author="Author", description="")
+
+        self.assertFalse(result["has_bad_language"])
+
+    # --- Stub override ---
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
+    def test_setting_can_still_force_flagged_fields(self):
+        from moderation.auto_moderation import auto_moderate_item
+
+        result = auto_moderate_item(
+            title="Title",
+            author="Author",
+            description="Description",
         )
 
         self.assertTrue(result["has_bad_language"])
         self.assertIn("title", result["flagged_fields"])
         self.assertIn("description", result["flagged_fields"])
-        self.assertNotIn("author", result["flagged_fields"])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["unknown_field"])
-    def test_stub_ignores_unknown_field_names(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertFalse(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], [])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS="author")
-    def test_stub_accepts_string_setting_as_single_field(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertTrue(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], ["author"])
-
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=None)
-    def test_stub_handles_none_setting_gracefully(self):
-        from moderation.auto_moderation import auto_moderate_item
-
-        result = auto_moderate_item(
-            title="Title",
-            author="Author",
-            description="Description",
-        )
-
-        self.assertFalse(result["has_bad_language"])
-        self.assertEqual(result["flagged_fields"], [])
