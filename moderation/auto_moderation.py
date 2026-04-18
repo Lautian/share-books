@@ -1,7 +1,9 @@
 """
-Auto-moderation for item text fields.
+Auto-moderation for generic named text fields and item text fields.
 
-``auto_moderate_item`` is the single entry-point used by item create/edit views.
+``auto_moderate_fields`` is the generic entry-point used to evaluate arbitrary
+named text fields. ``auto_moderate_item`` is a convenience wrapper used by item
+create/edit views.
 The implementation performs heuristic checks for:
 
 - links / URLs
@@ -17,7 +19,7 @@ Word lists are stored in ``moderation/resources/bad_words.json`` and
 The optional ``ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS`` setting is still honored
 as a manual override for tests or manual verification.
 
-Expected return value of ``auto_moderate_item``:
+Expected return value of ``auto_moderate_fields`` / ``auto_moderate_item``:
 
     {
         "has_bad_language": bool,
@@ -27,6 +29,7 @@ Expected return value of ``auto_moderate_item``:
 
 import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from django.conf import settings
@@ -191,7 +194,7 @@ def _is_junk_text(text: str) -> bool:
 # Core detection
 # ---------------------------------------------------------------------------
 
-_CHECK_ORDER = ("title", "author", "description")
+_ITEM_CHECK_ORDER = ("title", "author", "description")
 
 
 def _field_matches_auto_moderation(text: str) -> bool:
@@ -226,22 +229,29 @@ def _field_matches_auto_moderation(text: str) -> bool:
 # Public API
 # ---------------------------------------------------------------------------
 
-def auto_moderate_item(*, title: str, author: str, description: str) -> dict:
-    """Return an auto-moderation verdict for item text content.
+def auto_moderate_fields(
+    *,
+    values: Mapping[str, str | None],
+    check_order: Sequence[str] | None = None,
+) -> dict:
+    """Return an auto-moderation verdict for arbitrary named text fields.
+
+    ``values`` maps field names to their text content.
+    ``check_order`` controls which field names are checked and in what order
+    they appear in ``flagged_fields``.
 
     The optional Django setting ``ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS``
     (a list of field names) can be used to force flagged fields, which is useful
     for tests and manual verification of the moderation UI flow.
     """
-    values = {
-        "title": title or "",
-        "author": author or "",
-        "description": description or "",
-    }
-
-    flagged_fields = [
-        field for field in _CHECK_ORDER if _field_matches_auto_moderation(values[field])
-    ]
+    normalized_values = {field: (text or "") for field, text in values.items()}
+    if check_order is None:
+        normalized_check_order = tuple(normalized_values.keys())
+    else:
+        deduped_fields = dict.fromkeys(
+            field for field in check_order if field in normalized_values
+        )
+        normalized_check_order = tuple(deduped_fields)
 
     configured_fields = getattr(settings, "ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS", [])
     if isinstance(configured_fields, str):
@@ -249,12 +259,26 @@ def auto_moderate_item(*, title: str, author: str, description: str) -> dict:
     elif not configured_fields:
         configured_fields = []
 
-    allowed_fields = set(_CHECK_ORDER)
-    for field in configured_fields:
-        if field in allowed_fields and field not in flagged_fields:
-            flagged_fields.append(field)
+    forced_fields = set(configured_fields) & set(normalized_check_order)
+    flagged_fields = [
+        field
+        for field in normalized_check_order
+        if field in forced_fields or _field_matches_auto_moderation(normalized_values[field])
+    ]
 
     return {
         "has_bad_language": bool(flagged_fields),
         "flagged_fields": flagged_fields,
     }
+
+
+def auto_moderate_item(*, title: str, author: str, description: str) -> dict:
+    """Return an auto-moderation verdict for item text content."""
+    return auto_moderate_fields(
+        values={
+            "title": title,
+            "author": author,
+            "description": description,
+        },
+        check_order=_ITEM_CHECK_ORDER,
+    )
