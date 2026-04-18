@@ -2111,3 +2111,28 @@ class AutoModerationTests(TestCase):
         self.assertTrue(result["has_bad_language"])
         self.assertIn("title", result["flagged_fields"])
         self.assertIn("description", result["flagged_fields"])
+
+    def test_can_moderate_custom_field_names(self):
+        from moderation.auto_moderation import auto_moderate_fields
+
+        result = auto_moderate_fields(
+            values={
+                "username": "hot_deals_account",
+                "bio": "Limited time offer - buy now",
+            }
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["bio"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["username", "title"])
+    def test_stub_override_uses_configured_check_order_fields(self):
+        from moderation.auto_moderation import auto_moderate_fields
+
+        result = auto_moderate_fields(
+            values={"username": "clean_name"},
+            check_order=("username",),
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["username"])
