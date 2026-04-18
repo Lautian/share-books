@@ -231,6 +231,10 @@ def _field_matches_auto_moderation(text: str) -> bool:
 def auto_moderate_fields(*, values: dict[str, str], check_order: tuple[str, ...] | list[str] | None = None) -> dict:
     """Return an auto-moderation verdict for arbitrary named text fields.
 
+    ``values`` maps field names to their text content.
+    ``check_order`` controls which field names are checked and in what order
+    they appear in ``flagged_fields``.
+
     The optional Django setting ``ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS``
     (a list of field names) can be used to force flagged fields, which is useful
     for tests and manual verification of the moderation UI flow.

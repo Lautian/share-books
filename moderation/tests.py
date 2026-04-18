@@ -2136,3 +2136,4 @@ class AutoModerationTests(TestCase):
 
         self.assertTrue(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], ["username"])
+        self.assertNotIn("title", result["flagged_fields"])
