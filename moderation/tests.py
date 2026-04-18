@@ -2137,3 +2137,41 @@ class AutoModerationTests(TestCase):
         self.assertTrue(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], ["username"])
         self.assertNotIn("title", result["flagged_fields"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["username"])
+    def test_stub_flagged_fields_preserve_check_order(self):
+        from moderation.auto_moderation import auto_moderate_fields
+
+        result = auto_moderate_fields(
+            values={
+                "username": "clean_name",
+                "bio": "Limited time offer - buy now",
+            },
+            check_order=("username", "bio"),
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["username", "bio"])
+
+    def test_check_order_deduplicates_flagged_fields(self):
+        from moderation.auto_moderation import auto_moderate_fields
+
+        result = auto_moderate_fields(
+            values={"bio": "Limited time offer - buy now"},
+            check_order=("bio", "bio"),
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["bio"])
+
+    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["bio"])
+    def test_stub_field_not_duplicated_with_duplicate_check_order(self):
+        from moderation.auto_moderation import auto_moderate_fields
+
+        result = auto_moderate_fields(
+            values={"bio": "Clean bio"},
+            check_order=("bio", "bio"),
+        )
+
+        self.assertTrue(result["has_bad_language"])
+        self.assertEqual(result["flagged_fields"], ["bio"])

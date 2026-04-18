@@ -1,5 +1,5 @@
 """
-Auto-moderation for item text fields.
+Auto-moderation for generic named text fields and item text fields.
 
 ``auto_moderate_fields`` is the generic entry-point used to evaluate arbitrary
 named text fields. ``auto_moderate_item`` is a convenience wrapper used by item
@@ -29,6 +29,7 @@ Expected return value of ``auto_moderate_fields`` / ``auto_moderate_item``:
 
 import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from django.conf import settings
@@ -228,7 +229,11 @@ def _field_matches_auto_moderation(text: str) -> bool:
 # Public API
 # ---------------------------------------------------------------------------
 
-def auto_moderate_fields(*, values: dict[str, str], check_order: tuple[str, ...] | list[str] | None = None) -> dict:
+def auto_moderate_fields(
+    *,
+    values: Mapping[str, str | None],
+    check_order: Sequence[str] | None = None,
+) -> dict:
     """Return an auto-moderation verdict for arbitrary named text fields.
 
     ``values`` maps field names to their text content.
@@ -243,15 +248,10 @@ def auto_moderate_fields(*, values: dict[str, str], check_order: tuple[str, ...]
     if check_order is None:
         normalized_check_order = tuple(normalized_values.keys())
     else:
-        normalized_check_order = tuple(
+        deduped_fields = dict.fromkeys(
             field for field in check_order if field in normalized_values
         )
-
-    flagged_fields = [
-        field
-        for field in normalized_check_order
-        if _field_matches_auto_moderation(normalized_values[field])
-    ]
+        normalized_check_order = tuple(deduped_fields)
 
     configured_fields = getattr(settings, "ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS", [])
     if isinstance(configured_fields, str):
@@ -259,10 +259,12 @@ def auto_moderate_fields(*, values: dict[str, str], check_order: tuple[str, ...]
     elif not configured_fields:
         configured_fields = []
 
-    allowed_fields = set(normalized_check_order)
-    for field in configured_fields:
-        if field in allowed_fields and field not in flagged_fields:
-            flagged_fields.append(field)
+    forced_fields = set(configured_fields) & set(normalized_check_order)
+    flagged_fields = [
+        field
+        for field in normalized_check_order
+        if field in forced_fields or _field_matches_auto_moderation(normalized_values[field])
+    ]
 
     return {
         "has_bad_language": bool(flagged_fields),
