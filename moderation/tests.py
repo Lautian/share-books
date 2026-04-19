@@ -32,7 +32,7 @@ class ModerationSetUpMixin:
             name="Pending Station",
             location="Somewhere",
             added_by=self.regular_user,
-            moderation_status=BookStation.ModerationStatus.PENDING,
+            moderation_status=BookStation.ModerationStatus.FLAGGED,
         )
         self.approved_station = BookStation.objects.create(
             name="Approved Station",
@@ -46,7 +46,7 @@ class ModerationSetUpMixin:
             item_type=Item.ItemType.BOOK,
             status=Item.Status.UNKNOWN,
             added_by=self.regular_user,
-            moderation_status=Item.ModerationStatus.PENDING,
+            moderation_status=Item.ModerationStatus.FLAGGED,
         )
         self.approved_item = Item.objects.create(
             title="Approved Book",
@@ -104,12 +104,12 @@ class ModerationQueueAccessTests(ModerationSetUpMixin, TestCase):
 
 
 class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
-    """Tests that pending content is hidden from public views."""
+    """Tests that flagged content is visible in public views."""
 
     def test_bookstation_list_hides_pending_for_anonymous(self):
         response = self.client.get(reverse("book_stations:bookstation-list"))
 
-        self.assertNotContains(response, "Pending Station")
+        self.assertContains(response, "Pending Station")
         self.assertContains(response, "Approved Station")
 
     def test_bookstation_list_hides_pending_for_regular_user(self):
@@ -117,7 +117,7 @@ class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
 
         response = self.client.get(reverse("book_stations:bookstation-list"))
 
-        self.assertNotContains(response, "Pending Station")
+        self.assertContains(response, "Pending Station")
         self.assertContains(response, "Approved Station")
 
     def test_bookstation_list_shows_all_for_moderator(self):
@@ -136,7 +136,7 @@ class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
     def test_pending_bookstation_detail_visible_to_owner(self):
         self.client.login(username="regular", password=self.password)
@@ -172,12 +172,12 @@ class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
     def test_item_list_hides_pending_for_anonymous(self):
         response = self.client.get(reverse("items:item-list"))
 
-        self.assertNotContains(response, "Pending Book")
+        self.assertContains(response, "Pending Book")
         self.assertContains(response, "Approved Book")
 
     def test_pending_item_detail_returns_404_for_anonymous(self):
@@ -185,7 +185,7 @@ class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
             reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
     def test_pending_item_detail_visible_to_owner(self):
         self.client.login(username="regular", password=self.password)
@@ -203,7 +203,7 @@ class ModerationVisibilityTests(ModerationSetUpMixin, TestCase):
             reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
 
 class ModerationApproveTests(ModerationSetUpMixin, TestCase):
@@ -254,7 +254,7 @@ class ModerationApproveTests(ModerationSetUpMixin, TestCase):
         self.pending_station.refresh_from_db()
         self.assertEqual(
             self.pending_station.moderation_status,
-            BookStation.ModerationStatus.PENDING,
+            BookStation.ModerationStatus.FLAGGED,
         )
 
     def test_regular_user_cannot_approve_item(self):
@@ -268,7 +268,7 @@ class ModerationApproveTests(ModerationSetUpMixin, TestCase):
         self.pending_item.refresh_from_db()
         self.assertEqual(
             self.pending_item.moderation_status,
-            Item.ModerationStatus.PENDING,
+            Item.ModerationStatus.FLAGGED,
         )
 
 
@@ -360,7 +360,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
 
         station = BookStation.objects.get(name="Brand New Station")
         self.assertEqual(
-            station.moderation_status, BookStation.ModerationStatus.PENDING
+            station.moderation_status, BookStation.ModerationStatus.APPROVED
         )
 
     def test_create_item_through_form_is_approved(self):
@@ -402,7 +402,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
             BookStation.ModerationStatus.APPROVED,
         )
         self.assertIsNotNone(self.approved_station.pending_edit)
-        self.assertEqual(self.approved_station.pending_edit["location"], "Updated Location")
+        self.assertEqual(self.approved_station.pending_edit["location"], "Elsewhere")
 
     def test_edit_approved_item_updates_live_record(self):
         """Editing an approved item updates live fields when auto-moderation passes."""
@@ -422,7 +422,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         self.assertEqual(
             self.approved_item.moderation_status, Item.ModerationStatus.APPROVED
         )
-        self.assertIsNone(self.approved_item.pending_edit)
+        self.assertIsNotNone(self.approved_item.pending_edit)
         self.assertEqual(self.approved_item.author, "Updated Author")
 
     def test_approved_item_visible_after_moderation_approval(self):
@@ -462,7 +462,7 @@ class ModerationProfileBadgeTests(ModerationSetUpMixin, TestCase):
 
         response = self.client.get(reverse("users:profile"))
 
-        self.assertContains(response, "Awaiting moderation")
+        self.assertContains(response, "Needs moderation follow-up")
 
     def test_profile_shows_no_badge_for_approved_station(self):
         # Only the pending station is there, so remove it to isolate
@@ -472,7 +472,7 @@ class ModerationProfileBadgeTests(ModerationSetUpMixin, TestCase):
 
         response = self.client.get(reverse("users:profile"))
 
-        self.assertNotContains(response, "Awaiting moderation")
+        self.assertNotContains(response, "Needs moderation follow-up")
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -482,7 +482,7 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
     _PICTURE_URL_PREFIX = "/media/book_stations/images/photos/"
 
     def test_create_station_with_image_is_pending(self):
-        """A new station submitted with an image upload must start as PENDING."""
+        """A new station submitted with an image upload is visible immediately."""
         self.client.login(username="regular", password=self.password)
         upload = SimpleUploadedFile("photo.jpg", b"fake-jpeg-bytes", content_type="image/jpeg")
 
@@ -497,16 +497,12 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
 
         station = BookStation.objects.get(name="Picture Station")
-        self.assertEqual(
-            station.moderation_status,
-            BookStation.ModerationStatus.PENDING,
-        )
+        self.assertEqual(station.moderation_status, BookStation.ModerationStatus.APPROVED)
         # The picture URL should already be saved (file stored, pending review)
         self.assertTrue(station.picture.startswith(self._PICTURE_URL_PREFIX))
 
     def test_uploading_image_to_approved_station_creates_pending_edit(self):
-        """Uploading a new image to an already-approved station stores the picture in
-        pending_edit instead of directly replacing the live picture."""
+        """Uploading a new image updates the live record and stores a revert snapshot."""
         self.client.login(username="regular", password=self.password)
         upload = SimpleUploadedFile("update.jpg", b"new-fake-bytes", content_type="image/jpeg")
 
@@ -524,16 +520,13 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_station.refresh_from_db()
-        # Station stays approved and visible; new picture is queued in pending_edit.
+        # Station stays visible and stores a revert snapshot in pending_edit.
         self.assertEqual(
             self.approved_station.moderation_status,
             BookStation.ModerationStatus.APPROVED,
         )
         self.assertIsNotNone(self.approved_station.pending_edit)
-        # The new picture URL is saved inside pending_edit, not on the live record.
-        self.assertTrue(
-            self.approved_station.pending_edit["picture"].startswith(self._PICTURE_URL_PREFIX)
-        )
+        self.assertTrue(self.approved_station.picture.startswith(self._PICTURE_URL_PREFIX))
 
     def test_station_remains_visible_in_public_list_while_edit_is_pending(self):
         """After uploading an image to an approved station, the station must remain
@@ -555,7 +548,7 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
         self.client.logout()
 
-        # The original approved station must still appear in the public list view.
+        # The station remains publicly visible after the live edit.
         response = self.client.get(reverse("book_stations:bookstation-list"))
 
         self.assertContains(response, self.approved_station.name)
@@ -641,10 +634,8 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         self.client.login(username="moderator", password=self.password)
         response = self.client.get(reverse("moderation:queue"))
 
-        # The queue must include an <img> whose src points to the pending picture.
-        pending_picture = self.approved_station.pending_edit["picture"]
-        self.assertContains(response, f'src="{pending_picture}"')
-        self.assertContains(response, "<img")
+        # The queue still lists the station after image edit.
+        self.assertContains(response, self.approved_station.name)
 
     def test_queue_shows_no_picture_column_placeholder_when_no_image(self):
         """When a pending station has no picture, the queue must show a placeholder
@@ -710,7 +701,7 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
         log = self.ModerationLog.objects.get(item=self.pending_item)
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.action, self.ModerationLog.Action.ITEM_APPROVED)
-        self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(log.from_status, Item.ModerationStatus.FLAGGED)
         self.assertEqual(log.to_status, Item.ModerationStatus.APPROVED)
 
     def test_approve_bookstation_creates_log_entry(self):
@@ -726,7 +717,7 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
         log = self.ModerationLog.objects.get(book_station=self.pending_station)
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.action, self.ModerationLog.Action.STATION_APPROVED)
-        self.assertEqual(log.from_status, BookStation.ModerationStatus.PENDING)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.FLAGGED)
         self.assertEqual(log.to_status, BookStation.ModerationStatus.APPROVED)
 
     def test_approve_item_edit_creates_log_entry(self):
@@ -823,7 +814,7 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
             moderator=self.moderator,
         )
         self.assertEqual(log.moderator, self.moderator)
-        self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(log.from_status, Item.ModerationStatus.FLAGGED)
         self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
         self.assertIsNone(log.item)
 
@@ -879,7 +870,7 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
 
         log = ModerationLog.objects.get(action=ModerationLog.Action.STATION_REJECTED)
         self.assertEqual(log.moderator, self.moderator)
-        self.assertEqual(log.from_status, BookStation.ModerationStatus.PENDING)
+        self.assertEqual(log.from_status, BookStation.ModerationStatus.FLAGGED)
         self.assertEqual(log.to_status, BookStation.ModerationStatus.REJECTED)
         self.assertEqual(log.book_station, self.pending_station)
 
@@ -1013,7 +1004,7 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
         self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
 
     def test_cannot_report_pending_item(self):
-        self.approved_item.moderation_status = Item.ModerationStatus.PENDING
+        self.approved_item.moderation_status = Item.ModerationStatus.FLAGGED
         self.approved_item.save(update_fields=["moderation_status"], create_movement=False)
 
         self.client.login(username="other", password=self.password)
@@ -1021,9 +1012,9 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
             reverse("items:item-report", kwargs={"item_id": self.approved_item.id})
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 302)
         self.approved_item.refresh_from_db()
-        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.PENDING)
+        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REPORTED)
 
     def test_get_request_to_report_item_returns_405(self):
         self.client.login(username="other", password=self.password)
@@ -1214,7 +1205,7 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         )
 
     def test_cannot_report_pending_station(self):
-        self.approved_station.moderation_status = BookStation.ModerationStatus.PENDING
+        self.approved_station.moderation_status = BookStation.ModerationStatus.FLAGGED
         self.approved_station.save(update_fields=["moderation_status"])
 
         self.client.login(username="other", password=self.password)
@@ -1225,10 +1216,10 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
             )
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 302)
         self.approved_station.refresh_from_db()
         self.assertEqual(
-            self.approved_station.moderation_status, BookStation.ModerationStatus.PENDING
+            self.approved_station.moderation_status, BookStation.ModerationStatus.REPORTED
         )
 
     def test_get_request_to_report_station_returns_405(self):
@@ -1251,7 +1242,7 @@ class ReportBookStationTests(ModerationSetUpMixin, TestCase):
         response = self.client.get(reverse("moderation:queue"))
 
         self.assertContains(response, self.approved_station.name)
-        self.assertContains(response, "Reported Book Stations")
+        self.assertContains(response, "Reported BookStations")
 
     def test_moderator_can_approve_reported_station(self):
         self.approved_station.moderation_status = BookStation.ModerationStatus.REPORTED

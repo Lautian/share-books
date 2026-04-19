@@ -17,6 +17,7 @@ from .forms import SignupForm
 from .tokens import email_verification_token
 
 logger = logging.getLogger(__name__)
+_LEGACY_PENDING_STATUS = "PENDING"
 
 
 def signup(request):
@@ -114,15 +115,17 @@ def profile(request):
         claimed_stations = BookStation.objects.filter(
             claimed_by=request.user,
             moderation_status__in=[
-                BookStation.ModerationStatus.PENDING,
+                BookStation.ModerationStatus.FLAGGED,
                 BookStation.ModerationStatus.REPORTED,
+                _LEGACY_PENDING_STATUS,
             ],
         ).order_by("name")
         claimed_items = Item.objects.filter(
             claimed_by=request.user,
             moderation_status__in=[
-                Item.ModerationStatus.PENDING,
+                Item.ModerationStatus.FLAGGED,
                 Item.ModerationStatus.REPORTED,
+                _LEGACY_PENDING_STATUS,
             ],
         ).order_by("title", "id")
         context["claimed_stations"] = claimed_stations
@@ -130,5 +133,3 @@ def profile(request):
         context["total_claims"] = claimed_stations.count() + claimed_items.count()
 
     return render(request, "users/profile.html", context)
-
-

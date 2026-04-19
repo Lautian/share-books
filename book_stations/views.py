@@ -13,6 +13,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 
+from moderation.auto_moderation import auto_moderate_fields
 from moderation.utils import is_moderator
 from items.models import Item
 
@@ -51,6 +52,7 @@ def bookstation_list(request):
 	if not is_moderator(request.user):
 		stations = stations.filter(
 			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
 
@@ -92,11 +94,13 @@ def bookstation_detail_page(request, readable_id):
 	else:
 		qs = BookStation.objects.filter(
 			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
 		if request.user.is_authenticated:
 			qs = BookStation.objects.filter(
 				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 				| models.Q(added_by=request.user)
 			)
@@ -108,6 +112,7 @@ def bookstation_detail_page(request, readable_id):
 	if not is_moderator(request.user):
 		items = items.filter(
 			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
 		)
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
@@ -181,6 +186,7 @@ def bookstation_list_create(request):
 		if not is_moderator(request.user):
 			stations = stations.filter(
 				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 			)
 		return JsonResponse(
@@ -206,7 +212,19 @@ def bookstation_list_create(request):
 			longitude=_to_decimal(payload.get("longitude")),
 			location=payload.get("location", ""),
 			added_by=request.user,
-			moderation_status=BookStation.ModerationStatus.PENDING,
+		)
+		auto_moderation = auto_moderate_fields(
+			values={
+				"name": station.name,
+				"location": station.location,
+				"description": station.description,
+			},
+			check_order=("name", "location", "description"),
+		)
+		station.moderation_status = (
+			BookStation.ModerationStatus.FLAGGED
+			if auto_moderation["has_bad_language"]
+			else BookStation.ModerationStatus.APPROVED
 		)
 
 		try:
@@ -228,6 +246,7 @@ def bookstation_detail_api(request, readable_id):
 	if not is_moderator(request.user):
 		qs = qs.filter(
 			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
 	station = get_object_or_404(qs, readable_id=readable_id)
@@ -243,6 +262,7 @@ def bookstation_inventory_page(request, readable_id):
 	else:
 		visibility_filter = (
 			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
 		if request.user.is_authenticated:
@@ -285,6 +305,7 @@ def bookstation_inventory_page(request, readable_id):
 	if not is_moderator(request.user):
 		items = items.filter(
 			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
 		)
 
@@ -327,7 +348,19 @@ def bookstation_create(request):
 		if form.is_valid():
 			station = form.save(commit=False)
 			station.added_by = request.user
-			station.moderation_status = BookStation.ModerationStatus.PENDING
+			auto_moderation = auto_moderate_fields(
+				values={
+					"name": station.name,
+					"location": station.location,
+					"description": station.description,
+				},
+				check_order=("name", "location", "description"),
+			)
+			station.moderation_status = (
+				BookStation.ModerationStatus.FLAGGED
+				if auto_moderation["has_bad_language"]
+				else BookStation.ModerationStatus.APPROVED
+			)
 			station.save()
 			return redirect(
 				"book_stations:bookstation-detail",
@@ -347,8 +380,8 @@ def bookstation_edit(request, readable_id):
 		added_by=request.user,
 	)
 
-	# Block further edits while any edit (or new submission) is awaiting moderation.
-	if station.moderation_status == BookStation.ModerationStatus.PENDING or station.pending_edit is not None:
+	# Block further edits while an unreviewed edit is awaiting moderation review.
+	if station.pending_edit is not None:
 		return render(
 			request,
 			"book_stations/bookstation_form.html",
@@ -359,24 +392,38 @@ def bookstation_edit(request, readable_id):
 			},
 		)
 
-	# Station is APPROVED with no pending edit — the edit is stored as a pending diff
-	# so the original live data stays publicly visible while moderation is in progress.
+	# Station edit is applied immediately; keep a snapshot to support moderator rejection.
 	if request.method == "POST":
 		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
 		if form.is_valid():
-			# Build the pending snapshot from the validated form data.
-			updated = form.save(commit=False)
-			pending_data = {
-				"name": updated.name,
-				"location": updated.location,
-				"description": updated.description,
-				"latitude": str(updated.latitude) if updated.latitude is not None else None,
-				"longitude": str(updated.longitude) if updated.longitude is not None else None,
-				"picture": updated.picture,
+			original_station = BookStation.objects.get(pk=station.pk)
+			previous_data = {
+				"_moderation_type": "EDIT_REVERT_SNAPSHOT",
+				"moderation_status": original_station.moderation_status,
+				"name": original_station.name,
+				"location": original_station.location,
+				"description": original_station.description,
+				"latitude": str(original_station.latitude) if original_station.latitude is not None else None,
+				"longitude": str(original_station.longitude) if original_station.longitude is not None else None,
+				"picture": original_station.picture,
 			}
-			station.pending_edit = pending_data
-			station.claimed_by = None
-			station.save(update_fields=["pending_edit", "claimed_by"])
+			updated = form.save(commit=False)
+			auto_moderation = auto_moderate_fields(
+				values={
+					"name": updated.name,
+					"location": updated.location,
+					"description": updated.description,
+				},
+				check_order=("name", "location", "description"),
+			)
+			updated.pending_edit = previous_data
+			updated.moderation_status = (
+				BookStation.ModerationStatus.FLAGGED
+				if auto_moderation["has_bad_language"]
+				else BookStation.ModerationStatus.APPROVED
+			)
+			updated.claimed_by = None
+			updated.save()
 			return redirect(
 				"book_stations:bookstation-detail",
 				readable_id=station.readable_id,
@@ -440,7 +487,11 @@ def bookstation_report(request, readable_id):
 	station = get_object_or_404(
 		BookStation,
 		readable_id=readable_id,
-		moderation_status__in=[BookStation.ModerationStatus.APPROVED, BookStation.ModerationStatus.REPORTED],
+		moderation_status__in=[
+			BookStation.ModerationStatus.APPROVED,
+			BookStation.ModerationStatus.FLAGGED,
+			BookStation.ModerationStatus.REPORTED,
+		],
 	)
 	if station.moderation_status != BookStation.ModerationStatus.REPORTED:
 		station.moderation_status = BookStation.ModerationStatus.REPORTED

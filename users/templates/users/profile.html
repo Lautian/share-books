@@ -36,8 +36,8 @@
                                     <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
                                         {{ station.name }}
                                     </a>
-                                    {% if station.moderation_status == "PENDING" %}
-                                        <span class="badge badge-warning badge-sm">Awaiting moderation</span>
+                                    {% if station.moderation_status == "FLAGGED" or station.pending_edit %}
+                                        <span class="badge badge-warning badge-sm">Needs moderation follow-up</span>
                                     {% endif %}
                                 </div>
                                 <p class="text-base-content/70">{{ station.location }}</p>
@@ -73,8 +73,8 @@
                                     <a class="font-semibold link-hover" href="{% url 'items:item-detail' item.id %}">
                                         {{ item.title }}
                                     </a>
-                                    {% if item.moderation_status == "PENDING" %}
-                                        <span class="badge badge-warning badge-sm">Awaiting moderation</span>
+                                    {% if item.moderation_status == "FLAGGED" or item.pending_edit %}
+                                        <span class="badge badge-warning badge-sm">Needs moderation follow-up</span>
                                     {% endif %}
                                 </div>
                                 <p class="text-base-content/70">

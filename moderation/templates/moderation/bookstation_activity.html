@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+
+{% block title %}BookStation Activity{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-5xl">
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <h1 class="text-3xl font-bold">Unapproved BookStation activity</h1>
+        <a class="btn btn-sm btn-outline" href="{% url 'moderation:queue' %}">Back to queue</a>
+    </div>
+    <div class="rounded-2xl border border-base-300/70 bg-base-100/70 p-4 shadow">
+        <ul class="space-y-3">
+            {% for station in page_obj %}
+                <li class="flex items-center justify-between gap-3 border-b border-base-300/50 pb-3">
+                    <a class="link-hover font-semibold" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">{{ station.name }}</a>
+                    <span class="badge">{{ station.get_moderation_status_display }}</span>
+                </li>
+            {% empty %}
+                <li class="text-base-content/60">No BookStation activity found.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="mt-4 flex items-center justify-between">
+        {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% else %}
+            <span></span>
+        {% endif %}
+        <span class="text-sm text-base-content/70">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-outline" href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% else %}
+            <span></span>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

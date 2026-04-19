@@ -55,7 +55,7 @@ class Item(models.Model):
     )
 
     class ModerationStatus(models.TextChoices):
-        PENDING = "PENDING", "Pending moderation"
+        FLAGGED = "FLAGGED", "Flagged"
         APPROVED = "APPROVED", "Approved"
         REPORTED = "REPORTED", "Reported"
         REJECTED = "REJECTED", "Rejected"

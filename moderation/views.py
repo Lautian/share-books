@@ -1,6 +1,9 @@
 import functools
+from datetime import date
 from decimal import Decimal
 
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -10,6 +13,22 @@ from book_stations.models import BookStation
 from items.models import Item
 from moderation.models import ModerationLog
 from moderation.utils import is_moderator
+
+_LEGACY_PENDING_STATUS = "PENDING"
+_REVIEWABLE_STATION_STATUSES = [
+    BookStation.ModerationStatus.FLAGGED,
+    BookStation.ModerationStatus.REPORTED,
+    _LEGACY_PENDING_STATUS,
+]
+_REVIEWABLE_ITEM_STATUSES = [
+    Item.ModerationStatus.FLAGGED,
+    Item.ModerationStatus.REPORTED,
+    _LEGACY_PENDING_STATUS,
+]
+
+
+def _is_edit_revert_snapshot(data):
+    return isinstance(data, dict) and data.get("_moderation_type") == "EDIT_REVERT_SNAPSHOT"
 
 
 def _redirect_to_next(request, fallback):
@@ -22,6 +41,7 @@ def _redirect_to_next(request, fallback):
 
 def moderator_required(view_func):
     """Decorator that requires the user to be a moderator."""
+
     @functools.wraps(view_func)
     def wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -30,49 +50,109 @@ def moderator_required(view_func):
         if not is_moderator(request.user):
             return HttpResponseForbidden("You do not have permission to access this page.")
         return view_func(request, *args, **kwargs)
+
     return wrapped
+
+
+def _unapproved_station_activity_qs():
+    return BookStation.objects.filter(
+        Q(moderation_status__in=_REVIEWABLE_STATION_STATUSES) | Q(pending_edit__isnull=False)
+    )
+
+
+def _unapproved_item_activity_qs():
+    return Item.objects.filter(
+        Q(moderation_status__in=_REVIEWABLE_ITEM_STATUSES) | Q(pending_edit__isnull=False)
+    )
 
 
 @moderator_required
 def moderation_queue(request):
-    pending_stations = BookStation.objects.filter(
-        moderation_status=BookStation.ModerationStatus.PENDING
-    ).select_related("added_by", "claimed_by").order_by("name")
-
-    pending_items = Item.objects.filter(
-        moderation_status=Item.ModerationStatus.PENDING
-    ).select_related("added_by", "claimed_by", "current_book_station").order_by("title", "id")
-
-    station_edits = BookStation.objects.filter(
-        moderation_status=BookStation.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    ).select_related("added_by").order_by("name")
-
-    item_edits = Item.objects.filter(
-        moderation_status=Item.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    ).select_related("added_by", "current_book_station").order_by("title", "id")
-
-    reported_stations = BookStation.objects.filter(
-        moderation_status=BookStation.ModerationStatus.REPORTED
-    ).select_related("added_by", "claimed_by").order_by("name")
-
-    reported_items = Item.objects.filter(
-        moderation_status=Item.ModerationStatus.REPORTED
-    ).select_related("added_by", "claimed_by", "current_book_station").order_by("title", "id")
+    flagged_new_stations = (
+        BookStation.objects.filter(
+            moderation_status=BookStation.ModerationStatus.FLAGGED,
+            pending_edit__isnull=True,
+        )
+        .select_related("added_by", "claimed_by")
+        .order_by("name")
+    )
+    flagged_new_items = (
+        Item.objects.filter(
+            moderation_status=Item.ModerationStatus.FLAGGED,
+            pending_edit__isnull=True,
+        )
+        .select_related("added_by", "claimed_by", "current_book_station")
+        .order_by("title", "id")
+    )
+    flagged_station_edits = (
+        BookStation.objects.filter(
+            moderation_status=BookStation.ModerationStatus.FLAGGED,
+            pending_edit__isnull=False,
+        )
+        .select_related("added_by")
+        .order_by("name")
+    )
+    flagged_item_edits = (
+        Item.objects.filter(
+            moderation_status=Item.ModerationStatus.FLAGGED,
+            pending_edit__isnull=False,
+        )
+        .select_related("added_by", "current_book_station")
+        .order_by("title", "id")
+    )
+    reported_stations = (
+        BookStation.objects.filter(moderation_status=BookStation.ModerationStatus.REPORTED)
+        .select_related("added_by", "claimed_by")
+        .order_by("name")
+    )
+    reported_items = (
+        Item.objects.filter(moderation_status=Item.ModerationStatus.REPORTED)
+        .select_related("added_by", "claimed_by", "current_book_station")
+        .order_by("title", "id")
+    )
+    recent_station_activity = (
+        _unapproved_station_activity_qs().select_related("added_by").order_by("-id")[:20]
+    )
+    recent_item_activity = (
+        _unapproved_item_activity_qs().select_related("added_by", "current_book_station").order_by("-id")[
+            :20
+        ]
+    )
 
     return render(
         request,
         "moderation/queue.html",
         {
-            "pending_stations": pending_stations,
-            "pending_items": pending_items,
-            "station_edits": station_edits,
-            "item_edits": item_edits,
+            "flagged_new_stations": flagged_new_stations,
+            "flagged_new_items": flagged_new_items,
+            "flagged_station_edits": flagged_station_edits,
+            "flagged_item_edits": flagged_item_edits,
             "reported_stations": reported_stations,
             "reported_items": reported_items,
+            "recent_station_activity": recent_station_activity,
+            "recent_item_activity": recent_item_activity,
         },
     )
+
+
+@moderator_required
+def bookstation_activity(request):
+    page_obj = Paginator(
+        _unapproved_station_activity_qs().select_related("added_by").order_by("-id"),
+        20,
+    ).get_page(request.GET.get("page"))
+    return render(request, "moderation/bookstation_activity.html", {"page_obj": page_obj})
+
+
+@moderator_required
+def item_activity(request):
+    page_obj = Paginator(
+        _unapproved_item_activity_qs()
+        .select_related("added_by", "current_book_station")
+        .order_by("-id"),
+        20,
+    ).get_page(request.GET.get("page"))
+    return render(request, "moderation/item_activity.html", {"page_obj": page_obj})
 
 
 @moderator_required
@@ -83,10 +163,7 @@ def claim_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status__in=[
-            BookStation.ModerationStatus.PENDING,
-            BookStation.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
         claimed_by__isnull=True,
     )
     station.claimed_by = request.user
@@ -102,10 +179,9 @@ def approve_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status__in=[
-            BookStation.ModerationStatus.PENDING,
-            BookStation.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
+        # New/create moderation actions only target records that don't represent edits.
+        pending_edit__isnull=True,
     )
     from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.APPROVED
@@ -134,10 +210,9 @@ def reject_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status__in=[
-            BookStation.ModerationStatus.PENDING,
-            BookStation.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
+        # New/create moderation actions only target records that don't represent edits.
+        pending_edit__isnull=True,
     )
     from_status = station.moderation_status
     station.moderation_status = BookStation.ModerationStatus.REJECTED
@@ -166,10 +241,7 @@ def claim_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.PENDING,
-            Item.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
         claimed_by__isnull=True,
     )
     item.claimed_by = request.user
@@ -185,10 +257,9 @@ def approve_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.PENDING,
-            Item.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
+        # New/create moderation actions only target records that don't represent edits.
+        pending_edit__isnull=True,
     )
     from_status = item.moderation_status
     item.moderation_status = Item.ModerationStatus.APPROVED
@@ -217,10 +288,9 @@ def reject_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.PENDING,
-            Item.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
+        # New/create moderation actions only target records that don't represent edits.
+        pending_edit__isnull=True,
     )
     from_status = item.moderation_status
     action = (
@@ -241,33 +311,31 @@ def reject_item(request, item_id):
 
 @moderator_required
 def approve_bookstation_edit(request, readable_id):
-    """Apply a pending edit to an already-approved BookStation."""
+    """Approve a station edit waiting for moderation follow-up."""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    )
-    data = station.pending_edit
-    station.name = data.get("name", station.name)
-    station.location = data.get("location", station.location)
-    station.description = data.get("description", station.description)
-    raw_lat = data.get("latitude")
-    raw_lon = data.get("longitude")
-    station.latitude = Decimal(raw_lat) if raw_lat is not None else None
-    station.longitude = Decimal(raw_lon) if raw_lon is not None else None
-    station.picture = data.get("picture", station.picture)
+    station = get_object_or_404(BookStation, readable_id=readable_id, pending_edit__isnull=False)
+    data = station.pending_edit or {}
+    if not _is_edit_revert_snapshot(data):
+        station.name = data.get("name", station.name)
+        station.location = data.get("location", station.location)
+        station.description = data.get("description", station.description)
+        raw_lat = data.get("latitude")
+        raw_lon = data.get("longitude")
+        station.latitude = Decimal(raw_lat) if raw_lat is not None else None
+        station.longitude = Decimal(raw_lon) if raw_lon is not None else None
+        station.picture = data.get("picture", station.picture)
+    from_status = station.moderation_status
     station.pending_edit = None
+    station.moderation_status = BookStation.ModerationStatus.APPROVED
+    station.claimed_by = None
     station.save()
-    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
     ModerationLog.objects.create(
         moderator=request.user,
         book_station=station,
         action=ModerationLog.Action.STATION_EDIT_APPROVED,
-        from_status=station.moderation_status,
+        from_status=from_status,
         to_status=station.moderation_status,
     )
     return _redirect_to_next(request, reverse("moderation:queue"))
@@ -275,24 +343,34 @@ def approve_bookstation_edit(request, readable_id):
 
 @moderator_required
 def reject_bookstation_edit(request, readable_id):
-    """Discard a pending edit on an already-approved BookStation."""
+    """Reject a station edit; revert to the previous approved content when possible."""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    station = get_object_or_404(
-        BookStation,
-        readable_id=readable_id,
-        moderation_status=BookStation.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    )
+    station = get_object_or_404(BookStation, readable_id=readable_id, pending_edit__isnull=False)
+    data = station.pending_edit or {}
+    from_status = station.moderation_status
+    if _is_edit_revert_snapshot(data):
+        station.name = data.get("name", station.name)
+        station.location = data.get("location", station.location)
+        station.description = data.get("description", station.description)
+        raw_lat = data.get("latitude")
+        raw_lon = data.get("longitude")
+        station.latitude = Decimal(raw_lat) if raw_lat is not None else None
+        station.longitude = Decimal(raw_lon) if raw_lon is not None else None
+        station.picture = data.get("picture", station.picture)
+        station.moderation_status = data.get(
+            "moderation_status",
+            BookStation.ModerationStatus.APPROVED,
+        )
     station.pending_edit = None
-    station.save(update_fields=["pending_edit"])
-    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    station.claimed_by = None
+    station.save()
     ModerationLog.objects.create(
         moderator=request.user,
         book_station=station,
         action=ModerationLog.Action.STATION_EDIT_REJECTED,
-        from_status=station.moderation_status,
+        from_status=from_status,
         to_status=station.moderation_status,
     )
     return _redirect_to_next(request, reverse("moderation:queue"))
@@ -300,37 +378,34 @@ def reject_bookstation_edit(request, readable_id):
 
 @moderator_required
 def approve_item_edit(request, item_id):
-    """Apply a pending edit to an already-approved Item."""
+    """Approve an item edit waiting for moderation follow-up."""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    )
-    data = item.pending_edit
-    item.title = data.get("title", item.title)
-    item.author = data.get("author", item.author)
-    item.thumbnail_url = data.get("thumbnail_url", item.thumbnail_url)
-    item.description = data.get("description", item.description)
-    item.item_type = data.get("item_type", item.item_type)
-    item.status = data.get("status", item.status)
-    item.current_book_station_id = data.get("current_book_station_id", item.current_book_station_id)
-    item.last_seen_at_id = data.get("last_seen_at_id", item.last_seen_at_id)
-    raw_date = data.get("last_activity")
-    if raw_date is not None:
-        from datetime import date
-        item.last_activity = date.fromisoformat(raw_date)
+    item = get_object_or_404(Item, pk=item_id, pending_edit__isnull=False)
+    data = item.pending_edit or {}
+    if not _is_edit_revert_snapshot(data):
+        item.title = data.get("title", item.title)
+        item.author = data.get("author", item.author)
+        item.thumbnail_url = data.get("thumbnail_url", item.thumbnail_url)
+        item.description = data.get("description", item.description)
+        item.item_type = data.get("item_type", item.item_type)
+        item.status = data.get("status", item.status)
+        item.current_book_station_id = data.get("current_book_station_id", item.current_book_station_id)
+        item.last_seen_at_id = data.get("last_seen_at_id", item.last_seen_at_id)
+        raw_date = data.get("last_activity")
+        if raw_date is not None:
+            item.last_activity = date.fromisoformat(raw_date)
+    from_status = item.moderation_status
     item.pending_edit = None
+    item.moderation_status = Item.ModerationStatus.APPROVED
+    item.claimed_by = None
     item.save(create_movement=False)
-    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
     ModerationLog.objects.create(
         moderator=request.user,
         item=item,
         action=ModerationLog.Action.ITEM_EDIT_APPROVED,
-        from_status=item.moderation_status,
+        from_status=from_status,
         to_status=item.moderation_status,
     )
     return _redirect_to_next(request, reverse("moderation:queue"))
@@ -338,24 +413,34 @@ def approve_item_edit(request, item_id):
 
 @moderator_required
 def reject_item_edit(request, item_id):
-    """Discard a pending edit on an already-approved Item."""
+    """Reject an item edit; revert to the previous approved content when possible."""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status=Item.ModerationStatus.APPROVED,
-        pending_edit__isnull=False,
-    )
+    item = get_object_or_404(Item, pk=item_id, pending_edit__isnull=False)
+    data = item.pending_edit or {}
+    from_status = item.moderation_status
+    if _is_edit_revert_snapshot(data):
+        item.title = data.get("title", item.title)
+        item.author = data.get("author", item.author)
+        item.thumbnail_url = data.get("thumbnail_url", item.thumbnail_url)
+        item.description = data.get("description", item.description)
+        item.item_type = data.get("item_type", item.item_type)
+        item.status = data.get("status", item.status)
+        item.current_book_station_id = data.get("current_book_station_id", item.current_book_station_id)
+        item.last_seen_at_id = data.get("last_seen_at_id", item.last_seen_at_id)
+        raw_date = data.get("last_activity")
+        if raw_date is not None:
+            item.last_activity = date.fromisoformat(raw_date)
+        item.moderation_status = data.get("moderation_status", Item.ModerationStatus.APPROVED)
     item.pending_edit = None
-    item.save(update_fields=["pending_edit"])
-    # Edit actions don't change moderation_status; from/to_status record the unchanged status for audit purposes.
+    item.claimed_by = None
+    item.save(create_movement=False)
     ModerationLog.objects.create(
         moderator=request.user,
         item=item,
         action=ModerationLog.Action.ITEM_EDIT_REJECTED,
-        from_status=item.moderation_status,
+        from_status=from_status,
         to_status=item.moderation_status,
     )
     return _redirect_to_next(request, reverse("moderation:queue"))
@@ -370,10 +455,7 @@ def unclaim_bookstation(request, readable_id):
     station = get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status__in=[
-            BookStation.ModerationStatus.PENDING,
-            BookStation.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
         claimed_by=request.user,
     )
     station.claimed_by = None
@@ -390,10 +472,7 @@ def unclaim_item(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.PENDING,
-            Item.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
         claimed_by=request.user,
     )
     item.claimed_by = None
@@ -403,35 +482,21 @@ def unclaim_item(request, item_id):
 
 @moderator_required
 def moderate_pending_bookstation(request, readable_id):
-    """Redirect to the regular BookStation detail page.
-
-    The regular detail page shows a moderation panel for moderators viewing PENDING or REPORTED stations.
-    Returns 404 if the station does not exist or is no longer in a reviewable state.
-    """
+    """Redirect to BookStation detail if the station has moderation work pending."""
     get_object_or_404(
         BookStation,
         readable_id=readable_id,
-        moderation_status__in=[
-            BookStation.ModerationStatus.PENDING,
-            BookStation.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
     )
     return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 @moderator_required
 def moderate_pending_item(request, item_id):
-    """Redirect to the regular Item detail page.
-
-    The regular detail page shows a moderation panel for moderators viewing PENDING or REPORTED items.
-    Returns 404 if the item does not exist or is no longer in a reviewable state.
-    """
+    """Redirect to Item detail if the item has moderation work pending."""
     get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.PENDING,
-            Item.ModerationStatus.REPORTED,
-        ],
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
     )
     return redirect("items:item-detail", item_id=item_id)
