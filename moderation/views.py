@@ -223,9 +223,6 @@ def reject_item(request, item_id):
         ],
     )
     from_status = item.moderation_status
-    item.moderation_status = Item.ModerationStatus.REJECTED
-    item.claimed_by = None
-    item.save(update_fields=["moderation_status", "claimed_by"])
     action = (
         ModerationLog.Action.REPORTED_ITEM_REJECTED
         if from_status == Item.ModerationStatus.REPORTED
@@ -236,8 +233,9 @@ def reject_item(request, item_id):
         item=item,
         action=action,
         from_status=from_status,
-        to_status=item.moderation_status,
+        to_status=Item.ModerationStatus.REJECTED,
     )
+    item.delete()
     return _redirect_to_next(request, reverse("moderation:queue"))
 
 
@@ -437,4 +435,3 @@ def moderate_pending_item(request, item_id):
         ],
     )
     return redirect("items:item-detail", item_id=item_id)
-
