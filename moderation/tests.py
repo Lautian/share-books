@@ -800,7 +800,7 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 class ModerationRejectTests(ModerationSetUpMixin, TestCase):
     """Tests for the reject action on newly created (PENDING) items and stations."""
 
-    def test_reject_item_sets_status_to_rejected(self):
+    def test_reject_item_deletes_item(self):
         self.client.login(username="moderator", password=self.password)
 
         response = self.client.post(
@@ -808,8 +808,7 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         )
 
         self.assertRedirects(response, reverse("moderation:queue"))
-        self.pending_item.refresh_from_db()
-        self.assertEqual(self.pending_item.moderation_status, Item.ModerationStatus.REJECTED)
+        self.assertFalse(Item.objects.filter(pk=self.pending_item.id).exists())
 
     def test_reject_item_creates_log_entry(self):
         from moderation.models import ModerationLog
@@ -823,7 +822,32 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
         self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
-        self.assertEqual(log.item, self.pending_item)
+        self.assertIsNone(log.item)
+
+    def test_rejected_item_not_visible_in_browse_items(self):
+        self.client.login(username="moderator", password=self.password)
+        self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
+        )
+        self.client.logout()
+
+        response = self.client.get(reverse("items:item-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Pending Book")
+
+    def test_rejected_item_has_no_detail_page(self):
+        self.client.login(username="moderator", password=self.password)
+        self.client.post(
+            reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
+        )
+        self.client.logout()
+
+        response = self.client.get(
+            reverse("items:item-detail", kwargs={"item_id": self.pending_item.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_reject_bookstation_sets_status_to_rejected(self):
         self.client.login(username="moderator", password=self.password)
@@ -1040,8 +1064,7 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
         )
 
         self.assertRedirects(response, reverse("moderation:queue"))
-        self.approved_item.refresh_from_db()
-        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
+        self.assertFalse(Item.objects.filter(pk=self.approved_item.id).exists())
 
     def test_moderator_can_claim_reported_item(self):
         self.approved_item.moderation_status = Item.ModerationStatus.REPORTED
@@ -1097,7 +1120,7 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, Item.ModerationStatus.REPORTED)
         self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
-        self.assertEqual(log.item, self.approved_item)
+        self.assertIsNone(log.item)
 
 
 class ReportBookStationTests(ModerationSetUpMixin, TestCase):
@@ -1830,9 +1853,9 @@ class UnifiedModerationFlowTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:reject-item", kwargs={"item_id": self.approved_item.id})
         )
 
-        self.approved_item.refresh_from_db()
-        self.assertEqual(self.approved_item.moderation_status, Item.ModerationStatus.REJECTED)
-        log = ModerationLog.objects.get(item=self.approved_item)
+        self.assertFalse(Item.objects.filter(pk=self.approved_item.id).exists())
+        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_ITEM_REJECTED)
+        self.assertIsNone(log.item)
         self.assertEqual(log.action, ModerationLog.Action.REPORTED_ITEM_REJECTED)
 
     # --- queue shows Unclaim button for claimed reported items ---
