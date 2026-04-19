@@ -818,7 +818,10 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:reject-item", kwargs={"item_id": self.pending_item.id})
         )
 
-        log = ModerationLog.objects.get(action=ModerationLog.Action.ITEM_REJECTED)
+        log = ModerationLog.objects.get(
+            action=ModerationLog.Action.ITEM_REJECTED,
+            moderator=self.moderator,
+        )
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, Item.ModerationStatus.PENDING)
         self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
@@ -834,7 +837,7 @@ class ModerationRejectTests(ModerationSetUpMixin, TestCase):
         response = self.client.get(reverse("items:item-list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Pending Book")
+        self.assertNotContains(response, self.pending_item.title)
 
     def test_rejected_item_has_no_detail_page(self):
         self.client.login(username="moderator", password=self.password)
@@ -1116,7 +1119,10 @@ class ReportItemTests(ModerationSetUpMixin, TestCase):
             reverse("moderation:reject-reported-item", kwargs={"item_id": self.approved_item.id})
         )
 
-        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_ITEM_REJECTED)
+        log = ModerationLog.objects.get(
+            action=ModerationLog.Action.REPORTED_ITEM_REJECTED,
+            moderator=self.moderator,
+        )
         self.assertEqual(log.moderator, self.moderator)
         self.assertEqual(log.from_status, Item.ModerationStatus.REPORTED)
         self.assertEqual(log.to_status, Item.ModerationStatus.REJECTED)
@@ -1854,7 +1860,10 @@ class UnifiedModerationFlowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.assertFalse(Item.objects.filter(pk=self.approved_item.id).exists())
-        log = ModerationLog.objects.get(action=ModerationLog.Action.REPORTED_ITEM_REJECTED)
+        log = ModerationLog.objects.get(
+            action=ModerationLog.Action.REPORTED_ITEM_REJECTED,
+            moderator=self.moderator,
+        )
         self.assertIsNone(log.item)
         self.assertEqual(log.action, ModerationLog.Action.REPORTED_ITEM_REJECTED)
 
