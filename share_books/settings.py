@@ -34,11 +34,17 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 # Trust localhost origins for local development.  Once CSRF_TRUSTED_ORIGINS is
 # set Django enforces strict origin checking on every POST, so all origins that
 # the browser may report (with or without an explicit port) must be listed.
+# Both http:// and https:// are included because VS Code port-forwarding and
+# some Codespaces setups serve the forwarded port over HTTPS even for localhost.
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
     'http://localhost:8000',
+    'https://localhost',
+    'https://localhost:8000',
     'http://127.0.0.1',
     'http://127.0.0.1:8000',
+    'https://127.0.0.1',
+    'https://127.0.0.1:8000',
 ]
 
 # GitHub Codespaces support
