@@ -29,7 +29,17 @@ SECRET_KEY = 'django-insecure-_o@ek3vuu9e07uv)v$h-3z817b@sx&q#f600#h8hw#ov#^+xut
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+
+# Trust localhost origins for local development.  Once CSRF_TRUSTED_ORIGINS is
+# set Django enforces strict origin checking on every POST, so all origins that
+# the browser may report (with or without an explicit port) must be listed.
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://localhost:8000',
+    'http://127.0.0.1',
+    'http://127.0.0.1:8000',
+]
 
 # GitHub Codespaces support
 # When CODESPACE_NAME is set (automatically by Codespaces), requests arrive through
@@ -40,19 +50,10 @@ _codespace_name = os.environ.get('CODESPACE_NAME')
 if _codespace_name:
     USE_X_FORWARDED_HOST = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    ALLOWED_HOSTS = ['.app.github.dev', 'localhost', '127.0.0.1', '[::1]']
-    # Trust both the public Codespaces URL and localhost (the internal address the
-    # Codespaces proxy forwards to).  Once CSRF_TRUSTED_ORIGINS is set Django
-    # enforces strict origin checking on every POST, so both origins must be listed
-    # or the logout form (whose Origin header the browser reports as the internal
-    # http://localhost:8000 address) will fail with an origin-mismatch error.
-    CSRF_TRUSTED_ORIGINS = [
-        'https://*.app.github.dev',
-        'http://localhost',
-        'http://localhost:8000',
-        'http://127.0.0.1',
-        'http://127.0.0.1:8000',
-    ]
+    ALLOWED_HOSTS += ['.app.github.dev']
+    # Also trust the public Codespaces URL so POSTs from the forwarded-port
+    # browser tab pass origin checking.
+    CSRF_TRUSTED_ORIGINS += ['https://*.app.github.dev']
 
 
 # Application definition
