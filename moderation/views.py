@@ -16,11 +16,13 @@ from moderation.utils import is_moderator
 
 _LEGACY_PENDING_STATUS = "PENDING"
 _REVIEWABLE_STATION_STATUSES = [
+    BookStation.ModerationStatus.NEW,
     BookStation.ModerationStatus.FLAGGED,
     BookStation.ModerationStatus.REPORTED,
     _LEGACY_PENDING_STATUS,
 ]
 _REVIEWABLE_ITEM_STATUSES = [
+    Item.ModerationStatus.NEW,
     Item.ModerationStatus.FLAGGED,
     Item.ModerationStatus.REPORTED,
     _LEGACY_PENDING_STATUS,
@@ -54,15 +56,17 @@ def moderator_required(view_func):
     return wrapped
 
 
-def _unapproved_station_activity_qs():
+def _new_station_activity_qs():
+    """BookStations with NEW status (not yet approved by a moderator) — shown in activity sections."""
     return BookStation.objects.filter(
-        Q(moderation_status__in=_REVIEWABLE_STATION_STATUSES) | Q(pending_edit__isnull=False)
+        Q(moderation_status=BookStation.ModerationStatus.NEW) | Q(pending_edit__isnull=False)
     )
 
 
-def _unapproved_item_activity_qs():
+def _new_item_activity_qs():
+    """Items with NEW status (not yet approved by a moderator) — shown in activity sections."""
     return Item.objects.filter(
-        Q(moderation_status__in=_REVIEWABLE_ITEM_STATUSES) | Q(pending_edit__isnull=False)
+        Q(moderation_status=Item.ModerationStatus.NEW) | Q(pending_edit__isnull=False)
     )
 
 
@@ -111,10 +115,10 @@ def moderation_queue(request):
         .order_by("title", "id")
     )
     recent_station_activity = (
-        _unapproved_station_activity_qs().select_related("added_by").order_by("-id")[:20]
+        _new_station_activity_qs().select_related("added_by").order_by("-id")[:20]
     )
     recent_item_activity = (
-        _unapproved_item_activity_qs().select_related("added_by", "current_book_station").order_by("-id")[
+        _new_item_activity_qs().select_related("added_by", "current_book_station").order_by("-id")[
             :20
         ]
     )
@@ -138,7 +142,7 @@ def moderation_queue(request):
 @moderator_required
 def bookstation_activity(request):
     page_obj = Paginator(
-        _unapproved_station_activity_qs().select_related("added_by").order_by("-id"),
+        _new_station_activity_qs().select_related("added_by").order_by("-id"),
         20,
     ).get_page(request.GET.get("page"))
     return render(request, "moderation/bookstation_activity.html", {"page_obj": page_obj})
@@ -147,7 +151,7 @@ def bookstation_activity(request):
 @moderator_required
 def item_activity(request):
     page_obj = Paginator(
-        _unapproved_item_activity_qs()
+        _new_item_activity_qs()
         .select_related("added_by", "current_book_station")
         .order_by("-id"),
         20,

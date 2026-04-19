@@ -360,10 +360,10 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
 
         station = BookStation.objects.get(name="Brand New Station")
         self.assertEqual(
-            station.moderation_status, BookStation.ModerationStatus.APPROVED
+            station.moderation_status, BookStation.ModerationStatus.NEW
         )
 
-    def test_create_item_through_form_is_approved(self):
+    def test_create_item_through_form_is_new(self):
         self.client.login(username="regular", password=self.password)
 
         response = self.client.post(
@@ -377,7 +377,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         item = Item.objects.get(title="Brand New Book")
-        self.assertEqual(item.moderation_status, Item.ModerationStatus.APPROVED)
+        self.assertEqual(item.moderation_status, Item.ModerationStatus.NEW)
 
     def test_edit_approved_bookstation_creates_pending_edit(self):
         """Editing an approved station stores a pending_edit instead of resetting to PENDING."""
@@ -396,10 +396,10 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
         )
 
         self.approved_station.refresh_from_db()
-        # Station stays approved and visible; changes are queued in pending_edit.
+        # Station stays visible after edit with NEW status; revert snapshot saved in pending_edit.
         self.assertEqual(
             self.approved_station.moderation_status,
-            BookStation.ModerationStatus.APPROVED,
+            BookStation.ModerationStatus.NEW,
         )
         self.assertIsNotNone(self.approved_station.pending_edit)
         self.assertEqual(self.approved_station.pending_edit["location"], "Elsewhere")
@@ -420,7 +420,7 @@ class ModerationWorkflowTests(ModerationSetUpMixin, TestCase):
 
         self.approved_item.refresh_from_db()
         self.assertEqual(
-            self.approved_item.moderation_status, Item.ModerationStatus.APPROVED
+            self.approved_item.moderation_status, Item.ModerationStatus.NEW
         )
         self.assertIsNotNone(self.approved_item.pending_edit)
         self.assertEqual(self.approved_item.author, "Updated Author")
@@ -497,7 +497,7 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         )
 
         station = BookStation.objects.get(name="Picture Station")
-        self.assertEqual(station.moderation_status, BookStation.ModerationStatus.APPROVED)
+        self.assertEqual(station.moderation_status, BookStation.ModerationStatus.NEW)
         # The picture URL should already be saved (file stored, pending review)
         self.assertTrue(station.picture.startswith(self._PICTURE_URL_PREFIX))
 
@@ -523,7 +523,7 @@ class ModerationImageUploadTests(ModerationSetUpMixin, TestCase):
         # Station stays visible and stores a revert snapshot in pending_edit.
         self.assertEqual(
             self.approved_station.moderation_status,
-            BookStation.ModerationStatus.APPROVED,
+            BookStation.ModerationStatus.NEW,
         )
         self.assertIsNotNone(self.approved_station.pending_edit)
         self.assertTrue(self.approved_station.picture.startswith(self._PICTURE_URL_PREFIX))

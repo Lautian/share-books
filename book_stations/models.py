@@ -33,6 +33,7 @@ class BookStation(models.Model):
 	)
 
 	class ModerationStatus(models.TextChoices):
+		NEW = "NEW", "New"
 		FLAGGED = "FLAGGED", "Flagged"
 		APPROVED = "APPROVED", "Approved"
 		REPORTED = "REPORTED", "Reported"
@@ -41,7 +42,7 @@ class BookStation(models.Model):
 	moderation_status = models.CharField(
 		max_length=16,
 		choices=ModerationStatus.choices,
-		default=ModerationStatus.APPROVED,
+		default=ModerationStatus.NEW,
 	)
 	claimed_by = models.ForeignKey(
 		settings.AUTH_USER_MODEL,

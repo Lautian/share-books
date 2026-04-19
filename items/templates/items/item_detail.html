@@ -46,7 +46,7 @@
         {% endif %}
     </div>
 
-    {% if user_is_moderator and item.moderation_status == "FLAGGED" and item.pending_edit is None %}
+    {% if user_is_moderator and item.moderation_status == "FLAGGED" and item.pending_edit is None or user_is_moderator and item.moderation_status == "NEW" and item.pending_edit is None %}
     <div class="mb-5 rounded-2xl border border-warning/40 bg-base-100/80 p-4 shadow-xl">
         <p class="text-xs uppercase tracking-[0.18em] text-warning mb-3">Moderation actions</p>
         <div class="flex flex-wrap items-center gap-2">

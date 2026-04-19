@@ -708,7 +708,7 @@ class ItemCreateFormViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": created_item.id}),
         )
-        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.APPROVED)
+        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.NEW)
         self.assertEqual(created_item.added_by, self.user)
         self.assertEqual(created_item.thumbnail_url, "https://example.com/digest.jpg")
 

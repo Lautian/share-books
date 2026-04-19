@@ -233,7 +233,8 @@ def item_list(request):
 
     if not is_moderator(request.user):
         items = items.filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
             | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
@@ -283,14 +284,16 @@ def item_detail_page(request, item_id):
         qs = Item.objects.select_related("current_book_station", "last_seen_at")
     elif request.user.is_authenticated:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
             | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
             | Q(added_by=request.user)
         )
     else:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
             | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
@@ -324,7 +327,8 @@ def item_history_page(request, item_id):
         )
     else:
         visibility_filter = (
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
             | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
@@ -364,7 +368,8 @@ def item_list_create(request):
         ).all()
         if not is_moderator(request.user):
             items = items.filter(
-                Q(moderation_status=Item.ModerationStatus.APPROVED)
+                Q(moderation_status=Item.ModerationStatus.NEW)
+                | Q(moderation_status=Item.ModerationStatus.APPROVED)
                 | Q(moderation_status=Item.ModerationStatus.REPORTED)
             )
         status = request.GET.get("status")
@@ -441,7 +446,7 @@ def item_list_create(request):
             item.moderation_status = (
                 Item.ModerationStatus.FLAGGED
                 if api_moderation["has_bad_language"]
-                else Item.ModerationStatus.APPROVED
+                else Item.ModerationStatus.NEW
             )
 
             item.full_clean()
@@ -462,7 +467,8 @@ def item_detail_api(request, item_id):
     qs = Item.objects.select_related("current_book_station", "last_seen_at", "added_by")
     if not is_moderator(request.user):
         qs = qs.filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
             | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
@@ -485,7 +491,7 @@ def item_create(request):
             item.moderation_status = (
                 Item.ModerationStatus.FLAGGED
                 if auto_moderation["has_bad_language"]
-                else Item.ModerationStatus.APPROVED
+                else Item.ModerationStatus.NEW
             )
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
@@ -541,7 +547,7 @@ def item_edit(request, item_id):
             updated.moderation_status = (
                 Item.ModerationStatus.FLAGGED
                 if auto_moderation["has_bad_language"]
-                else Item.ModerationStatus.APPROVED
+                else Item.ModerationStatus.NEW
             )
             updated.claimed_by = None
             updated.save(reported_by=request.user, create_movement=False)
@@ -905,6 +911,7 @@ def item_report(request, item_id):
         Item,
         pk=item_id,
         moderation_status__in=[
+            Item.ModerationStatus.NEW,
             Item.ModerationStatus.APPROVED,
             Item.ModerationStatus.FLAGGED,
             Item.ModerationStatus.REPORTED,

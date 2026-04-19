@@ -51,7 +51,8 @@ def bookstation_list(request):
 
 	if not is_moderator(request.user):
 		stations = stations.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
@@ -93,13 +94,15 @@ def bookstation_detail_page(request, readable_id):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
 		qs = BookStation.objects.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
 		if request.user.is_authenticated:
 			qs = BookStation.objects.filter(
-				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+				| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 				| models.Q(added_by=request.user)
@@ -111,7 +114,8 @@ def bookstation_detail_page(request, readable_id):
 	).order_by("title", "id")
 	if not is_moderator(request.user):
 		items = items.filter(
-			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			models.Q(moderation_status=Item.ModerationStatus.NEW)
+			| models.Q(moderation_status=Item.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
 		)
@@ -185,7 +189,8 @@ def bookstation_list_create(request):
 		stations = BookStation.objects.select_related("added_by").all()
 		if not is_moderator(request.user):
 			stations = stations.filter(
-				models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+				models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+				| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 			)
@@ -224,7 +229,7 @@ def bookstation_list_create(request):
 		station.moderation_status = (
 			BookStation.ModerationStatus.FLAGGED
 			if auto_moderation["has_bad_language"]
-			else BookStation.ModerationStatus.APPROVED
+			else BookStation.ModerationStatus.NEW
 		)
 
 		try:
@@ -245,7 +250,8 @@ def bookstation_detail_api(request, readable_id):
 	qs = BookStation.objects.select_related("added_by")
 	if not is_moderator(request.user):
 		qs = qs.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
@@ -261,7 +267,8 @@ def bookstation_inventory_page(request, readable_id):
 		station = get_object_or_404(BookStation, readable_id=readable_id)
 	else:
 		visibility_filter = (
-			models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
+			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
+			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
 		)
@@ -304,7 +311,8 @@ def bookstation_inventory_page(request, readable_id):
 
 	if not is_moderator(request.user):
 		items = items.filter(
-			models.Q(moderation_status=Item.ModerationStatus.APPROVED)
+			models.Q(moderation_status=Item.ModerationStatus.NEW)
+			| models.Q(moderation_status=Item.ModerationStatus.APPROVED)
 			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
 			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
 		)
@@ -359,7 +367,7 @@ def bookstation_create(request):
 			station.moderation_status = (
 				BookStation.ModerationStatus.FLAGGED
 				if auto_moderation["has_bad_language"]
-				else BookStation.ModerationStatus.APPROVED
+				else BookStation.ModerationStatus.NEW
 			)
 			station.save()
 			return redirect(
@@ -420,7 +428,7 @@ def bookstation_edit(request, readable_id):
 			updated.moderation_status = (
 				BookStation.ModerationStatus.FLAGGED
 				if auto_moderation["has_bad_language"]
-				else BookStation.ModerationStatus.APPROVED
+				else BookStation.ModerationStatus.NEW
 			)
 			updated.claimed_by = None
 			updated.save()
@@ -488,6 +496,7 @@ def bookstation_report(request, readable_id):
 		BookStation,
 		readable_id=readable_id,
 		moderation_status__in=[
+			BookStation.ModerationStatus.NEW,
 			BookStation.ModerationStatus.APPROVED,
 			BookStation.ModerationStatus.FLAGGED,
 			BookStation.ModerationStatus.REPORTED,

@@ -115,6 +115,7 @@ def profile(request):
         claimed_stations = BookStation.objects.filter(
             claimed_by=request.user,
             moderation_status__in=[
+                BookStation.ModerationStatus.NEW,
                 BookStation.ModerationStatus.FLAGGED,
                 BookStation.ModerationStatus.REPORTED,
                 _LEGACY_PENDING_STATUS,
@@ -123,6 +124,7 @@ def profile(request):
         claimed_items = Item.objects.filter(
             claimed_by=request.user,
             moderation_status__in=[
+                Item.ModerationStatus.NEW,
                 Item.ModerationStatus.FLAGGED,
                 Item.ModerationStatus.REPORTED,
                 _LEGACY_PENDING_STATUS,
