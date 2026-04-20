@@ -54,7 +54,7 @@ Constraints/indexes:
 
 ## Lifecycle rules
 1. On create of `Item`/`BookStation`, insert version `1` with `change_source=CREATE`.
-2. On each create/update save where any tracked snapshot field changes, insert next version row after save.
+2. On each `save()` (create or update) where any tracked snapshot field changes, insert the next version row after the write completes.
    - `Item`: `title`, `author`, `thumbnail_url`, `description`, `item_type`, `status`,
      `current_book_station`, `last_seen_at`, `last_activity`, and moderation/ownership fields.
    - `BookStation`: `name`, `description`, `location`, `location_plus_code`, `address`,
