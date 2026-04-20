@@ -57,14 +57,14 @@ def moderator_required(view_func):
 
 
 def _new_station_activity_qs():
-    """BookStations with NEW status (not yet approved by a moderator) — shown in activity sections."""
+    """BookStations with NEW status or a pending edit — shown in activity sections."""
     return BookStation.objects.filter(
         Q(moderation_status=BookStation.ModerationStatus.NEW) | Q(pending_edit__isnull=False)
     )
 
 
 def _new_item_activity_qs():
-    """Items with NEW status (not yet approved by a moderator) — shown in activity sections."""
+    """Items with NEW status or a pending edit — shown in activity sections."""
     return Item.objects.filter(
         Q(moderation_status=Item.ModerationStatus.NEW) | Q(pending_edit__isnull=False)
     )
@@ -319,7 +319,12 @@ def approve_bookstation_edit(request, readable_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    station = get_object_or_404(BookStation, readable_id=readable_id, pending_edit__isnull=False)
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
+        pending_edit__isnull=False,
+    )
     data = station.pending_edit or {}
     if not _is_edit_revert_snapshot(data):
         station.name = data.get("name", station.name)
@@ -351,7 +356,12 @@ def reject_bookstation_edit(request, readable_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    station = get_object_or_404(BookStation, readable_id=readable_id, pending_edit__isnull=False)
+    station = get_object_or_404(
+        BookStation,
+        readable_id=readable_id,
+        moderation_status__in=_REVIEWABLE_STATION_STATUSES,
+        pending_edit__isnull=False,
+    )
     data = station.pending_edit or {}
     from_status = station.moderation_status
     if _is_edit_revert_snapshot(data):
@@ -386,7 +396,12 @@ def approve_item_edit(request, item_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    item = get_object_or_404(Item, pk=item_id, pending_edit__isnull=False)
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
+        pending_edit__isnull=False,
+    )
     data = item.pending_edit or {}
     if not _is_edit_revert_snapshot(data):
         item.title = data.get("title", item.title)
@@ -421,7 +436,12 @@ def reject_item_edit(request, item_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    item = get_object_or_404(Item, pk=item_id, pending_edit__isnull=False)
+    item = get_object_or_404(
+        Item,
+        pk=item_id,
+        moderation_status__in=_REVIEWABLE_ITEM_STATUSES,
+        pending_edit__isnull=False,
+    )
     data = item.pending_edit or {}
     from_status = item.moderation_status
     if _is_edit_revert_snapshot(data):

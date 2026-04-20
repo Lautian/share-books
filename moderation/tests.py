@@ -722,7 +722,8 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 
     def test_approve_item_edit_creates_log_entry(self):
         self.approved_item.pending_edit = {"title": "New Title"}
-        self.approved_item.save(update_fields=["pending_edit"])
+        self.approved_item.moderation_status = Item.ModerationStatus.FLAGGED
+        self.approved_item.save(update_fields=["pending_edit", "moderation_status"])
         self.client.login(username="moderator", password=self.password)
 
         self.client.post(
@@ -735,7 +736,8 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 
     def test_reject_item_edit_creates_log_entry(self):
         self.approved_item.pending_edit = {"title": "New Title"}
-        self.approved_item.save(update_fields=["pending_edit"])
+        self.approved_item.moderation_status = Item.ModerationStatus.FLAGGED
+        self.approved_item.save(update_fields=["pending_edit", "moderation_status"])
         self.client.login(username="moderator", password=self.password)
 
         self.client.post(
@@ -748,7 +750,8 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 
     def test_approve_bookstation_edit_creates_log_entry(self):
         self.approved_station.pending_edit = {"name": "New Name", "location": "New Location"}
-        self.approved_station.save(update_fields=["pending_edit"])
+        self.approved_station.moderation_status = BookStation.ModerationStatus.FLAGGED
+        self.approved_station.save(update_fields=["pending_edit", "moderation_status"])
         self.client.login(username="moderator", password=self.password)
 
         self.client.post(
@@ -764,7 +767,8 @@ class ModerationLogTests(ModerationSetUpMixin, TestCase):
 
     def test_reject_bookstation_edit_creates_log_entry(self):
         self.approved_station.pending_edit = {"name": "New Name", "location": "New Location"}
-        self.approved_station.save(update_fields=["pending_edit"])
+        self.approved_station.moderation_status = BookStation.ModerationStatus.FLAGGED
+        self.approved_station.save(update_fields=["pending_edit", "moderation_status"])
         self.client.login(username="moderator", password=self.password)
 
         self.client.post(
@@ -2198,3 +2202,144 @@ class AutoModerationTests(TestCase):
 
         self.assertTrue(result["has_bad_language"])
         self.assertEqual(result["flagged_fields"], ["bio"])
+
+
+class ActivityViewAccessTests(ModerationSetUpMixin, TestCase):
+    """Tests that activity views are only accessible to moderators."""
+
+    def test_anonymous_user_redirected_from_bookstation_activity(self):
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
+
+    def test_regular_user_gets_403_for_bookstation_activity(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_moderator_can_access_bookstation_activity(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_anonymous_user_redirected_from_item_activity(self):
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
+
+    def test_regular_user_gets_403_for_item_activity(self):
+        self.client.login(username="regular", password=self.password)
+
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_moderator_can_access_item_activity(self):
+        self.client.login(username="moderator", password=self.password)
+
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertEqual(response.status_code, 200)
+
+
+class ActivityViewContentTests(ModerationSetUpMixin, TestCase):
+    """Tests that activity views show the correct records."""
+
+    def setUp(self):
+        super().setUp()
+        User = get_user_model()
+        self.new_station = BookStation.objects.create(
+            name="New Station",
+            location="Somewhere",
+            added_by=self.regular_user,
+            moderation_status=BookStation.ModerationStatus.NEW,
+        )
+        self.new_item = Item.objects.create(
+            title="New Book",
+            author="Author C",
+            item_type=Item.ItemType.BOOK,
+            status=Item.Status.UNKNOWN,
+            added_by=self.regular_user,
+            moderation_status=Item.ModerationStatus.NEW,
+        )
+        self.client.login(username="moderator", password=self.password)
+
+    def test_bookstation_activity_shows_new_stations(self):
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertContains(response, "New Station")
+
+    def test_bookstation_activity_does_not_show_approved_stations(self):
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertNotContains(response, "Approved Station")
+
+    def test_bookstation_activity_shows_stations_with_pending_edit(self):
+        self.approved_station.pending_edit = {"name": "Updated Name"}
+        self.approved_station.save()
+
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+
+        self.assertContains(response, "Approved Station")
+
+    def test_item_activity_shows_new_items(self):
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertContains(response, "New Book")
+
+    def test_item_activity_does_not_show_approved_items(self):
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertNotContains(response, "Approved Book")
+
+    def test_item_activity_shows_items_with_pending_edit(self):
+        self.approved_item.pending_edit = {"title": "Updated Title"}
+        self.approved_item.save(create_movement=False)
+
+        response = self.client.get(reverse("moderation:item-activity"))
+
+        self.assertContains(response, "Approved Book")
+
+    def test_bookstation_activity_pagination(self):
+        # Create enough stations to trigger pagination (page size = 20).
+        for i in range(25):
+            BookStation.objects.create(
+                name=f"Extra Station {i}",
+                location="Somewhere",
+                added_by=self.regular_user,
+                moderation_status=BookStation.ModerationStatus.NEW,
+            )
+
+        response = self.client.get(reverse("moderation:bookstation-activity"))
+        self.assertEqual(response.status_code, 200)
+
+        response_page2 = self.client.get(
+            reverse("moderation:bookstation-activity"), {"page": 2}
+        )
+        self.assertEqual(response_page2.status_code, 200)
+
+    def test_item_activity_pagination(self):
+        # Create enough items to trigger pagination (page size = 20).
+        for i in range(25):
+            Item.objects.create(
+                title=f"Extra Book {i}",
+                author="Author",
+                item_type=Item.ItemType.BOOK,
+                status=Item.Status.UNKNOWN,
+                added_by=self.regular_user,
+                moderation_status=Item.ModerationStatus.NEW,
+            )
+
+        response = self.client.get(reverse("moderation:item-activity"))
+        self.assertEqual(response.status_code, 200)
+
+        response_page2 = self.client.get(
+            reverse("moderation:item-activity"), {"page": 2}
+        )
+        self.assertEqual(response_page2.status_code, 200)

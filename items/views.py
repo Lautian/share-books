@@ -550,7 +550,7 @@ def item_edit(request, item_id):
                 else Item.ModerationStatus.NEW
             )
             updated.claimed_by = None
-            updated.save(reported_by=request.user, create_movement=False)
+            updated.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
         form = ItemCreateForm(instance=item)

@@ -46,7 +46,7 @@
         {% endif %}
     </div>
 
-    {% if user_is_moderator and item.moderation_status == "FLAGGED" and item.pending_edit is None or user_is_moderator and item.moderation_status == "NEW" and item.pending_edit is None %}
+    {% if user_is_moderator and item.pending_edit is None and item.moderation_status == "FLAGGED" or user_is_moderator and item.pending_edit is None and item.moderation_status == "NEW" %}
     <div class="mb-5 rounded-2xl border border-warning/40 bg-base-100/80 p-4 shadow-xl">
         <p class="text-xs uppercase tracking-[0.18em] text-warning mb-3">Moderation actions</p>
         <div class="flex flex-wrap items-center gap-2">
@@ -80,7 +80,7 @@
             {% endif %}
         </div>
     </div>
-    {% elif user_is_moderator and item.moderation_status == "REPORTED" %}
+    {% elif user_is_moderator and item.pending_edit is None and item.moderation_status == "REPORTED" %}
     <div class="mb-5 rounded-2xl border border-error/40 bg-base-100/80 p-4 shadow-xl">
         <p class="text-xs uppercase tracking-[0.18em] text-error mb-3">Moderation actions</p>
         <div class="flex flex-wrap items-center gap-2">
