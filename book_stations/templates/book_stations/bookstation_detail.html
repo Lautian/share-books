@@ -451,7 +451,6 @@
             </form>
             <form method="post" action="{% url 'moderation:reject-bookstation' station.readable_id %}">
                 {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if station.claimed_by == request.user %}
@@ -486,7 +485,6 @@
             </form>
             <form method="post" action="{% url 'moderation:reject-bookstation' station.readable_id %}">
                 {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit" class="btn btn-sm btn-error btn-outline">Reject</button>
             </form>
             {% if station.claimed_by == request.user %}
