@@ -39,8 +39,8 @@ Constraints/indexes:
 - `book_station` (FK → `BookStation`, indexed)
 - `version_number` (positive integer, unique per `book_station`)
 - Snapshot fields needed to reconstruct state at that time:
-  - `name`, `description`, `location`, `location_plus_code`
-  - `address`, `picture`
+  - `name`, `readable_id`, `description`, `location`
+  - `latitude`, `longitude`, `picture`
   - ownership/moderation fields currently on `BookStation` (copy as snapshot)
 - Metadata:
   - `changed_at` (`DateTimeField(auto_now_add=True)`, indexed)
@@ -57,7 +57,7 @@ Constraints/indexes:
 2. On each `save()` (create or update) where any tracked snapshot field changes, insert the next version row after the write completes.
    - `Item`: `title`, `author`, `thumbnail_url`, `description`, `item_type`, `status`,
      `current_book_station`, `last_seen_at`, `last_activity`, and moderation/ownership fields.
-   - `BookStation`: `name`, `description`, `location`, `location_plus_code`, `address`,
+   - `BookStation`: `name`, `readable_id`, `description`, `location`, `latitude`, `longitude`,
      `picture`, and moderation/ownership fields.
 3. Version rows are immutable (append-only).
 4. Current row stays denormalized for fast reads; history is in version tables.
