@@ -732,6 +732,7 @@ class InventoryMigrationRegressionTests(TestCase):
         )
 
     def test_item_table_exists_and_inventory_views_render(self):
+        self.assertEqual(Item._meta.db_table, "items_item")
         self.assertIn(
             Item._meta.db_table,
             connection.introspection.table_names(),

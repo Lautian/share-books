@@ -81,7 +81,6 @@ class Item(models.Model):
     )
 
     class Meta:
-        db_table = "book_stations_item"
         ordering = ["title", "id"]
         constraints = [
             models.CheckConstraint(
