@@ -1,7 +1,9 @@
 from io import StringIO
 
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
+from django.urls import reverse
 
 
 class HomePageViewTests(TestCase):
@@ -37,3 +39,33 @@ class MigrationConsistencyTests(TestCase):
                 self.fail(
                     f"Missing migrations detected (run 'python manage.py makemigrations'):\n{out.getvalue()}"
                 )
+
+
+class NavigationBarTests(TestCase):
+    def test_navbar_contains_browse_items_link(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, reverse("items:item-list"))
+        self.assertContains(response, "Browse Items")
+
+    def test_navbar_shows_login_actions_for_anonymous_user(self):
+        response = self.client.get("/")
+
+        self.assertContains(response, reverse("users:login"))
+        self.assertContains(response, reverse("users:signup"))
+        self.assertNotContains(response, reverse("users:profile"))
+
+    def test_navbar_shows_account_actions_for_authenticated_user(self):
+        user = get_user_model().objects.create_user(
+            username="nav-user",
+            password="StrongPass123",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/")
+
+        self.assertContains(response, reverse("users:profile"))
+        self.assertContains(response, reverse("book_stations:bookstation-create"))
+        self.assertContains(response, reverse("items:item-create"))
+        self.assertContains(response, "Log out")
+        self.assertNotContains(response, reverse("users:login"))
