@@ -233,7 +233,9 @@ def item_list(request):
 
     if not is_moderator(request.user):
         items = items.filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
 
@@ -282,13 +284,17 @@ def item_detail_page(request, item_id):
         qs = Item.objects.select_related("current_book_station", "last_seen_at")
     elif request.user.is_authenticated:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
             | Q(added_by=request.user)
         )
     else:
         qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
     item = get_object_or_404(qs, pk=item_id)
@@ -321,7 +327,9 @@ def item_history_page(request, item_id):
         )
     else:
         visibility_filter = (
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
         if request.user.is_authenticated:
@@ -360,7 +368,8 @@ def item_list_create(request):
         ).all()
         if not is_moderator(request.user):
             items = items.filter(
-                Q(moderation_status=Item.ModerationStatus.APPROVED)
+                Q(moderation_status=Item.ModerationStatus.NEW)
+                | Q(moderation_status=Item.ModerationStatus.APPROVED)
                 | Q(moderation_status=Item.ModerationStatus.REPORTED)
             )
         status = request.GET.get("status")
@@ -435,9 +444,9 @@ def item_list_create(request):
                 description=item.description,
             )
             item.moderation_status = (
-                Item.ModerationStatus.PENDING
+                Item.ModerationStatus.FLAGGED
                 if api_moderation["has_bad_language"]
-                else Item.ModerationStatus.APPROVED
+                else Item.ModerationStatus.NEW
             )
 
             item.full_clean()
@@ -458,7 +467,9 @@ def item_detail_api(request, item_id):
     qs = Item.objects.select_related("current_book_station", "last_seen_at", "added_by")
     if not is_moderator(request.user):
         qs = qs.filter(
-            Q(moderation_status=Item.ModerationStatus.APPROVED)
+            Q(moderation_status=Item.ModerationStatus.NEW)
+            | Q(moderation_status=Item.ModerationStatus.APPROVED)
+            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
             | Q(moderation_status=Item.ModerationStatus.REPORTED)
         )
     item = get_object_or_404(qs, pk=item_id)
@@ -476,24 +487,11 @@ def item_create(request):
                 author=item.author,
                 description=item.description,
             )
-            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
-
-            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
-                return render(
-                    request,
-                    "items/item_form.html",
-                    {
-                        "form": form,
-                        "moderation_confirmation_required": True,
-                        "flagged_fields": auto_moderation["flagged_fields"],
-                    },
-                )
-
             item.added_by = request.user
             item.moderation_status = (
-                Item.ModerationStatus.PENDING
+                Item.ModerationStatus.FLAGGED
                 if auto_moderation["has_bad_language"]
-                else Item.ModerationStatus.APPROVED
+                else Item.ModerationStatus.NEW
             )
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
@@ -507,8 +505,8 @@ def item_create(request):
 def item_edit(request, item_id):
     item = get_object_or_404(Item, pk=item_id, added_by=request.user)
 
-    # Block further edits while any edit (or new submission) is awaiting moderation.
-    if item.moderation_status == Item.ModerationStatus.PENDING or item.pending_edit is not None:
+    # Block further edits while an unreviewed edit is awaiting moderation review.
+    if item.pending_edit is not None:
         return render(
             request,
             "items/item_form.html",
@@ -519,52 +517,40 @@ def item_edit(request, item_id):
             },
         )
 
-    # Item is APPROVED with no pending edit.
-    # When auto-moderation passes the edit is saved directly.
-    # When auto-moderation flags the content the edit is stored as a pending diff
-    # so the original live data stays publicly visible while moderation is in progress.
+    # Item edits are applied immediately; keep a snapshot to support moderator rejection.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
+            original_item = Item.objects.get(pk=item.pk)
+            previous_data = {
+                "_moderation_type": "EDIT_REVERT_SNAPSHOT",
+                "moderation_status": original_item.moderation_status,
+                "title": original_item.title,
+                "author": original_item.author,
+                "thumbnail_url": original_item.thumbnail_url,
+                "description": original_item.description,
+                "item_type": original_item.item_type,
+                "status": original_item.status,
+                "current_book_station_id": original_item.current_book_station_id,
+                "last_seen_at_id": original_item.last_seen_at_id,
+                "last_activity": (
+                    original_item.last_activity.isoformat() if original_item.last_activity else None
+                ),
+            }
             updated = form.save(commit=False)
             auto_moderation = auto_moderate_item(
                 title=updated.title,
                 author=updated.author,
                 description=updated.description,
             )
-            confirmed_flagged_content = request.POST.get("confirm_flagged_content") == "1"
-
-            if auto_moderation["has_bad_language"] and not confirmed_flagged_content:
-                return render(
-                    request,
-                    "items/item_form.html",
-                    {
-                        "form": form,
-                        "is_edit": True,
-                        "item": item,
-                        "moderation_confirmation_required": True,
-                        "flagged_fields": auto_moderation["flagged_fields"],
-                    },
-                )
-
-            if not auto_moderation["has_bad_language"]:
-                updated.save(reported_by=request.user)
-                return redirect("items:item-detail", item_id=item.id)
-
-            pending_data = {
-                "title": updated.title,
-                "author": updated.author,
-                "thumbnail_url": updated.thumbnail_url,
-                "description": updated.description,
-                "item_type": updated.item_type,
-                "status": updated.status,
-                "current_book_station_id": updated.current_book_station_id,
-                "last_seen_at_id": updated.last_seen_at_id,
-                "last_activity": updated.last_activity.isoformat() if updated.last_activity else None,
-            }
-            item.pending_edit = pending_data
-            item.claimed_by = None
-            item.save(update_fields=["pending_edit", "claimed_by"], create_movement=False)
+            updated.pending_edit = previous_data
+            updated.moderation_status = (
+                Item.ModerationStatus.FLAGGED
+                if auto_moderation["has_bad_language"]
+                else Item.ModerationStatus.NEW
+            )
+            updated.claimed_by = None
+            updated.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
         form = ItemCreateForm(instance=item)
@@ -924,7 +910,12 @@ def item_report(request, item_id):
     item = get_object_or_404(
         Item,
         pk=item_id,
-        moderation_status__in=[Item.ModerationStatus.APPROVED, Item.ModerationStatus.REPORTED],
+        moderation_status__in=[
+            Item.ModerationStatus.NEW,
+            Item.ModerationStatus.APPROVED,
+            Item.ModerationStatus.FLAGGED,
+            Item.ModerationStatus.REPORTED,
+        ],
     )
     if item.moderation_status != Item.ModerationStatus.REPORTED:
         item.moderation_status = Item.ModerationStatus.REPORTED

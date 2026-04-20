@@ -504,11 +504,10 @@ class BookStationViewTests(TestCase):
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
-        # The live record stays unchanged while the edit is pending moderation.
-        self.assertEqual(self.station.name, "Riverside Box")
+        # The live record is updated immediately; pending_edit stores the revert snapshot.
+        self.assertEqual(self.station.name, "Riverside Box Updated")
         self.assertIsNotNone(self.station.pending_edit)
-        self.assertEqual(self.station.pending_edit["name"], "Riverside Box Updated")
-        self.assertEqual(self.station.pending_edit["description"], "Updated description")
+        self.assertEqual(self.station.pending_edit["name"], "Riverside Box")
 
     def test_non_owner_cannot_edit_or_delete_station(self):
         self.client.login(username="other-station-user", password="StrongPass123")

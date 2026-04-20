@@ -6,6 +6,8 @@ app_name = "moderation"
 
 urlpatterns = [
     path("", views.moderation_queue, name="queue"),
+    path("activity/stations/", views.bookstation_activity, name="bookstation-activity"),
+    path("activity/items/", views.item_activity, name="item-activity"),
     path(
         "stations/<slug:readable_id>/",
         views.moderate_pending_bookstation,
