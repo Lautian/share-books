@@ -5,17 +5,17 @@ Track version history for `Item` and `BookStation` so edits are auditable, curre
 
 ## Proposed model
 
-### 1) Keep current tables as canonical current state
-- `book_stations_item` (`Item` model — table kept from original `book_stations` app, see `Meta.db_table`)
-- `book_stations_bookstation`
+### 1) Keep existing models as canonical current state
+- `Item` (in `items` app)
+- `BookStation` (in `book_stations` app)
 
 These remain the source for normal reads/writes used by the app today.
 
-### 2) Add append-only version tables
+### 2) Add append-only version models
 
-#### `book_stations_itemversion`
+#### `ItemVersion` (in `items` app)
 - `id` (PK)
-- `item` (FK → `book_stations_item`, indexed)
+- `item` (FK → `Item`, indexed)
 - `version_number` (positive integer, unique per `item`)
 - Snapshot fields needed to reconstruct state at that time:
   - `title`, `author`, `thumbnail_url`, `description`
@@ -34,9 +34,9 @@ Constraints/indexes:
 - `UniqueConstraint(fields=["item", "version_number"])`
 - Index on `("item", "-changed_at")`
 
-#### `book_stations_bookstationversion`
+#### `BookStationVersion` (in `book_stations` app)
 - `id` (PK)
-- `book_station` (FK → `book_stations_bookstation`, indexed)
+- `book_station` (FK → `BookStation`, indexed)
 - `version_number` (positive integer, unique per `book_station`)
 - Snapshot fields needed to reconstruct state at that time:
   - `name`, `description`, `location`, `location_plus_code`
