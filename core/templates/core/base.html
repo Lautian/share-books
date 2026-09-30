@@ -78,6 +78,7 @@
                         {% if user_is_moderator %}
                             <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
                         {% endif %}
+                        <li><a href="/admin/">Admin</a></li>
                         <li>
                             <form method="post" action="{% url 'users:logout' %}">
                                 {% csrf_token %}
@@ -88,7 +89,6 @@
                         <li><a href="{% url 'users:login' %}">Log in</a></li>
                         <li><a href="{% url 'users:signup' %}">Sign up</a></li>
                     {% endif %}
-                    <li><a href="/admin/">Admin</a></li>
                 </ul>
             </div>
             <a href="/" class="btn btn-ghost px-2 text-xl font-semibold tracking-wide md:text-2xl">Little libraries</a>
@@ -102,7 +102,7 @@
             </ul>
         </div>
 
-        <div class="navbar-end gap-2">
+        <div class="navbar-end hidden gap-2 md:flex">
             {% if user.is_authenticated %}
                 <div class="dropdown dropdown-end">
                     <button tabindex="0" type="button" class="btn btn-circle btn-ghost" aria-label="Open user menu">

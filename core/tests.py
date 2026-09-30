@@ -53,6 +53,10 @@ class NavigationBarTests(TestCase):
 
         self.assertContains(response, reverse("users:login"))
         self.assertContains(response, reverse("users:signup"))
+        mobile_menu = response.content.split(b'aria-label="Open menu"', 1)[1].split(
+            b"</ul>", 1
+        )[0]
+        self.assertNotIn(b'href="/admin/"', mobile_menu)
         self.assertNotContains(response, reverse("users:profile"))
 
     def test_navbar_shows_account_actions_for_authenticated_user(self):
@@ -67,5 +71,9 @@ class NavigationBarTests(TestCase):
         self.assertContains(response, reverse("users:profile"))
         self.assertContains(response, reverse("book_stations:bookstation-create"))
         self.assertContains(response, reverse("items:item-create"))
+        self.assertLess(
+            response.content.index(b'href="/admin/"'),
+            response.content.index(b"Log out"),
+        )
         self.assertContains(response, "Log out")
         self.assertNotContains(response, reverse("users:login"))
