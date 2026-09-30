@@ -6,16 +6,12 @@ import json
 import qrcode
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
-from django.views.decorators.csrf import csrf_exempt
 
 from book_stations.models import BookStation
-from moderation.auto_moderation import auto_moderate_item
-from moderation.utils import is_moderator
 from movements.models import Movement
 
 from .forms import ItemCreateForm
@@ -231,14 +227,6 @@ def item_list(request):
 
     items = Item.objects.select_related("current_book_station", "last_seen_at").all()
 
-    if not is_moderator(request.user):
-        items = items.filter(
-            Q(moderation_status=Item.ModerationStatus.NEW)
-            | Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
-            | Q(moderation_status=Item.ModerationStatus.REPORTED)
-        )
-
     selected_status = request.GET.get("status", "")
     selected_type = request.GET.get("item_type", "")
     selected_station = request.GET.get("station", "")
@@ -280,23 +268,7 @@ def item_detail_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    if is_moderator(request.user):
-        qs = Item.objects.select_related("current_book_station", "last_seen_at")
-    elif request.user.is_authenticated:
-        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.NEW)
-            | Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
-            | Q(moderation_status=Item.ModerationStatus.REPORTED)
-            | Q(added_by=request.user)
-        )
-    else:
-        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            Q(moderation_status=Item.ModerationStatus.NEW)
-            | Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
-            | Q(moderation_status=Item.ModerationStatus.REPORTED)
-        )
+    qs = Item.objects.select_related("current_book_station", "last_seen_at")
     item = get_object_or_404(qs, pk=item_id)
     recent_movements = (
         item.movements.select_related(
@@ -320,24 +292,10 @@ def item_history_page(request, item_id):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
 
-    if is_moderator(request.user):
-        item = get_object_or_404(
-            Item.objects.select_related("current_book_station", "last_seen_at"),
-            pk=item_id,
-        )
-    else:
-        visibility_filter = (
-            Q(moderation_status=Item.ModerationStatus.NEW)
-            | Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
-            | Q(moderation_status=Item.ModerationStatus.REPORTED)
-        )
-        if request.user.is_authenticated:
-            visibility_filter |= Q(added_by=request.user)
-        qs = Item.objects.select_related("current_book_station", "last_seen_at").filter(
-            visibility_filter
-        )
-        item = get_object_or_404(qs, pk=item_id)
+    item = get_object_or_404(
+        Item.objects.select_related("current_book_station", "last_seen_at"),
+        pk=item_id,
+    )
     movements = list(
         Movement.objects.select_related(
             "from_book_station",
@@ -360,18 +318,11 @@ def item_history_page(request, item_id):
     )
 
 
-@csrf_exempt
 def item_list_create(request):
     if request.method == "GET":
         items = Item.objects.select_related(
             "current_book_station", "last_seen_at", "added_by"
         ).all()
-        if not is_moderator(request.user):
-            items = items.filter(
-                Q(moderation_status=Item.ModerationStatus.NEW)
-                | Q(moderation_status=Item.ModerationStatus.APPROVED)
-                | Q(moderation_status=Item.ModerationStatus.REPORTED)
-            )
         status = request.GET.get("status")
         item_type = request.GET.get("item_type")
         station_reference = request.GET.get("station")
@@ -438,17 +389,6 @@ def item_list_create(request):
                 last_activity=_parse_last_activity(payload.get("last_activity")),
                 added_by=request.user,
             )
-            api_moderation = auto_moderate_item(
-                title=item.title,
-                author=item.author,
-                description=item.description,
-            )
-            item.moderation_status = (
-                Item.ModerationStatus.FLAGGED
-                if api_moderation["has_bad_language"]
-                else Item.ModerationStatus.NEW
-            )
-
             item.full_clean()
             item.save(reported_by=request.user)
         except ValidationError as error:
@@ -465,13 +405,6 @@ def item_detail_api(request, item_id):
         return HttpResponseNotAllowed(["GET"])
 
     qs = Item.objects.select_related("current_book_station", "last_seen_at", "added_by")
-    if not is_moderator(request.user):
-        qs = qs.filter(
-            Q(moderation_status=Item.ModerationStatus.NEW)
-            | Q(moderation_status=Item.ModerationStatus.APPROVED)
-            | Q(moderation_status=Item.ModerationStatus.FLAGGED)
-            | Q(moderation_status=Item.ModerationStatus.REPORTED)
-        )
     item = get_object_or_404(qs, pk=item_id)
     return JsonResponse(_serialize_item(item))
 
@@ -482,17 +415,7 @@ def item_create(request):
         form = ItemCreateForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
-            auto_moderation = auto_moderate_item(
-                title=item.title,
-                author=item.author,
-                description=item.description,
-            )
             item.added_by = request.user
-            item.moderation_status = (
-                Item.ModerationStatus.FLAGGED
-                if auto_moderation["has_bad_language"]
-                else Item.ModerationStatus.NEW
-            )
             item.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -503,53 +426,12 @@ def item_create(request):
 
 @login_required(login_url="users:login")
 def item_edit(request, item_id):
-    item = get_object_or_404(Item, pk=item_id, added_by=request.user)
+    item = get_object_or_404(Item, pk=item_id)
 
-    # Block further edits while an unreviewed edit is awaiting moderation review.
-    if item.pending_edit is not None:
-        return render(
-            request,
-            "items/item_form.html",
-            {
-                "is_edit": True,
-                "item": item,
-                "edit_blocked": True,
-            },
-        )
-
-    # Item edits are applied immediately; keep a snapshot to support moderator rejection.
     if request.method == "POST":
         form = ItemCreateForm(request.POST, instance=item)
         if form.is_valid():
-            original_item = Item.objects.get(pk=item.pk)
-            previous_data = {
-                "_moderation_type": "EDIT_REVERT_SNAPSHOT",
-                "moderation_status": original_item.moderation_status,
-                "title": original_item.title,
-                "author": original_item.author,
-                "thumbnail_url": original_item.thumbnail_url,
-                "description": original_item.description,
-                "item_type": original_item.item_type,
-                "status": original_item.status,
-                "current_book_station_id": original_item.current_book_station_id,
-                "last_seen_at_id": original_item.last_seen_at_id,
-                "last_activity": (
-                    original_item.last_activity.isoformat() if original_item.last_activity else None
-                ),
-            }
             updated = form.save(commit=False)
-            auto_moderation = auto_moderate_item(
-                title=updated.title,
-                author=updated.author,
-                description=updated.description,
-            )
-            updated.pending_edit = previous_data
-            updated.moderation_status = (
-                Item.ModerationStatus.FLAGGED
-                if auto_moderation["has_bad_language"]
-                else Item.ModerationStatus.NEW
-            )
-            updated.claimed_by = None
             updated.save(reported_by=request.user)
             return redirect("items:item-detail", item_id=item.id)
     else:
@@ -568,7 +450,7 @@ def item_edit(request, item_id):
 
 @login_required(login_url="users:login")
 def item_delete(request, item_id):
-    item = get_object_or_404(Item, pk=item_id, added_by=request.user)
+    item = get_object_or_404(Item, pk=item_id)
 
     if request.method == "POST":
         item.delete()
@@ -900,27 +782,6 @@ def _generate_qr_png_bytes(url):
     img.save(buf, format="PNG")
     buf.seek(0)
     return buf.read()
-
-
-@login_required(login_url="users:login")
-def item_report(request, item_id):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-
-    item = get_object_or_404(
-        Item,
-        pk=item_id,
-        moderation_status__in=[
-            Item.ModerationStatus.NEW,
-            Item.ModerationStatus.APPROVED,
-            Item.ModerationStatus.FLAGGED,
-            Item.ModerationStatus.REPORTED,
-        ],
-    )
-    if item.moderation_status != Item.ModerationStatus.REPORTED:
-        item.moderation_status = Item.ModerationStatus.REPORTED
-        item.save(update_fields=["moderation_status"], create_movement=False)
-    return redirect("items:item-detail", item_id=item_id)
 
 
 def item_qr_code(request, item_id):

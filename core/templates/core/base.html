@@ -75,9 +75,6 @@
                         <li><a href="{% url 'users:profile' %}">Profile</a></li>
                         <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                         <li><a href="{% url 'items:item-create' %}">Add item</a></li>
-                        {% if user_is_moderator %}
-                            <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
-                        {% endif %}
                         <li><a href="/admin/">Admin</a></li>
                         <li>
                             <form method="post" action="{% url 'users:logout' %}">
@@ -87,7 +84,6 @@
                         </li>
                     {% else %}
                         <li><a href="{% url 'users:login' %}">Log in</a></li>
-                        <li><a href="{% url 'users:signup' %}">Sign up</a></li>
                     {% endif %}
                 </ul>
             </div>
@@ -115,9 +111,6 @@
                         <li><a href="{% url 'users:profile' %}">Profile</a></li>
                         <li><a href="{% url 'book_stations:bookstation-create' %}">Add station</a></li>
                         <li><a href="{% url 'items:item-create' %}">Add item</a></li>
-                        {% if user_is_moderator %}
-                            <li><a href="{% url 'moderation:queue' %}">Moderation</a></li>
-                        {% endif %}
                         <li><a href="/admin/">Admin</a></li>
                         <li>
                             <form method="post" action="{% url 'users:logout' %}">
@@ -129,7 +122,6 @@
                 </div>
             {% else %}
                 <a class="btn btn-outline btn-sm md:btn-md" href="{% url 'users:login' %}">Log in</a>
-                <a class="btn btn-primary btn-sm md:btn-md" href="{% url 'users:signup' %}">Sign up</a>
             {% endif %}
         </div>
     </div>
