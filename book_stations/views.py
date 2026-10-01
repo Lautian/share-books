@@ -316,6 +316,7 @@ def bookstation_delete(request, readable_id):
 	station = get_object_or_404(
 		BookStation,
 		readable_id=readable_id,
+		added_by=request.user,
 	)
 
 	if request.method == "POST":

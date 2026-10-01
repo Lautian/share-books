@@ -450,7 +450,7 @@ def item_edit(request, item_id):
 
 @login_required(login_url="users:login")
 def item_delete(request, item_id):
-    item = get_object_or_404(Item, pk=item_id)
+    item = get_object_or_404(Item, pk=item_id, added_by=request.user)
 
     if request.method == "POST":
         item.delete()

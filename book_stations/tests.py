@@ -544,7 +544,7 @@ class BookStationViewTests(TestCase):
         )
         self.assertEqual(self.station.name, "Edited by another user")
 
-    def test_another_user_can_access_edit_and_delete_station(self):
+    def test_another_user_can_edit_but_not_delete_station(self):
         self.client.login(username="other-station-user", password="StrongPass123")
 
         edit_response = self.client.get(
@@ -561,8 +561,8 @@ class BookStationViewTests(TestCase):
         )
 
         self.assertEqual(edit_response.status_code, 200)
-        self.assertRedirects(delete_response, reverse("users:profile"))
-        self.assertFalse(BookStation.objects.filter(pk=self.station.pk).exists())
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(BookStation.objects.filter(pk=self.station.pk).exists())
 
     def test_owner_can_delete_station(self):
         self.client.login(username="station-owner", password="StrongPass123")
