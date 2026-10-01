@@ -244,9 +244,9 @@
                     <a class="btn btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">Cancel</a>
                 {% else %}
                     <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">Cancel</a>
+                {% endif %}
             </div>
         </form>
-        {% endif %}
     </article>
 </section>
 {% endblock %}
