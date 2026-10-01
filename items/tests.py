@@ -465,7 +465,7 @@ class ItemViewTests(TestCase):
         self.assertIsNone(self.item_taken.current_book_station)
         self.assertEqual(self.item_taken.last_seen_at, self.other_station)
 
-    def test_another_user_can_edit_but_not_delete_item(self):
+    def test_another_user_can_edit_but_cannot_delete_item(self):
         self.client.login(username="other-item-user", password="StrongPass123")
 
         edit_response = self.client.get(
@@ -476,11 +476,29 @@ class ItemViewTests(TestCase):
         )
 
         self.assertEqual(edit_response.status_code, 200)
+        delete_page_response = self.client.get(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+        self.assertEqual(delete_page_response.status_code, 404)
         self.assertEqual(delete_response.status_code, 404)
         self.assertTrue(Item.objects.filter(pk=self.item_here.pk).exists())
 
     def test_owner_can_delete_item(self):
         self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
+
+    def test_admin_can_delete_item(self):
+        admin = get_user_model().objects.create_user(
+            username="item-admin",
+            is_staff=True,
+        )
+        self.client.force_login(admin)
 
         response = self.client.post(
             reverse("items:item-delete", kwargs={"item_id": self.item_here.id})

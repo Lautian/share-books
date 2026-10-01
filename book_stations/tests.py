@@ -544,7 +544,7 @@ class BookStationViewTests(TestCase):
         )
         self.assertEqual(self.station.name, "Edited by another user")
 
-    def test_another_user_can_edit_but_not_delete_station(self):
+    def test_another_user_can_edit_but_cannot_delete_station(self):
         self.client.login(username="other-station-user", password="StrongPass123")
 
         edit_response = self.client.get(
@@ -561,11 +561,35 @@ class BookStationViewTests(TestCase):
         )
 
         self.assertEqual(edit_response.status_code, 200)
+        delete_page_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+        self.assertEqual(delete_page_response.status_code, 404)
         self.assertEqual(delete_response.status_code, 404)
         self.assertTrue(BookStation.objects.filter(pk=self.station.pk).exists())
 
     def test_owner_can_delete_station(self):
         self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(BookStation.objects.filter(pk=self.station.pk).exists())
+
+    def test_admin_can_delete_station(self):
+        admin = get_user_model().objects.create_user(
+            username="station-admin",
+            is_staff=True,
+        )
+        self.client.force_login(admin)
 
         response = self.client.post(
             reverse(

@@ -313,11 +313,10 @@ def bookstation_edit(request, readable_id):
 
 @login_required(login_url="users:login")
 def bookstation_delete(request, readable_id):
-	station = get_object_or_404(
-		BookStation,
-		readable_id=readable_id,
-		added_by=request.user,
-	)
+	stations = BookStation.objects.all()
+	if not request.user.is_staff:
+		stations = stations.filter(added_by=request.user)
+	station = get_object_or_404(stations, readable_id=readable_id)
 
 	if request.method == "POST":
 		Item.objects.filter(
