@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from book_stations.models import BookStation
@@ -201,7 +201,7 @@ class ItemViewTests(TestCase):
             html=True,
         )
 
-    def test_item_detail_shows_owner_controls_only_for_owner(self):
+    def test_item_detail_shows_edit_controls_to_any_authenticated_user(self):
         self.client.login(username="item-owner", password="StrongPass123")
         owner_response = self.client.get(
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
@@ -221,14 +221,22 @@ class ItemViewTests(TestCase):
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
         )
 
-        self.assertNotContains(
+        self.assertContains(
             other_response,
             reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
         )
-        self.assertNotContains(
+        self.assertContains(
             other_response,
             reverse("items:item-delete", kwargs={"item_id": self.item_here.id}),
         )
+
+    def test_anonymous_visitor_cannot_edit_item(self):
+        response = self.client.get(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
 
     def test_item_detail_shows_latest_three_movements_and_full_history_link(self):
         self.item_here.status = Item.Status.TAKEN_OUT
@@ -327,8 +335,31 @@ class ItemViewTests(TestCase):
         )
         self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
         self.assertEqual(self.item_here.description, "Updated programming book")
-        self.assertIsNotNone(self.item_here.pending_edit)
-        self.assertEqual(self.item_here.pending_edit["title"], "Clean Code")
+
+    def test_another_user_can_edit_item(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.post(
+            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+            data={
+                "title": "Edited by another user",
+                "author": self.item_here.author,
+                "item_type": self.item_here.item_type,
+                "thumbnail_url": "",
+                "description": self.item_here.description,
+                "status": self.item_here.status,
+                "current_book_station": self.station.id,
+                "last_seen_at": self.station.id,
+                "last_activity": "2026-03-09",
+            },
+        )
+
+        self.item_here.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
+        )
+        self.assertEqual(self.item_here.title, "Edited by another user")
 
     def test_edit_assigning_current_station_sets_status_to_at_book_station(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -381,10 +412,8 @@ class ItemViewTests(TestCase):
         )
         self.assertEqual(self.item_here.status, Item.Status.LOST)
         self.assertIsNone(self.item_here.current_book_station)
-        self.assertIsNotNone(self.item_here.pending_edit)
 
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
-    def test_flagged_edit_requires_confirmation_before_pending_review(self):
+    def test_edit_is_applied_immediately_without_moderation(self):
         self.client.login(username="item-owner", password="StrongPass123")
 
         response = self.client.post(
@@ -407,9 +436,7 @@ class ItemViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
-        self.assertEqual(self.item_here.moderation_status, Item.ModerationStatus.FLAGGED)
-        self.assertIsNotNone(self.item_here.pending_edit)
-        self.assertEqual(self.item_here.pending_edit["title"], "Clean Code")
+        self.assertEqual(self.item_here.title, "Flagged Title")
 
     def test_edit_without_current_station_keeps_existing_last_seen_history(self):
         self.client.login(username="item-owner", password="StrongPass123")
@@ -438,7 +465,7 @@ class ItemViewTests(TestCase):
         self.assertIsNone(self.item_taken.current_book_station)
         self.assertEqual(self.item_taken.last_seen_at, self.other_station)
 
-    def test_non_owner_cannot_edit_or_delete_item(self):
+    def test_another_user_can_edit_but_cannot_delete_item(self):
         self.client.login(username="other-item-user", password="StrongPass123")
 
         edit_response = self.client.get(
@@ -448,12 +475,30 @@ class ItemViewTests(TestCase):
             reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
         )
 
-        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(edit_response.status_code, 200)
+        delete_page_response = self.client.get(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+        self.assertEqual(delete_page_response.status_code, 404)
         self.assertEqual(delete_response.status_code, 404)
         self.assertTrue(Item.objects.filter(pk=self.item_here.pk).exists())
 
     def test_owner_can_delete_item(self):
         self.client.login(username="item-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
+
+    def test_admin_can_delete_item(self):
+        admin = get_user_model().objects.create_user(
+            username="item-admin",
+            is_staff=True,
+        )
+        self.client.force_login(admin)
 
         response = self.client.post(
             reverse("items:item-delete", kwargs={"item_id": self.item_here.id})
@@ -630,8 +675,7 @@ class ItemViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("current_book_station", response.json()["errors"])
 
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title"])
-    def test_post_items_api_sets_pending_when_auto_moderation_flags_content(self):
+    def test_post_items_api_creates_content_without_moderation(self):
         self.client.login(username="item-owner", password="StrongPass123")
         payload = {
             "title": "Flagged API Title",
@@ -648,7 +692,7 @@ class ItemViewTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         created_item = Item.objects.get(title="Flagged API Title")
-        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.FLAGGED)
+        self.assertEqual(created_item.title, "Flagged API Title")
 
 
 class ItemCreateFormViewTests(TestCase):
@@ -708,12 +752,10 @@ class ItemCreateFormViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": created_item.id}),
         )
-        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.NEW)
         self.assertEqual(created_item.added_by, self.user)
         self.assertEqual(created_item.thumbnail_url, "https://example.com/digest.jpg")
 
-    @override_settings(ITEM_AUTOMODERATION_STUB_FLAGGED_FIELDS=["title", "description"])
-    def test_item_create_form_flagged_content_requires_confirmation(self):
+    def test_item_create_form_content_is_created_without_moderation(self):
         self.client.login(username="form-user", password=self.password)
 
         response = self.client.post(
@@ -732,9 +774,9 @@ class ItemCreateFormViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": created_item.id}),
         )
-        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.FLAGGED)
+        self.assertEqual(created_item.title, "Flagged Create Title")
 
-    def test_item_create_form_url_content_is_created_as_flagged(self):
+    def test_item_create_form_url_content_is_created(self):
         self.client.login(username="form-user", password=self.password)
 
         response = self.client.post(
@@ -753,7 +795,7 @@ class ItemCreateFormViewTests(TestCase):
             response,
             reverse("items:item-detail", kwargs={"item_id": created_item.id}),
         )
-        self.assertEqual(created_item.moderation_status, Item.ModerationStatus.FLAGGED)
+        self.assertEqual(created_item.title, "Read this: https://example.com/offer")
 
     def test_item_create_form_sets_status_when_current_station_is_selected(self):
         self.client.login(username="form-user", password=self.password)

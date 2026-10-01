@@ -1,105 +1,8 @@
-import logging
-
-from django.conf import settings
-from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
-from django.shortcuts import redirect, render
-from django.urls import reverse
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.shortcuts import render
 
 from book_stations.models import BookStation
 from items.models import Item
-from moderation.utils import is_moderator
-
-from .forms import SignupForm
-from .tokens import email_verification_token
-
-logger = logging.getLogger(__name__)
-_LEGACY_PENDING_STATUS = "PENDING"
-
-
-def signup(request):
-    if request.user.is_authenticated:
-        return redirect("users:profile")
-
-    if request.method == "POST":
-        form = SignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False
-            user.save()
-            email_sent = _send_verification_email(request, user)
-            # POST/Redirect/GET: store state in session, then redirect so that
-            # refreshing the confirmation page never re-submits the form.
-            request.session["signup_email"] = user.email
-            request.session["signup_email_sent"] = email_sent
-            return redirect("users:signup-pending")
-    else:
-        form = SignupForm()
-
-    return render(request, "users/signup.html", {"form": form})
-
-
-def signup_pending(request):
-    """Confirmation page shown after a successful signup form submission."""
-    email = request.session.pop("signup_email", None)
-    email_sent = request.session.pop("signup_email_sent", False)
-    # Validate session values defensively before passing to the template.
-    if not isinstance(email, str) or "@" not in email:
-        return redirect("users:signup")
-    if not isinstance(email_sent, bool):
-        email_sent = False
-    return render(
-        request,
-        "users/signup_verify_email.html",
-        {"email": email, "email_sent": email_sent},
-    )
-
-
-def _send_verification_email(request, user):
-    """Send a verification email to the user. Returns True on success, False on failure."""
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    token = email_verification_token.make_token(user)
-    path = reverse("users:verify-email", kwargs={"uidb64": uid, "token": token})
-    verify_url = request.build_absolute_uri(path)
-    subject = "Verify your Little Libraries account"
-    message = (
-        f"Hi {user.username},\n\n"
-        "Thank you for registering! Please verify your email address by clicking the link below:\n\n"
-        f"{verify_url}\n\n"
-        "This link expires after 3 days.\n\n"
-        "If you did not create this account, you can ignore this email.\n"
-    )
-    try:
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-        return True
-    except Exception:
-        logger.exception("Failed to send verification email to %s", user.email)
-        return False
-
-
-def verify_email(request, uidb64, token):
-    User = get_user_model()
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
-
-    if user is not None and user.is_active:
-        # Already verified – redirect to login
-        return redirect("users:login")
-
-    if user is not None and email_verification_token.check_token(user, token):
-        user.is_active = True
-        user.save()
-        login(request, user)
-        return render(request, "users/email_verified.html")
-
-    return render(request, "users/email_verification_invalid.html", status=400)
-
 
 @login_required(login_url="users:login")
 def profile(request):
@@ -110,28 +13,5 @@ def profile(request):
         "added_stations": added_stations,
         "added_items": added_items,
     }
-
-    if is_moderator(request.user):
-        claimed_stations = BookStation.objects.filter(
-            claimed_by=request.user,
-            moderation_status__in=[
-                BookStation.ModerationStatus.NEW,
-                BookStation.ModerationStatus.FLAGGED,
-                BookStation.ModerationStatus.REPORTED,
-                _LEGACY_PENDING_STATUS,
-            ],
-        ).order_by("name")
-        claimed_items = Item.objects.filter(
-            claimed_by=request.user,
-            moderation_status__in=[
-                Item.ModerationStatus.NEW,
-                Item.ModerationStatus.FLAGGED,
-                Item.ModerationStatus.REPORTED,
-                _LEGACY_PENDING_STATUS,
-            ],
-        ).order_by("title", "id")
-        context["claimed_stations"] = claimed_stations
-        context["claimed_items"] = claimed_items
-        context["total_claims"] = claimed_stations.count() + claimed_items.count()
 
     return render(request, "users/profile.html", context)

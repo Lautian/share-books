@@ -432,7 +432,7 @@ class BookStationViewTests(TestCase):
         inventory_items = list(response.context["items"])
         self.assertEqual(inventory_items[0].title, "Alpha Title")
 
-    def test_detail_page_shows_owner_controls_only_for_owner(self):
+    def test_detail_page_shows_edit_controls_to_any_authenticated_user(self):
         self.client.login(username="station-owner", password="StrongPass123")
         owner_response = self.client.get(
             reverse(
@@ -464,20 +464,31 @@ class BookStationViewTests(TestCase):
             )
         )
 
-        self.assertNotContains(
+        self.assertContains(
             other_response,
             reverse(
                 "book_stations:bookstation-edit",
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
-        self.assertNotContains(
+        self.assertContains(
             other_response,
             reverse(
                 "book_stations:bookstation-delete",
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
+
+    def test_anonymous_visitor_cannot_edit_station(self):
+        response = self.client.get(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("users:login"), response.url)
 
     def test_owner_can_edit_station(self):
         self.client.login(username="station-owner", password="StrongPass123")
@@ -504,12 +515,36 @@ class BookStationViewTests(TestCase):
                 kwargs={"readable_id": self.station.readable_id},
             ),
         )
-        # The live record is updated immediately; pending_edit stores the revert snapshot.
         self.assertEqual(self.station.name, "Riverside Box Updated")
-        self.assertIsNotNone(self.station.pending_edit)
-        self.assertEqual(self.station.pending_edit["name"], "Riverside Box")
 
-    def test_non_owner_cannot_edit_or_delete_station(self):
+    def test_another_user_can_edit_station(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-edit",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+            data={
+                "name": "Edited by another user",
+                "location": "Riverside Walk, London",
+                "description": "Updated by another user",
+                "latitude": "51.507351",
+                "longitude": "-0.127758",
+            },
+        )
+
+        self.station.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse(
+                "book_stations:bookstation-detail",
+                kwargs={"readable_id": self.station.readable_id},
+            ),
+        )
+        self.assertEqual(self.station.name, "Edited by another user")
+
+    def test_another_user_can_edit_but_cannot_delete_station(self):
         self.client.login(username="other-station-user", password="StrongPass123")
 
         edit_response = self.client.get(
@@ -525,12 +560,36 @@ class BookStationViewTests(TestCase):
             )
         )
 
-        self.assertEqual(edit_response.status_code, 404)
+        self.assertEqual(edit_response.status_code, 200)
+        delete_page_response = self.client.get(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+        self.assertEqual(delete_page_response.status_code, 404)
         self.assertEqual(delete_response.status_code, 404)
         self.assertTrue(BookStation.objects.filter(pk=self.station.pk).exists())
 
     def test_owner_can_delete_station(self):
         self.client.login(username="station-owner", password="StrongPass123")
+
+        response = self.client.post(
+            reverse(
+                "book_stations:bookstation-delete",
+                kwargs={"readable_id": self.station.readable_id},
+            )
+        )
+
+        self.assertRedirects(response, reverse("users:profile"))
+        self.assertFalse(BookStation.objects.filter(pk=self.station.pk).exists())
+
+    def test_admin_can_delete_station(self):
+        admin = get_user_model().objects.create_user(
+            username="station-admin",
+            is_staff=True,
+        )
+        self.client.force_login(admin)
 
         response = self.client.post(
             reverse(
@@ -583,7 +642,7 @@ class BookStationViewTests(TestCase):
         self.assertContains(response, "Click to add a photo for this station")
         self.assertContains(response, 'title="Add a photo for this station"')
 
-    def test_non_owner_does_not_see_photo_shortcut_when_no_picture(self):
+    def test_authenticated_user_sees_photo_shortcut_when_no_picture(self):
         station_without_picture = BookStation.objects.create(
             name="Non Owner Photo Shelf",
             readable_id="non-owner-photo-shelf",
@@ -602,8 +661,8 @@ class BookStationViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No station photo yet")
-        self.assertNotContains(response, "Click to add a photo for this station")
-        self.assertNotContains(response, 'title="Add a photo for this station"')
+        self.assertContains(response, "Click to add a photo for this station")
+        self.assertContains(response, 'title="Add a photo for this station"')
 
     def test_anonymous_user_does_not_see_photo_shortcut_when_no_picture(self):
         station_without_picture = BookStation.objects.create(

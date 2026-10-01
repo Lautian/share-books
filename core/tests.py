@@ -52,7 +52,7 @@ class NavigationBarTests(TestCase):
         response = self.client.get("/")
 
         self.assertContains(response, reverse("users:login"))
-        self.assertContains(response, reverse("users:signup"))
+        self.assertNotContains(response, "Sign up")
         mobile_menu = response.content.split(b'aria-label="Open menu"', 1)[1].split(
             b"</ul>", 1
         )[0]

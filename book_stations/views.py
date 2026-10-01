@@ -11,10 +11,7 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 
-from moderation.auto_moderation import auto_moderate_fields
-from moderation.utils import is_moderator
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
@@ -49,14 +46,6 @@ def bookstation_list(request):
 		)
 	)
 
-	if not is_moderator(request.user):
-		stations = stations.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-		)
-
 	sort_field_map = {
 		"name": ["name"],
 		"location": ["location", "name"],
@@ -90,35 +79,11 @@ def bookstation_detail_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	if is_moderator(request.user):
-		station = get_object_or_404(BookStation, readable_id=readable_id)
-	else:
-		qs = BookStation.objects.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-		)
-		if request.user.is_authenticated:
-			qs = BookStation.objects.filter(
-				models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-				| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-				| models.Q(added_by=request.user)
-			)
-		station = get_object_or_404(qs, readable_id=readable_id)
+	station = get_object_or_404(BookStation, readable_id=readable_id)
 	items = Item.objects.filter(
 		status=Item.Status.AT_BOOK_STATION,
 		current_book_station=station,
 	).order_by("title", "id")
-	if not is_moderator(request.user):
-		items = items.filter(
-			models.Q(moderation_status=Item.ModerationStatus.NEW)
-			| models.Q(moderation_status=Item.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
-		)
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
 	dvd_items = items.filter(item_type=Item.ItemType.DVD)
 	return render(
@@ -183,17 +148,9 @@ def plus_code_decode_api(request):
 	)
 
 
-@csrf_exempt
 def bookstation_list_create(request):
 	if request.method == "GET":
 		stations = BookStation.objects.select_related("added_by").all()
-		if not is_moderator(request.user):
-			stations = stations.filter(
-				models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-				| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-				| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-				| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-			)
 		return JsonResponse(
 			[_serialize_bookstation(station) for station in stations],
 			safe=False,
@@ -218,20 +175,6 @@ def bookstation_list_create(request):
 			location=payload.get("location", ""),
 			added_by=request.user,
 		)
-		auto_moderation = auto_moderate_fields(
-			values={
-				"name": station.name,
-				"location": station.location,
-				"description": station.description,
-			},
-			check_order=("name", "location", "description"),
-		)
-		station.moderation_status = (
-			BookStation.ModerationStatus.FLAGGED
-			if auto_moderation["has_bad_language"]
-			else BookStation.ModerationStatus.NEW
-		)
-
 		try:
 			station.full_clean()
 			station.save()
@@ -248,13 +191,6 @@ def bookstation_detail_api(request, readable_id):
 		return HttpResponseNotAllowed(["GET"])
 
 	qs = BookStation.objects.select_related("added_by")
-	if not is_moderator(request.user):
-		qs = qs.filter(
-			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-		)
 	station = get_object_or_404(qs, readable_id=readable_id)
 	return JsonResponse(_serialize_bookstation(station))
 
@@ -263,19 +199,7 @@ def bookstation_inventory_page(request, readable_id):
 	if request.method != "GET":
 		return HttpResponseNotAllowed(["GET"])
 
-	if is_moderator(request.user):
-		station = get_object_or_404(BookStation, readable_id=readable_id)
-	else:
-		visibility_filter = (
-			models.Q(moderation_status=BookStation.ModerationStatus.NEW)
-			| models.Q(moderation_status=BookStation.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=BookStation.ModerationStatus.REPORTED)
-		)
-		if request.user.is_authenticated:
-			visibility_filter |= models.Q(added_by=request.user)
-		qs = BookStation.objects.filter(visibility_filter)
-		station = get_object_or_404(qs, readable_id=readable_id)
+	station = get_object_or_404(BookStation, readable_id=readable_id)
 	sort_by = request.GET.get("sort_by", "title")
 	sort_dir = request.GET.get("sort_dir")
 	if sort_dir is None:
@@ -309,13 +233,6 @@ def bookstation_inventory_page(request, readable_id):
 		current_book_station=station,
 	)
 
-	if not is_moderator(request.user):
-		items = items.filter(
-			models.Q(moderation_status=Item.ModerationStatus.NEW)
-			| models.Q(moderation_status=Item.ModerationStatus.APPROVED)
-			| models.Q(moderation_status=Item.ModerationStatus.FLAGGED)
-			| models.Q(moderation_status=Item.ModerationStatus.REPORTED)
-		)
 
 	sort_field_map = {
 		"title": ["title", "id"],
@@ -356,19 +273,6 @@ def bookstation_create(request):
 		if form.is_valid():
 			station = form.save(commit=False)
 			station.added_by = request.user
-			auto_moderation = auto_moderate_fields(
-				values={
-					"name": station.name,
-					"location": station.location,
-					"description": station.description,
-				},
-				check_order=("name", "location", "description"),
-			)
-			station.moderation_status = (
-				BookStation.ModerationStatus.FLAGGED
-				if auto_moderation["has_bad_language"]
-				else BookStation.ModerationStatus.NEW
-			)
 			station.save()
 			return redirect(
 				"book_stations:bookstation-detail",
@@ -382,55 +286,12 @@ def bookstation_create(request):
 
 @login_required(login_url="users:login")
 def bookstation_edit(request, readable_id):
-	station = get_object_or_404(
-		BookStation,
-		readable_id=readable_id,
-		added_by=request.user,
-	)
+	station = get_object_or_404(BookStation, readable_id=readable_id)
 
-	# Block further edits while an unreviewed edit is awaiting moderation review.
-	if station.pending_edit is not None:
-		return render(
-			request,
-			"book_stations/bookstation_form.html",
-			{
-				"is_edit": True,
-				"station": station,
-				"edit_blocked": True,
-			},
-		)
-
-	# Station edit is applied immediately; keep a snapshot to support moderator rejection.
 	if request.method == "POST":
 		form = BookStationCreateForm(request.POST, request.FILES, instance=station)
 		if form.is_valid():
-			original_station = BookStation.objects.get(pk=station.pk)
-			previous_data = {
-				"_moderation_type": "EDIT_REVERT_SNAPSHOT",
-				"moderation_status": original_station.moderation_status,
-				"name": original_station.name,
-				"location": original_station.location,
-				"description": original_station.description,
-				"latitude": str(original_station.latitude) if original_station.latitude is not None else None,
-				"longitude": str(original_station.longitude) if original_station.longitude is not None else None,
-				"picture": original_station.picture,
-			}
 			updated = form.save(commit=False)
-			auto_moderation = auto_moderate_fields(
-				values={
-					"name": updated.name,
-					"location": updated.location,
-					"description": updated.description,
-				},
-				check_order=("name", "location", "description"),
-			)
-			updated.pending_edit = previous_data
-			updated.moderation_status = (
-				BookStation.ModerationStatus.FLAGGED
-				if auto_moderation["has_bad_language"]
-				else BookStation.ModerationStatus.NEW
-			)
-			updated.claimed_by = None
 			updated.save()
 			return redirect(
 				"book_stations:bookstation-detail",
@@ -452,11 +313,10 @@ def bookstation_edit(request, readable_id):
 
 @login_required(login_url="users:login")
 def bookstation_delete(request, readable_id):
-	station = get_object_or_404(
-		BookStation,
-		readable_id=readable_id,
-		added_by=request.user,
-	)
+	stations = BookStation.objects.all()
+	if not request.user.is_staff:
+		stations = stations.filter(added_by=request.user)
+	station = get_object_or_404(stations, readable_id=readable_id)
 
 	if request.method == "POST":
 		Item.objects.filter(
@@ -485,27 +345,6 @@ def _generate_qr_png_bytes(url):
 	img.save(buf, format="PNG")
 	buf.seek(0)
 	return buf.read()
-
-
-@login_required(login_url="users:login")
-def bookstation_report(request, readable_id):
-	if request.method != "POST":
-		return HttpResponseNotAllowed(["POST"])
-
-	station = get_object_or_404(
-		BookStation,
-		readable_id=readable_id,
-		moderation_status__in=[
-			BookStation.ModerationStatus.NEW,
-			BookStation.ModerationStatus.APPROVED,
-			BookStation.ModerationStatus.FLAGGED,
-			BookStation.ModerationStatus.REPORTED,
-		],
-	)
-	if station.moderation_status != BookStation.ModerationStatus.REPORTED:
-		station.moderation_status = BookStation.ModerationStatus.REPORTED
-		station.save(update_fields=["moderation_status"])
-	return redirect("book_stations:bookstation-detail", readable_id=readable_id)
 
 
 def bookstation_qr_code(request, readable_id):
