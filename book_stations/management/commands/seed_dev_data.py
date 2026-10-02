@@ -138,6 +138,36 @@ ITEMS = [
 	},
 ]
 
+ITEM_COUNT = 75
+OVERFLOW_STATION = "Central Park Little Library"
+OVERFLOW_ITEMS = 22  # plus the hand-written items there, so well over 20
+
+
+def _generated_items(count):
+	"""Bulk filler items; the first ones all go to one station to test overflow."""
+	station_names = [station["name"] for station in STATIONS]
+	other_statuses = [Item.Status.TAKEN_OUT, Item.Status.LOST, Item.Status.UNKNOWN]
+	items = []
+	for index in range(1, count + 1):
+		data = {
+			"title": f"Sample Book {index:02d}",
+			"author": f"Sample Author {index:02d}",
+			"owner": USERS[index % len(USERS)],
+		}
+		if index <= OVERFLOW_ITEMS:
+			data["station"] = OVERFLOW_STATION
+		elif index % 5 == 0:
+			data["station"] = None
+			data["status"] = other_statuses[(index // 5) % len(other_statuses)]
+		else:
+			data["station"] = station_names[index % len(station_names)]
+		items.append(data)
+	return items
+
+
+ITEMS += _generated_items(ITEM_COUNT - len(ITEMS))
+
+
 
 class Command(BaseCommand):
 	help = (

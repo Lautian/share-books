@@ -7,6 +7,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, connection
+from django.db.models import Count
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -1186,6 +1187,13 @@ class SeedDevDataCommandTests(TestCase):
 		)
 		self.assertTrue(Item.objects.filter(current_book_station__isnull=True).exists())
 		self.assertGreater(counts[3], counts[2])
+		self.assertEqual(counts[2], 75)
+		self.assertGreaterEqual(
+			max(
+				BookStation.objects.annotate(n=Count("current_items")).values_list("n", flat=True)
+			),
+			20,
+		)
 		for station in BookStation.objects.all():
 			station.full_clean()
 		for item in Item.objects.all():
