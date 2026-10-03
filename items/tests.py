@@ -554,6 +554,12 @@ class ItemViewTests(TestCase):
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
         self.assertContains(inventory_response, 'class="inventory-list')
+        self.assertContains(inventory_response, 'href="/static/core/css/clickable-item-cards.css"')
+        self.assertContains(inventory_response, 'class="clickable-item-card inventory-item')
+        self.assertContains(
+            inventory_response,
+            'class="link-hover clickable-item-card-link inventory-item-link"',
+        )
         self.assertContains(
             inventory_response,
             f'href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
