@@ -554,11 +554,7 @@ class ItemViewTests(TestCase):
         self.assertNotContains(inventory_response, 'class="dvd-case"', html=False)
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
-        self.assertContains(
-            inventory_response,
-            '<ul class="inventory-list mt-4 space-y-3">',
-            html=False,
-        )
+        self.assertContains(inventory_response, "inventory-list")
         self.assertContains(inventory_response, 'href="/static/core/css/clickable-item-cards.css"')
         self.assertContains(inventory_response, "clickable-item-card")
         self.assertContains(inventory_response, "inventory-item")

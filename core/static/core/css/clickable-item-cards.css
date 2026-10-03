@@ -27,17 +27,6 @@
     outline-offset: 2px;
 }
 
-.clickable-item-card-link:focus:not(:focus-visible) {
-    outline: none;
-}
-
-@supports not selector(:has(*)) {
-    .clickable-item-card:focus-within {
-        outline: 2px solid currentColor;
-        outline-offset: 2px;
-    }
-}
-
 .clickable-item-card-inner-link {
     position: relative;
     z-index: 2;
