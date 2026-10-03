@@ -205,7 +205,13 @@ class ItemViewTests(TestCase):
             "book_stations:bookstation-detail",
             kwargs={"readable_id": self.station.readable_id},
         )
-        self.assertTrue(parser.has_element("a", {"item-card-link"}, href=item_detail_url))
+        self.assertTrue(
+            parser.has_element(
+                "a",
+                {"clickable-item-card-link"},
+                **{"data-testid": "item-card-link", "href": item_detail_url},
+            )
+        )
         self.assertTrue(
             parser.has_element(
                 "a",
@@ -593,13 +599,19 @@ class ItemViewTests(TestCase):
         parser = HTMLClassCollector()
         parser.feed(inventory_response.content.decode())
         self.assertTrue(parser.has_element("ul", {"inventory-list"}))
-        self.assertTrue(parser.has_element("li", {"clickable-item-card", "inventory-item"}))
+        self.assertTrue(
+            parser.has_element(
+                "li",
+                {"clickable-item-card"},
+                **{"data-testid": "inventory-item-card"},
+            )
+        )
         item_detail_url = reverse("items:item-detail", kwargs={"item_id": inventory_item.id})
         self.assertTrue(
             parser.has_element(
                 "a",
-                {"clickable-item-card-link", "inventory-item-link"},
-                href=item_detail_url,
+                {"clickable-item-card-link"},
+                **{"data-testid": "inventory-item-link", "href": item_detail_url},
             )
         )
         self.assertContains(inventory_response, "Blade Runner")

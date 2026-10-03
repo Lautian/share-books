@@ -29,16 +29,16 @@
     }
 }
 
+.clickable-item-card-link {
+    position: static;
+}
+
 .clickable-item-card-link::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
     cursor: pointer;
-}
-
-.clickable-item-card-link {
-    position: static;
 }
 
 @supports selector(:has(*)) {
