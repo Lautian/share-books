@@ -1169,6 +1169,15 @@ class SeedDevDataCommandTests(TestCase):
 		call_command("seed_dev_data", stdout=StringIO(), **kwargs)
 
 	@override_settings(DEBUG=True)
+	def test_uses_development_password_when_password_is_omitted(self):
+		from .management.commands.seed_dev_data import DEFAULT_PASSWORD
+
+		self._run()
+
+		user = get_user_model().objects.get(username="dev_alice")
+		self.assertTrue(user.check_password(DEFAULT_PASSWORD))
+
+	@override_settings(DEBUG=True)
 	def test_seeds_valid_varied_data_and_is_idempotent(self):
 		from items.models import Item
 		from movements.models import Movement
@@ -1214,8 +1223,27 @@ class SeedDevDataCommandTests(TestCase):
 		)
 
 	@override_settings(DEBUG=False)
-	def test_refuses_without_debug_unless_forced(self):
-		with self.assertRaises(CommandError):
-			self._run()
-		self._run(force=True)
+	def test_refuses_without_force_even_with_password(self):
+		test_password = "test"
+		with self.assertRaisesMessage(
+			CommandError,
+			"seed_dev_data is meant for development only. Use --force to run with DEBUG=False.",
+		):
+			call_command("seed_dev_data", "--password", test_password, stdout=StringIO())
+
+		self.assertFalse(BookStation.objects.exists())
+
+	@override_settings(DEBUG=False)
+	def test_force_seeds_data_when_password_is_provided(self):
+		test_password = "test"
+		call_command(
+			"seed_dev_data",
+			"--force",
+			"--password",
+			test_password,
+			stdout=StringIO(),
+		)
+
 		self.assertTrue(BookStation.objects.exists())
+		user = get_user_model().objects.get(username="dev_alice")
+		self.assertTrue(user.check_password(test_password))

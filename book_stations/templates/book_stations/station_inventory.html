@@ -1,14 +1,10 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}{{ station.name }} Inventory{% endblock %}
 
 {% block extra_head %}
-<style>
-    .inventory-shell {
-        background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
-        border: 1px solid rgba(98, 120, 89, 0.24);
-    }
-</style>
+<link rel="stylesheet" href="{% static 'core/css/clickable-item-cards.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -20,7 +16,7 @@
         <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">All items</a>
     </div>
 
-    <header class="inventory-shell mb-6 rounded-2xl p-6 shadow-xl">
+    <header class="inventory-shell natural-card-surface mb-6 rounded-2xl p-6 shadow-xl">
         <p class="text-sm uppercase tracking-[0.18em] text-success">Full inventory</p>
         <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{{ station.name }}</h1>
         <p class="mt-3 text-base-content/80">Items currently at this book station</p>
@@ -71,7 +67,7 @@
     {% if items %}
         <ul class="inventory-list mt-4 space-y-3">
             {% for item in items %}
-                <li class="rounded-xl border border-base-300/70 bg-base-100/80 p-4">
+                <li class="clickable-item-card rounded-xl border border-base-300/70 bg-base-100/80 p-4" data-testid="inventory-item-card">
                     {% if item.thumbnail_url %}
                         <img
                             class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
@@ -83,7 +79,7 @@
 
                     <div class="flex items-start justify-between gap-2">
                         <h2 class="text-lg font-semibold leading-snug">
-                            <a class="link-hover" href="{% url 'items:item-detail' item.id %}">{{ item.title }}</a>
+                            <a class="link-hover clickable-item-card-link" data-testid="inventory-item-link" href="{% url 'items:item-detail' item.id %}">{{ item.title }}</a>
                         </h2>
                         <span class="badge badge-ghost">{{ item.get_item_type_display }}</span>
                     </div>

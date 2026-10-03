@@ -1,6 +1,11 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}Items | Book Stations{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/clickable-item-cards.css' %}">
+{% endblock %}
 
 {% block content %}
 <section class="mx-auto max-w-6xl">
@@ -44,9 +49,9 @@
     </div>
 
     {% if items %}
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div class="item-grid">
             {% for item in items %}
-                <article class="rounded-2xl border border-base-300/70 bg-base-100/80 p-4 shadow">
+                <article class="clickable-item-card natural-card-surface card shadow-lg p-4">
                     {% if item.thumbnail_url %}
                         <img
                             class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
@@ -58,7 +63,7 @@
 
                     <div class="flex items-start justify-between gap-2">
                         <h2 class="text-xl font-semibold leading-snug">
-                            <a class="link-hover" href="{% url 'items:item-detail' item.id %}">{{ item.title }}</a>
+                            <a class="link-hover clickable-item-card-link" data-testid="item-card-link" href="{% url 'items:item-detail' item.id %}">{{ item.title }}</a>
                         </h2>
                         <span class="badge badge-ghost">{{ item.get_item_type_display }}</span>
                     </div>
@@ -76,7 +81,7 @@
                             <span class="badge badge-outline">Current station</span>
                             <span class="ml-2">
                                 {% if item.current_book_station %}
-                                    <a class="link-hover" href="{% url 'book_stations:bookstation-detail' item.current_book_station.readable_id %}">
+                                    <a class="link-hover clickable-item-card-inner-link" href="{% url 'book_stations:bookstation-detail' item.current_book_station.readable_id %}">
                                         {{ item.current_book_station.name }}
                                     </a>
                                 {% else %}

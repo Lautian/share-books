@@ -1,9 +1,11 @@
 from datetime import date
+from html.parser import HTMLParser
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 
@@ -11,6 +13,28 @@ from book_stations.models import BookStation
 from movements.models import Movement
 
 from .models import Item
+
+
+class HTMLClassCollector(HTMLParser):
+    """Collect element classes for reusable rendered-markup assertions."""
+
+    def __init__(self):
+        super().__init__()
+        self.elements = []
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        classes = set((attributes.get("class") or "").split())
+        self.elements.append((tag, classes, attributes))
+
+    def has_element(self, tag, classes=(), **attributes):
+        required_classes = set(classes)
+        return any(
+            element_tag == tag
+            and required_classes <= element_classes
+            and all(element_attributes.get(name) == value for name, value in attributes.items())
+            for element_tag, element_classes, element_attributes in self.elements
+        )
 
 
 class ItemModelTests(TestCase):
@@ -168,6 +192,34 @@ class ItemViewTests(TestCase):
         self.assertContains(response, "Browse Items")
         self.assertContains(response, "Clean Code")
         self.assertContains(response, "Ocean Dreams")
+
+    def test_item_cards_link_to_item_and_station_details(self):
+        response = self.client.get(reverse("items:item-list"))
+
+        parser = HTMLClassCollector()
+        parser.feed(response.content.decode())
+        self.assertTrue(parser.has_element("div", {"item-grid"}))
+        self.assertTrue(parser.has_element("article", {"clickable-item-card"}))
+        item_detail_url = reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
+        station_detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.station.readable_id},
+        )
+        self.assertNotEqual(item_detail_url, station_detail_url)
+        self.assertTrue(
+            parser.has_element(
+                "a",
+                {"clickable-item-card-link"},
+                **{"data-testid": "item-card-link", "href": item_detail_url},
+            )
+        )
+        self.assertTrue(
+            parser.has_element(
+                "a",
+                {"clickable-item-card-inner-link"},
+                href=station_detail_url,
+            )
+        )
 
     def test_get_item_detail_page_renders_item(self):
         response = self.client.get(reverse("items:item-detail", kwargs={"item_id": self.item_here.id}))
@@ -508,7 +560,7 @@ class ItemViewTests(TestCase):
         self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
 
     def test_station_detail_uses_bookshelf_and_inventory_page_uses_full_width_list(self):
-        Item.objects.create(
+        inventory_item = Item.objects.create(
             title="Blade Runner",
             author="",
             description="",
@@ -540,7 +592,29 @@ class ItemViewTests(TestCase):
         self.assertNotContains(inventory_response, 'class="dvd-case"', html=False)
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
-        self.assertContains(inventory_response, 'class="inventory-list mt-4 space-y-3"', html=False)
+        self.assertContains(
+            inventory_response,
+            f'href="{static("core/css/clickable-item-cards.css")}"',
+        )
+
+        parser = HTMLClassCollector()
+        parser.feed(inventory_response.content.decode())
+        self.assertTrue(parser.has_element("ul", {"inventory-list"}))
+        self.assertTrue(
+            parser.has_element(
+                "li",
+                {"clickable-item-card"},
+                **{"data-testid": "inventory-item-card"},
+            )
+        )
+        item_detail_url = reverse("items:item-detail", kwargs={"item_id": inventory_item.id})
+        self.assertTrue(
+            parser.has_element(
+                "a",
+                {"clickable-item-card-link"},
+                **{"data-testid": "inventory-item-link", "href": item_detail_url},
+            )
+        )
         self.assertContains(inventory_response, "Blade Runner")
 
     def test_get_items_api_returns_items(self):
