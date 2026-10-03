@@ -1237,3 +1237,5 @@ class SeedDevDataCommandTests(TestCase):
 		self._run(force=True, **{"password": "test"})
 
 		self.assertTrue(BookStation.objects.exists())
+		user = get_user_model().objects.get(username="dev_alice")
+		self.assertTrue(user.check_password("test"))

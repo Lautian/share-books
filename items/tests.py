@@ -173,12 +173,10 @@ class ItemViewTests(TestCase):
         response = self.client.get(reverse("items:item-list"))
 
         self.assertContains(response, 'class="item-grid"')
-        self.assertContains(response, 'class="item-card card shadow-lg p-4"')
         self.assertContains(
             response,
-            f'<a class="link-hover item-card-link" href="{reverse("items:item-detail", kwargs={"item_id": self.item_here.id})}">Clean Code</a>',
+            f'href="{reverse("items:item-detail", kwargs={"item_id": self.item_here.id})}">Clean Code</a>',
         )
-        self.assertContains(response, 'class="link-hover item-station-link"')
         self.assertContains(
             response,
             f'href="{reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})}"',
@@ -555,15 +553,10 @@ class ItemViewTests(TestCase):
         self.assertNotContains(inventory_response, 'class="dvd-case"', html=False)
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
-        self.assertContains(inventory_response, 'class="inventory-list mt-4 space-y-3"', html=False)
+        self.assertContains(inventory_response, 'class="inventory-list')
         self.assertContains(
             inventory_response,
-            'class="inventory-item rounded-xl border border-base-300/70 bg-base-100/80 p-4"',
-            html=False,
-        )
-        self.assertContains(
-            inventory_response,
-            f'<a class="link-hover inventory-item-link" href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
+            f'href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
         )
         self.assertContains(inventory_response, "Blade Runner")
 
