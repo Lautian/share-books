@@ -186,7 +186,17 @@ class ItemViewTests(TestCase):
     def test_item_cards_link_to_item_and_station_details(self):
         response = self.client.get(reverse("items:item-list"))
 
-        self.assertContains(response, 'class="item-grid"')
+        parser = HTMLClassCollector()
+        parser.feed(response.content.decode())
+        self.assertTrue(
+            any(tag == "div" and "item-grid" in classes for tag, classes in parser.elements)
+        )
+        self.assertTrue(
+            any(
+                tag == "article" and "clickable-item-card" in classes
+                for tag, classes in parser.elements
+            )
+        )
         self.assertContains(
             response,
             f'href="{reverse("items:item-detail", kwargs={"item_id": self.item_here.id})}">Clean Code</a>',
@@ -195,7 +205,12 @@ class ItemViewTests(TestCase):
             response,
             f'href="{reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})}"',
         )
-        self.assertContains(response, "clickable-item-card-inner-link")
+        self.assertTrue(
+            any(
+                tag == "a" and "clickable-item-card-inner-link" in classes
+                for tag, classes in parser.elements
+            )
+        )
 
     def test_get_item_detail_page_renders_item(self):
         response = self.client.get(reverse("items:item-detail", kwargs={"item_id": self.item_here.id}))

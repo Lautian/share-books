@@ -5,6 +5,7 @@
 
 .clickable-item-card {
     position: relative;
+    isolation: isolate;
     border-top: 3px solid rgba(98, 160, 80, 0.6);
     transition: transform 180ms ease, box-shadow 180ms ease;
 }
