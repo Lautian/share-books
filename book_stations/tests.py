@@ -1165,9 +1165,7 @@ class ShelfOverflowRestSectionTests(TestCase):
 
 
 class SeedDevDataCommandTests(TestCase):
-	def _run(self, explicit_password=None, **kwargs):
-		if explicit_password is not None:
-			kwargs["password"] = explicit_password
+	def _run(self, **kwargs):
 		call_command("seed_dev_data", stdout=StringIO(), **kwargs)
 
 	@override_settings(DEBUG=True)
@@ -1231,14 +1229,20 @@ class SeedDevDataCommandTests(TestCase):
 			CommandError,
 			"seed_dev_data is meant for development only. Use --force to run with DEBUG=False.",
 		):
-			self._run(test_password)
+			call_command("seed_dev_data", "--password", test_password, stdout=StringIO())
 
 		self.assertFalse(BookStation.objects.exists())
 
 	@override_settings(DEBUG=False)
 	def test_force_seeds_data_when_password_is_provided(self):
 		test_password = "test"
-		self._run(test_password, force=True)
+		call_command(
+			"seed_dev_data",
+			"--force",
+			"--password",
+			test_password,
+			stdout=StringIO(),
+		)
 
 		self.assertTrue(BookStation.objects.exists())
 		user = get_user_model().objects.get(username="dev_alice")
