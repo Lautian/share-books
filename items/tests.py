@@ -205,6 +205,7 @@ class ItemViewTests(TestCase):
             "book_stations:bookstation-detail",
             kwargs={"readable_id": self.station.readable_id},
         )
+        self.assertNotEqual(item_detail_url, station_detail_url)
         self.assertTrue(
             parser.has_element(
                 "a",

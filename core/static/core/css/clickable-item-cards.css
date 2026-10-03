@@ -59,6 +59,7 @@
     }
 }
 
+/* The overlay covers card content; any other interactive child must stack above it. */
 .clickable-item-card-inner-link {
     position: relative;
     z-index: 2;
