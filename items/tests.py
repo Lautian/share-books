@@ -23,8 +23,9 @@ class HTMLClassCollector(HTMLParser):
         self.elements = []
 
     def handle_starttag(self, tag, attrs):
-        classes = set((dict(attrs).get("class") or "").split())
-        self.elements.append((tag, classes))
+        attributes = dict(attrs)
+        classes = set((attributes.get("class") or "").split())
+        self.elements.append((tag, classes, attributes))
 
 
 class ItemModelTests(TestCase):
@@ -189,26 +190,36 @@ class ItemViewTests(TestCase):
         parser = HTMLClassCollector()
         parser.feed(response.content.decode())
         self.assertTrue(
-            any(tag == "div" and "item-grid" in classes for tag, classes in parser.elements)
+            any(
+                tag == "div" and "item-grid" in classes
+                for tag, classes, _ in parser.elements
+            )
         )
         self.assertTrue(
             any(
                 tag == "article" and "clickable-item-card" in classes
-                for tag, classes in parser.elements
+                for tag, classes, _ in parser.elements
             )
         )
-        self.assertContains(
-            response,
-            f'href="{reverse("items:item-detail", kwargs={"item_id": self.item_here.id})}">Clean Code</a>',
-        )
-        self.assertContains(
-            response,
-            f'href="{reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})}"',
+        item_detail_url = reverse("items:item-detail", kwargs={"item_id": self.item_here.id})
+        station_detail_url = reverse(
+            "book_stations:bookstation-detail",
+            kwargs={"readable_id": self.station.readable_id},
         )
         self.assertTrue(
             any(
-                tag == "a" and "clickable-item-card-inner-link" in classes
-                for tag, classes in parser.elements
+                tag == "a"
+                and attributes.get("href") == item_detail_url
+                and "item-card-link" in classes
+                for tag, classes, attributes in parser.elements
+            )
+        )
+        self.assertTrue(
+            any(
+                tag == "a"
+                and attributes.get("href") == station_detail_url
+                and "clickable-item-card-inner-link" in classes
+                for tag, classes, attributes in parser.elements
             )
         )
 
@@ -591,23 +602,25 @@ class ItemViewTests(TestCase):
         parser = HTMLClassCollector()
         parser.feed(inventory_response.content.decode())
         self.assertTrue(
-            any(tag == "ul" and "inventory-list" in classes for tag, classes in parser.elements)
+            any(
+                tag == "ul" and "inventory-list" in classes
+                for tag, classes, _ in parser.elements
+            )
         )
         self.assertTrue(
             any(
                 tag == "li" and {"clickable-item-card", "inventory-item"} <= classes
-                for tag, classes in parser.elements
+                for tag, classes, _ in parser.elements
             )
         )
+        item_detail_url = reverse("items:item-detail", kwargs={"item_id": inventory_item.id})
         self.assertTrue(
             any(
-                tag == "a" and {"clickable-item-card-link", "inventory-item-link"} <= classes
-                for tag, classes in parser.elements
+                tag == "a"
+                and attributes.get("href") == item_detail_url
+                and {"clickable-item-card-link", "inventory-item-link"} <= classes
+                for tag, classes, attributes in parser.elements
             )
-        )
-        self.assertContains(
-            inventory_response,
-            f'href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
         )
         self.assertContains(inventory_response, "Blade Runner")
 

@@ -42,6 +42,12 @@
     outline-offset: 2px;
 }
 
+@supports selector(:has(*)) {
+    .clickable-item-card-link:focus-visible {
+        outline: none;
+    }
+}
+
 @supports not selector(:has(*)) {
     .clickable-item-card-link:focus-visible {
         outline: 2px solid currentColor;
