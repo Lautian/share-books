@@ -1,9 +1,13 @@
+from io import StringIO
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, connection
+from django.db.models import Count
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -1158,3 +1162,60 @@ class ShelfOverflowRestSectionTests(TestCase):
         self.assertContains(response, 'class="dvd-rest"')
         # At least one full-frontal DVD case is also rendered alongside it
         self.assertContains(response, 'class="dvd-case"')
+
+
+class SeedDevDataCommandTests(TestCase):
+	def _run(self, **kwargs):
+		call_command("seed_dev_data", stdout=StringIO(), **kwargs)
+
+	@override_settings(DEBUG=True)
+	def test_seeds_valid_varied_data_and_is_idempotent(self):
+		from items.models import Item
+		from movements.models import Movement
+
+		self._run()
+		counts = (
+			get_user_model().objects.count(),
+			BookStation.objects.count(),
+			Item.objects.count(),
+			Movement.objects.count(),
+		)
+		self.assertTrue(get_user_model().objects.filter(username__in=["dev_alice", "dev_bob"]).count() == 2)
+		self.assertEqual(
+			set(Item.objects.values_list("status", flat=True)),
+			{choice for choice, _ in Item.Status.choices},
+		)
+		self.assertTrue(Item.objects.filter(current_book_station__isnull=True).exists())
+		self.assertGreater(counts[3], counts[2])
+		self.assertEqual(counts[2], 75)
+		self.assertGreaterEqual(
+			max(
+				BookStation.objects.annotate(n=Count("current_items")).values_list("n", flat=True)
+			),
+			20,
+		)
+		for station in BookStation.objects.all():
+			station.full_clean()
+		for item in Item.objects.all():
+			item.full_clean()
+		for field in ("description", "picture", "location"):
+			self.assertGreaterEqual(BookStation.objects.exclude(**{field: ""}).count(), 2)
+		self.assertGreaterEqual(BookStation.objects.filter(latitude__isnull=False).count(), 2)
+
+		self._run()
+		self.assertEqual(
+			counts,
+			(
+				get_user_model().objects.count(),
+				BookStation.objects.count(),
+				Item.objects.count(),
+				Movement.objects.count(),
+			),
+		)
+
+	@override_settings(DEBUG=False)
+	def test_refuses_without_debug_unless_forced(self):
+		with self.assertRaises(CommandError):
+			self._run()
+		self._run(force=True)
+		self.assertTrue(BookStation.objects.exists())
