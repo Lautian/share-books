@@ -7,7 +7,6 @@
     position: relative;
     border-top: 3px solid rgba(98, 160, 80, 0.6);
     transition: transform 180ms ease, box-shadow 180ms ease;
-    cursor: pointer;
 }
 
 .item-grid {
@@ -34,6 +33,7 @@
     position: absolute;
     inset: 0;
     z-index: 1;
+    cursor: pointer;
 }
 
 .clickable-item-card:has(.clickable-item-card-link:focus-visible) {
@@ -43,8 +43,6 @@
 
 @supports not selector(:has(*)) {
     .clickable-item-card-link:focus-visible {
-        position: relative;
-        z-index: 2;
         outline: 2px solid currentColor;
         outline-offset: 2px;
     }

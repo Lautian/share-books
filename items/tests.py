@@ -16,6 +16,8 @@ from .models import Item
 
 
 class HTMLClassCollector(HTMLParser):
+    """Collect element classes for reusable rendered-markup assertions."""
+
     def __init__(self):
         super().__init__()
         self.elements = []
