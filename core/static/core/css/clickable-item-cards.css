@@ -26,9 +26,11 @@
     outline: none;
 }
 
-.clickable-item-card-link:focus-visible::after {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
+@supports not selector(:has(*)) {
+    .clickable-item-card-link:focus-visible::after {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
 }
 
 .clickable-item-card-inner-link {
