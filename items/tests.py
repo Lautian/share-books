@@ -15,6 +15,16 @@ from movements.models import Movement
 from .models import Item
 
 
+class HTMLClassCollector(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.elements = []
+
+    def handle_starttag(self, tag, attrs):
+        classes = set((dict(attrs).get("class") or "").split())
+        self.elements.append((tag, classes))
+
+
 class ItemModelTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -561,16 +571,7 @@ class ItemViewTests(TestCase):
             f'href="{static("core/css/clickable-item-cards.css")}"',
         )
 
-        class ClassTokenParser(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.elements = []
-
-            def handle_starttag(self, tag, attrs):
-                classes = set(dict(attrs).get("class", "").split())
-                self.elements.append((tag, classes))
-
-        parser = ClassTokenParser()
+        parser = HTMLClassCollector()
         parser.feed(inventory_response.content.decode())
         self.assertTrue(
             any(tag == "ul" and "inventory-list" in classes for tag, classes in parser.elements)
