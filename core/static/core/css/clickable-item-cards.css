@@ -1,3 +1,8 @@
+.natural-card-surface {
+    background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
+    border: 1px solid rgba(98, 120, 89, 0.24);
+}
+
 .clickable-item-card {
     position: relative;
     border-top: 3px solid rgba(98, 160, 80, 0.6);
@@ -27,7 +32,7 @@
 }
 
 @supports not selector(:has(*)) {
-    .clickable-item-card-link:focus-visible::after {
+    .clickable-item-card:focus-within {
         outline: 2px solid currentColor;
         outline-offset: 2px;
     }

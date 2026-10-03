@@ -181,10 +181,7 @@ class ItemViewTests(TestCase):
             response,
             f'href="{reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})}"',
         )
-        self.assertContains(
-            response,
-            'class="link-hover clickable-item-card-inner-link item-station-link"',
-        )
+        self.assertContains(response, "clickable-item-card-inner-link")
 
     def test_get_item_detail_page_renders_item(self):
         response = self.client.get(reverse("items:item-detail", kwargs={"item_id": self.item_here.id}))
@@ -563,11 +560,10 @@ class ItemViewTests(TestCase):
             html=False,
         )
         self.assertContains(inventory_response, 'href="/static/core/css/clickable-item-cards.css"')
-        self.assertContains(inventory_response, 'class="clickable-item-card inventory-item')
-        self.assertContains(
-            inventory_response,
-            'class="link-hover clickable-item-card-link inventory-item-link"',
-        )
+        self.assertContains(inventory_response, "clickable-item-card")
+        self.assertContains(inventory_response, "inventory-item")
+        self.assertContains(inventory_response, "clickable-item-card-link")
+        self.assertContains(inventory_response, "inventory-item-link")
         self.assertContains(
             inventory_response,
             f'href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',

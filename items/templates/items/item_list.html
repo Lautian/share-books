@@ -12,11 +12,6 @@
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }
 
-    .item-card {
-        background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
-        border: 1px solid rgba(98, 120, 89, 0.24);
-    }
-
 </style>
 {% endblock %}
 
@@ -64,7 +59,7 @@
     {% if items %}
         <div class="item-grid">
             {% for item in items %}
-                <article class="clickable-item-card item-card card shadow-lg p-4">
+                <article class="clickable-item-card natural-card-surface item-card card shadow-lg p-4">
                     {% if item.thumbnail_url %}
                         <img
                             class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
