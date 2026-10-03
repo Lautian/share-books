@@ -17,10 +17,6 @@
         border: 1px solid rgba(98, 120, 89, 0.24);
     }
 
-    .item-station-link {
-        position: relative;
-        z-index: 2;
-    }
 </style>
 {% endblock %}
 
@@ -98,7 +94,7 @@
                             <span class="badge badge-outline">Current station</span>
                             <span class="ml-2">
                                 {% if item.current_book_station %}
-                                    <a class="link-hover item-station-link" href="{% url 'book_stations:bookstation-detail' item.current_book_station.readable_id %}">
+                                    <a class="link-hover clickable-item-card-inner-link item-station-link" href="{% url 'book_stations:bookstation-detail' item.current_book_station.readable_id %}">
                                         {{ item.current_book_station.name }}
                                     </a>
                                 {% else %}
