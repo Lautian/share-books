@@ -14,6 +14,7 @@ from django.urls import reverse
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
+from .management.commands.seed_dev_data import DEFAULT_PASSWORD
 from .models import BookStation
 
 
@@ -1170,8 +1171,6 @@ class SeedDevDataCommandTests(TestCase):
 
 	@override_settings(DEBUG=True)
 	def test_uses_development_password_when_password_is_omitted(self):
-		from .management.commands.seed_dev_data import DEFAULT_PASSWORD
-
 		self._run()
 
 		user = get_user_model().objects.get(username="dev_alice")

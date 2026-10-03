@@ -67,7 +67,7 @@
     {% if items %}
         <ul class="inventory-list mt-4 space-y-3">
             {% for item in items %}
-                <li class="clickable-item-card rounded-xl border border-base-300/70 bg-base-100/80 p-4" data-testid="inventory-item-card">
+                <li class="clickable-item-card natural-card-surface rounded-xl p-4" data-testid="inventory-item-card">
                     {% if item.thumbnail_url %}
                         <img
                             class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
