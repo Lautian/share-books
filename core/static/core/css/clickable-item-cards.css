@@ -15,6 +15,14 @@
     box-shadow: 0 16px 32px rgba(46, 68, 43, 0.16);
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .clickable-item-card,
+    .clickable-item-card:hover {
+        transform: none;
+        transition: none;
+    }
+}
+
 .clickable-item-card-link::after {
     content: '';
     position: absolute;

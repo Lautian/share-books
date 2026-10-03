@@ -1,9 +1,11 @@
 from datetime import date
+from html.parser import HTMLParser
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 
@@ -554,12 +556,37 @@ class ItemViewTests(TestCase):
         self.assertNotContains(inventory_response, 'class="dvd-case"', html=False)
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
-        self.assertContains(inventory_response, "inventory-list")
-        self.assertContains(inventory_response, 'href="/static/core/css/clickable-item-cards.css"')
-        self.assertContains(inventory_response, "clickable-item-card")
-        self.assertContains(inventory_response, "inventory-item")
-        self.assertContains(inventory_response, "clickable-item-card-link")
-        self.assertContains(inventory_response, "inventory-item-link")
+        self.assertContains(
+            inventory_response,
+            f'href="{static("core/css/clickable-item-cards.css")}"',
+        )
+
+        class ClassTokenParser(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.elements = []
+
+            def handle_starttag(self, tag, attrs):
+                classes = set(dict(attrs).get("class", "").split())
+                self.elements.append((tag, classes))
+
+        parser = ClassTokenParser()
+        parser.feed(inventory_response.content.decode())
+        self.assertTrue(
+            any(tag == "ul" and "inventory-list" in classes for tag, classes in parser.elements)
+        )
+        self.assertTrue(
+            any(
+                tag == "li" and {"clickable-item-card", "inventory-item"} <= classes
+                for tag, classes in parser.elements
+            )
+        )
+        self.assertTrue(
+            any(
+                tag == "a" and {"clickable-item-card-link", "inventory-item-link"} <= classes
+                for tag, classes in parser.elements
+            )
+        )
         self.assertContains(
             inventory_response,
             f'href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
