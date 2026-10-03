@@ -169,6 +169,25 @@ class ItemViewTests(TestCase):
         self.assertContains(response, "Clean Code")
         self.assertContains(response, "Ocean Dreams")
 
+    def test_item_cards_link_to_item_and_station_details(self):
+        response = self.client.get(reverse("items:item-list"))
+
+        self.assertContains(response, 'class="item-grid"')
+        self.assertContains(response, ".item-card-link::after")
+        self.assertContains(response, "repeat(auto-fit, minmax(300px, 1fr))")
+        self.assertContains(response, "border-top: 3px solid rgba(98, 160, 80, 0.6)")
+        self.assertContains(response, 'class="item-card card shadow-lg p-4"')
+        self.assertContains(
+            response,
+            f'<a class="link-hover item-card-link" href="{reverse("items:item-detail", kwargs={"item_id": self.item_here.id})}">Clean Code</a>',
+        )
+        self.assertContains(response, 'class="link-hover item-station-link"')
+        self.assertContains(response, "z-index: 1;")
+        self.assertContains(
+            response,
+            f'href="{reverse("book_stations:bookstation-detail", kwargs={"readable_id": self.station.readable_id})}"',
+        )
+
     def test_get_item_detail_page_renders_item(self):
         response = self.client.get(reverse("items:item-detail", kwargs={"item_id": self.item_here.id}))
 
@@ -508,7 +527,7 @@ class ItemViewTests(TestCase):
         self.assertFalse(Item.objects.filter(pk=self.item_here.pk).exists())
 
     def test_station_detail_uses_bookshelf_and_inventory_page_uses_full_width_list(self):
-        Item.objects.create(
+        inventory_item = Item.objects.create(
             title="Blade Runner",
             author="",
             description="",
@@ -541,6 +560,17 @@ class ItemViewTests(TestCase):
         self.assertContains(inventory_response, "Items currently at this book station")
         self.assertContains(inventory_response, "Sort by")
         self.assertContains(inventory_response, 'class="inventory-list mt-4 space-y-3"', html=False)
+        self.assertContains(
+            inventory_response,
+            'class="inventory-item rounded-xl border border-base-300/70 bg-base-100/80 p-4"',
+            html=False,
+        )
+        self.assertContains(inventory_response, ".inventory-item-link::after")
+        self.assertContains(inventory_response, "border-top: 3px solid")
+        self.assertContains(
+            inventory_response,
+            f'<a class="link-hover inventory-item-link" href="{reverse("items:item-detail", kwargs={"item_id": inventory_item.id})}">Blade Runner</a>',
+        )
         self.assertContains(inventory_response, "Blade Runner")
 
     def test_get_items_api_returns_items(self):
