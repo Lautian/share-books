@@ -1,3 +1,9 @@
+.item-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+
 .natural-card-surface {
     background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
     border: 1px solid rgba(98, 120, 89, 0.24);
@@ -8,12 +14,6 @@
     isolation: isolate;
     border-top: 3px solid rgba(98, 160, 80, 0.6);
     transition: transform 180ms ease, box-shadow 180ms ease;
-}
-
-.item-grid {
-    display: grid;
-    gap: 1.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
 }
 
 .clickable-item-card:hover {
@@ -41,6 +41,7 @@
     cursor: pointer;
 }
 
+/* Inner controls must stay above the stretched link overlay. */
 .clickable-item-card :is(a:not(.clickable-item-card-link), button) {
     position: relative;
     z-index: 2;
@@ -64,7 +65,6 @@
     }
 }
 
-/* The overlay covers card content; any other interactive child must stack above it. */
 .clickable-item-card-inner-link:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;

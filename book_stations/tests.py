@@ -1177,6 +1177,14 @@ class SeedDevDataCommandTests(TestCase):
 		self.assertTrue(user.check_password(DEFAULT_PASSWORD))
 
 	@override_settings(DEBUG=True)
+	def test_uses_provided_password_when_password_is_supplied(self):
+		test_password = "test"
+		call_command("seed_dev_data", "--password", test_password, stdout=StringIO())
+
+		user = get_user_model().objects.get(username="dev_alice")
+		self.assertTrue(user.check_password(test_password))
+
+	@override_settings(DEBUG=True)
 	def test_seeds_valid_varied_data_and_is_idempotent(self):
 		from items.models import Item
 		from movements.models import Movement
