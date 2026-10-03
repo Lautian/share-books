@@ -178,8 +178,8 @@ class Command(BaseCommand):
 	def add_arguments(self, parser):
 		parser.add_argument(
 			"--password",
-			default=DEFAULT_PASSWORD,
-			help="Password for newly created sample users (default: %(default)s).",
+			default=None,
+			help="Password for newly created sample users (defaults to the development password when DEBUG=True).",
 		)
 		parser.add_argument(
 			"--force",
@@ -193,8 +193,13 @@ class Command(BaseCommand):
 			raise CommandError(
 				"seed_dev_data is meant for development only. Use --force to run with DEBUG=False."
 			)
+		password = options["password"]
+		if password is None:
+			if not settings.DEBUG:
+				raise CommandError("--password is required when running with DEBUG=False.")
+			password = DEFAULT_PASSWORD
 
-		users = self._create_users(options["password"])
+		users = self._create_users(password)
 		stations = self._create_stations(users)
 		self._create_items(users, stations)
 
