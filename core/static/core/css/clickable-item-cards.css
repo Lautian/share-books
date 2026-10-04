@@ -1,0 +1,71 @@
+.item-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+
+.natural-card-surface {
+    background: linear-gradient(160deg, rgba(251, 252, 246, 0.9), rgba(240, 247, 239, 0.82));
+    border: 1px solid rgba(98, 120, 89, 0.24);
+}
+
+.clickable-item-card {
+    position: relative;
+    isolation: isolate;
+    border-top: 3px solid rgba(98, 160, 80, 0.6);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.clickable-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(46, 68, 43, 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .clickable-item-card,
+    .clickable-item-card:hover {
+        transform: none;
+        transition: none;
+    }
+}
+
+.clickable-item-card-link {
+    position: static;
+}
+
+.clickable-item-card-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: pointer;
+}
+
+/* Inner controls must stay above the stretched link overlay. */
+.clickable-item-card :is(a:not(.clickable-item-card-link), button) {
+    position: relative;
+    z-index: 2;
+}
+
+@supports selector(:has(*)) {
+    .clickable-item-card:has(.clickable-item-card-link:focus-visible) {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .clickable-item-card-link:focus-visible {
+        outline: none;
+    }
+}
+
+@supports not selector(:has(*)) {
+    .clickable-item-card-link:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+}
+
+.clickable-item-card-inner-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
