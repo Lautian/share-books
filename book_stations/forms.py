@@ -146,9 +146,9 @@ class BookStationCreateForm(forms.ModelForm):
 
         if uploaded_picture:
             extension = Path(uploaded_picture.name).suffix.lower()
-            upload_name = f"book_stations/images/photos/{uuid4().hex}{extension}"
+            upload_name = f"uploads/book_stations/images/photos/{uuid4().hex}{extension}"
             saved_path = default_storage.save(upload_name, uploaded_picture)
-            station.picture = default_storage.url(saved_path)
+            station.picture = saved_path
 
         if commit:
             station.save()

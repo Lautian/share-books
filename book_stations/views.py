@@ -103,7 +103,11 @@ def _serialize_bookstation(station):
 		"name": station.name,
 		"readable_id": station.readable_id,
 		"description": station.description,
-		"picture": station.picture,
+		"picture": (
+			station.picture_url
+			if station.picture.startswith("uploads/")
+			else station.picture
+		),
 		"latitude": float(station.latitude) if station.latitude is not None else None,
 		"longitude": float(station.longitude) if station.longitude is not None else None,
 		"location": station.location,

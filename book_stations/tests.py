@@ -887,9 +887,8 @@ class BookStationCreateFormViewTests(TestCase):
         )
         self.assertEqual(created_station.added_by, self.user)
         self.assertEqual(created_station.readable_id, "river-walk-station")
-        self.assertTrue(
-            created_station.picture.startswith("/media/book_stations/images/photos/")
-        )
+        self.assertTrue(created_station.picture.startswith("uploads/"))
+        self.assertTrue(created_station.picture_url.startswith("/media/uploads/"))
 
 
 class BookStationQRCodeViewTests(TestCase):

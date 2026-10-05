@@ -1,4 +1,7 @@
 from io import StringIO
+import os
+import subprocess
+import sys
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -14,6 +17,44 @@ class HomePageViewTests(TestCase):
         self.assertTemplateUsed(response, "core/home.html")
         self.assertContains(response, "Little libraries")
         self.assertContains(response, "Book stations")
+
+
+class ProductionSettingsTests(TestCase):
+    def test_environment_configures_railway_production_services(self):
+        environment = os.environ.copy()
+        environment.update(
+            {
+                "DEBUG": "False",
+                "SECRET_KEY": "test-production-secret",
+                "DATABASE_URL": "postgresql://localhost/sharebooks",
+                "RAILWAY_PUBLIC_DOMAIN": "share-books.up.railway.app",
+                "BUCKET": "share-books-uploads",
+                "ENDPOINT": "https://storage.example.test",
+                "ACCESS_KEY_ID": "test-access-key",
+                "SECRET_ACCESS_KEY": "test-secret-key",
+                "REGION": "auto",
+            }
+        )
+        check_settings = """
+from share_books import settings
+
+assert settings.DEBUG is False
+assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql"
+assert "share-books.up.railway.app" in settings.ALLOWED_HOSTS
+assert "https://share-books.up.railway.app" in settings.CSRF_TRUSTED_ORIGINS
+assert settings.STORAGES["default"]["BACKEND"] == "storages.backends.s3.S3Storage"
+assert settings.STORAGES["default"]["OPTIONS"]["bucket_name"] == "share-books-uploads"
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", check_settings],
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 class MigrationConsistencyTests(TestCase):

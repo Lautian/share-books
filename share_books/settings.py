@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,19 +25,41 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_o@ek3vuu9e07uv)v$h-3z817b@sx&q#f600#h8hw#ov#^+xut'
+DEBUG = os.environ.get("DEBUG", "True").lower() in {"true", "1", "yes"}
+
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("Set the SECRET_KEY environment variable.")
+    SECRET_KEY = "django-insecure-local-development-only"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        "ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]"
+    ).split(",")
+    if host.strip()
+]
+_railway_public_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+if _railway_public_domain and _railway_public_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_public_domain)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if _railway_public_domain:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_railway_public_domain}")
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Trust localhost origins for local development.  Once CSRF_TRUSTED_ORIGINS is
 # set Django enforces strict origin checking on every POST, so all origins that
 # the browser may report (with or without an explicit port) must be listed.
 # Both http:// and https:// are included because VS Code port-forwarding and
 # some Codespaces setups serve the forwarded port over HTTPS even for localhost.
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS += [
     'http://localhost',
     'http://localhost:8000',
     'https://localhost',
@@ -79,6 +104,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -110,11 +136,16 @@ WSGI_APPLICATION = 'share_books.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+_database_url = os.environ.get("DATABASE_URL")
+if not DEBUG and not _database_url:
+    raise ImproperlyConfigured("Set the DATABASE_URL environment variable.")
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.config(
+        default=_database_url or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -152,6 +183,68 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+AWS_STORAGE_BUCKET_NAME = (
+    os.environ.get("AWS_STORAGE_BUCKET_NAME")
+    or os.environ.get("AWS_BUCKET_NAME")
+    or os.environ.get("BUCKET")
+)
+AWS_S3_ENDPOINT_URL = (
+    os.environ.get("AWS_S3_ENDPOINT_URL")
+    or os.environ.get("AWS_ENDPOINT_URL")
+    or os.environ.get("ENDPOINT")
+)
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID") or os.environ.get(
+    "ACCESS_KEY_ID"
+)
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY") or os.environ.get(
+    "SECRET_ACCESS_KEY"
+)
+AWS_S3_REGION_NAME = (
+    os.environ.get("AWS_S3_REGION_NAME")
+    or os.environ.get("AWS_REGION")
+    or os.environ.get("REGION")
+    or "auto"
+)
+
+_bucket_configuration = (
+    AWS_STORAGE_BUCKET_NAME,
+    AWS_S3_ENDPOINT_URL,
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
+)
+if any(_bucket_configuration) and not all(_bucket_configuration):
+    raise ImproperlyConfigured(
+        "Set the bucket name, endpoint, access key, and secret key to enable bucket storage."
+    )
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+if all(_bucket_configuration):
+    INSTALLED_APPS.append("storages")
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_STORAGE_BUCKET_NAME,
+            "endpoint_url": AWS_S3_ENDPOINT_URL,
+            "access_key": AWS_ACCESS_KEY_ID,
+            "secret_key": AWS_SECRET_ACCESS_KEY,
+            "region_name": AWS_S3_REGION_NAME,
+            "signature_version": "s3v4",
+        },
+    }
+elif not DEBUG:
+    raise ImproperlyConfigured(
+        "Set the Railway bucket variables to enable persistent upload storage."
+    )
+
+if not DEBUG:
+    STORAGES["staticfiles"] = {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    }
