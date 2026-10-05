@@ -33,8 +33,8 @@ if _railway_domain:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_domain}')
 
 DATABASES = {
-    'default': dj_database_url.config(
-        env='DATABASE_URL', conn_max_age=600, conn_health_checks=True
+    'default': dj_database_url.parse(
+        os.environ['DATABASE_URL'], conn_max_age=600, conn_health_checks=True
     )
 }
 
