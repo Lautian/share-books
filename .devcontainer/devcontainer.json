@@ -1,6 +1,6 @@
 {
     "name": "share-books",
-    "postCreateCommand": "pip install -r requirements.txt",
+    "postCreateCommand": "pip install -r requirements-dev.txt",
     "postStartCommand": "python manage.py migrate",
     "forwardPorts": [8000],
     "portsAttributes": {

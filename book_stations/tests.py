@@ -1,6 +1,9 @@
+from importlib import import_module
 from io import StringIO
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
@@ -61,6 +64,61 @@ class BookStationModelTests(TestCase):
         )
 
         self.assertEqual(station.readable_id, "generated-slug-station")
+
+    def test_migration_converts_signed_picture_urls_to_storage_keys(self):
+        migration = import_module(
+            "book_stations.migrations.0017_migrate_legacy_picture_urls"
+        )
+        legacy_url = (
+            "https://bucket.example.com/uploads/legacy%20photo.jpg"
+            "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=expired"
+        )
+        legacy_station = BookStation.objects.create(
+            name="Legacy Picture",
+            description="",
+            location="Somewhere",
+            picture=legacy_url,
+            added_by=self.user,
+        )
+        path_style_station = BookStation.objects.create(
+            name="Path Style Legacy Picture",
+            description="",
+            location="Somewhere",
+            picture=(
+                "https://example.com/bucket/uploads/path-style.jpg"
+                "?AWSAccessKeyId=key&Signature=expired&Expires=123"
+            ),
+            added_by=self.user,
+        )
+        external_station = BookStation.objects.create(
+            name="External Picture",
+            description="",
+            location="Somewhere",
+            picture=(
+                "https://other.example.com/photo.jpg"
+                "?X-Amz-Signature=external"
+            ),
+            added_by=self.user,
+        )
+
+        with override_settings(
+            AWS_STORAGE_BUCKET_NAME="bucket",
+            AWS_S3_ENDPOINT_URL="https://example.com",
+        ):
+            migration.migrate_legacy_picture_urls(
+                apps,
+                SimpleNamespace(connection=connection),
+            )
+
+        legacy_station.refresh_from_db()
+        path_style_station.refresh_from_db()
+        external_station.refresh_from_db()
+        self.assertEqual(legacy_station.picture, "uploads/legacy photo.jpg")
+        self.assertEqual(path_style_station.picture, "uploads/path-style.jpg")
+        self.assertEqual(
+            external_station.picture,
+            "https://other.example.com/photo.jpg?X-Amz-Signature=external",
+        )
 
     def test_model_allows_blank_location_when_geolocation_is_present(self):
         station = BookStation(
@@ -887,9 +945,8 @@ class BookStationCreateFormViewTests(TestCase):
         )
         self.assertEqual(created_station.added_by, self.user)
         self.assertEqual(created_station.readable_id, "river-walk-station")
-        self.assertTrue(
-            created_station.picture.startswith("/media/book_stations/images/photos/")
-        )
+        self.assertTrue(created_station.picture.startswith("uploads/"))
+        self.assertTrue(created_station.picture_url.startswith("/media/uploads/"))
 
 
 class BookStationQRCodeViewTests(TestCase):

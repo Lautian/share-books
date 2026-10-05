@@ -1,0 +1,1 @@
+web: python manage.py migrate --noinput --settings=share_books.settings.production && python manage.py collectstatic --noinput --settings=share_books.settings.production && DJANGO_SETTINGS_MODULE=share_books.settings.production gunicorn share_books.wsgi --bind 0.0.0.0:$PORT
