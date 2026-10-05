@@ -24,11 +24,10 @@ class ProductionSettingsTests(TestCase):
         environment = os.environ.copy()
         environment.update(
             {
-                "DEBUG": "False",
                 "SECRET_KEY": "test-production-secret",
                 "DATABASE_URL": "postgresql://localhost/sharebooks",
                 "RAILWAY_PUBLIC_DOMAIN": "share-books.up.railway.app",
-                "BUCKET": "share-books-uploads",
+                "AWS_S3_BUCKET_NAME": "share-books-uploads",
                 "ENDPOINT": "https://storage.example.test",
                 "ACCESS_KEY_ID": "test-access-key",
                 "SECRET_ACCESS_KEY": "test-secret-key",
@@ -36,14 +35,16 @@ class ProductionSettingsTests(TestCase):
             }
         )
         check_settings = """
-from share_books import settings
+from share_books.settings import production as settings
 
 assert settings.DEBUG is False
 assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql"
 assert "share-books.up.railway.app" in settings.ALLOWED_HOSTS
 assert "https://share-books.up.railway.app" in settings.CSRF_TRUSTED_ORIGINS
 assert settings.STORAGES["default"]["BACKEND"] == "storages.backends.s3.S3Storage"
-assert settings.STORAGES["default"]["OPTIONS"]["bucket_name"] == "share-books-uploads"
+assert settings.AWS_STORAGE_BUCKET_NAME == "share-books-uploads"
+assert settings.AWS_S3_ENDPOINT_URL == "https://storage.example.test"
+assert "whitenoise.middleware.WhiteNoiseMiddleware" in settings.MIDDLEWARE
 """
         result = subprocess.run(
             [sys.executable, "-c", check_settings],
