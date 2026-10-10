@@ -4,6 +4,7 @@ import json
 from decimal import Decimal, InvalidOperation
 
 import qrcode
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -11,11 +12,12 @@ from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
-from .models import BookStation
+from .models import BookStation, StationVisit
 
 
 def bookstation_list(request):
@@ -86,10 +88,17 @@ def bookstation_detail_page(request, readable_id):
 	).order_by("title", "id")
 	book_like_items = items.exclude(item_type=Item.ItemType.DVD)
 	dvd_items = items.filter(item_type=Item.ItemType.DVD)
+	user_visit = None
+	just_visited = False
+	if request.user.is_authenticated:
+		user_visit = StationVisit.objects.filter(user=request.user, station=station).first()
+		just_visited = request.session.pop("just_visited_station", None) == station.pk
 	return render(
 		request,
 		"book_stations/bookstation_detail.html",
 		{
+			"user_visit": user_visit,
+			"just_visited": just_visited and user_visit is not None,
 			"station": station,
 			"items": items,
 			"book_like_items": book_like_items,
@@ -376,3 +385,45 @@ def bookstation_qr_code(request, readable_id):
 			"detail_url": detail_url,
 		},
 	)
+
+
+def _safe_next(request, fallback):
+	target = request.POST.get("next", "")
+	if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+		return target
+	return fallback
+
+
+@login_required(login_url="users:login")
+def visit_record(request, readable_id):
+	if request.method != "POST":
+		return HttpResponseNotAllowed(["POST"])
+
+	station = get_object_or_404(BookStation, readable_id=readable_id)
+	_, created = StationVisit.objects.get_or_create(user=request.user, station=station)
+	if created:
+		request.session["just_visited_station"] = station.pk
+	return redirect("book_stations:bookstation-detail", readable_id=station.readable_id)
+
+
+@login_required(login_url="users:login")
+def visit_remove(request, readable_id):
+	if request.method != "POST":
+		return HttpResponseNotAllowed(["POST"])
+
+	station = get_object_or_404(BookStation, readable_id=readable_id)
+	deleted, _ = StationVisit.objects.filter(user=request.user, station=station).delete()
+	if deleted:
+		messages.success(request, f"Removed {station.name} from your visited stations.")
+	return redirect(
+		_safe_next(
+			request,
+			reverse("book_stations:bookstation-detail", args=[station.readable_id]),
+		)
+	)
+
+
+@login_required(login_url="users:login")
+def visit_list(request):
+	visits = StationVisit.objects.filter(user=request.user).select_related("station")
+	return render(request, "book_stations/visit_list.html", {"visits": visits})

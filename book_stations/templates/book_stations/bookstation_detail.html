@@ -405,6 +405,23 @@
 {% endblock %}
 
 {% block content %}
+{% if just_visited %}
+<div class="toast toast-top toast-center z-50" id="visit-toast" role="status">
+    <div class="alert alert-success shadow-lg">
+        <span>Logged visit to {{ station.name }}</span>
+        <form method="post" action="{% url 'book_stations:visit-remove' station.readable_id %}">
+            {% csrf_token %}
+            <button class="btn btn-sm" type="submit">Undo</button>
+        </form>
+    </div>
+</div>
+<script>
+    setTimeout(function () {
+        var toast = document.getElementById("visit-toast");
+        if (toast) { toast.remove(); }
+    }, 8000);
+</script>
+{% endif %}
 <section class="mx-auto max-w-4xl">
     <div class="mb-5 flex flex-wrap gap-2">
         <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">
@@ -427,9 +444,21 @@
                     <p class="text-sm uppercase tracking-[0.2em] text-success">Book station detail</p>
                     <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{{ station.name }}</h1>
                 </div>
-                <a class="btn btn-outline" href="{% url 'book_stations:bookstation-qr' station.readable_id %}">
-                    QR code
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                    {% if user.is_authenticated %}
+                        {% if user_visit %}
+                            <span class="badge badge-success badge-lg" title="Visited {{ user_visit.visited_at|date:'j M Y' }}">&#10003; Visited</span>
+                        {% else %}
+                            <form method="post" action="{% url 'book_stations:visit-record' station.readable_id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-success" type="submit">Visited</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-qr' station.readable_id %}">
+                        QR code
+                    </a>
+                </div>
             </div>
             <p class="mt-4 text-lg text-base-content/80">
                 {{ station.description|default:"No description has been added for this station yet." }}

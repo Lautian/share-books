@@ -1,0 +1,35 @@
+{% extends "core/base.html" %}
+
+{% block title %}Visited stations{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-3xl space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <h1 class="text-3xl font-bold">Visited stations <span class="badge badge-primary">{{ visits|length }}</span></h1>
+        <a class="btn btn-outline" href="{% url 'users:profile' %}">Back to profile</a>
+    </div>
+
+    {% if visits %}
+        <ul class="space-y-3">
+            {% for visit in visits %}
+                <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300/70 border-l-8 border-l-success bg-base-100/80 p-4 shadow">
+                    <div class="min-w-0">
+                        <a class="text-lg font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' visit.station.readable_id %}">{{ visit.station.name }}</a>
+                        <p class="text-sm text-base-content/70">
+                            {{ visit.visited_at|date:"j M Y" }}
+                            {% if visit.station.location %}&middot; {{ visit.station.location|truncatechars:60 }}{% endif %}
+                        </p>
+                    </div>
+                    <form method="post" action="{% url 'book_stations:visit-remove' visit.station.readable_id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'book_stations:visit-list' %}">
+                        <button class="btn btn-sm btn-error btn-outline" type="submit">Delete</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-base-content/75">You have not recorded any visits yet. Open a station and press “Visited”.</p>
+    {% endif %}
+</section>
+{% endblock %}
