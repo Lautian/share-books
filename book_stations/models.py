@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.db import models
 from django.templatetags.static import static
+from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -102,3 +103,26 @@ class BookStation(models.Model):
 		if self.picture.startswith("uploads/"):
 			return default_storage.url(self.picture)
 		return static(self.picture)
+
+
+class StationVisit(models.Model):
+	user = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name="station_visits",
+	)
+	station = models.ForeignKey(
+		BookStation,
+		on_delete=models.CASCADE,
+		related_name="visits",
+	)
+	visited_at = models.DateTimeField(default=timezone.now)
+
+	class Meta:
+		ordering = ["-visited_at", "-id"]
+		constraints = [
+			models.UniqueConstraint(fields=["user", "station"], name="unique_station_visit_per_user"),
+		]
+
+	def __str__(self):
+		return f"{self.user} visited {self.station.name}"

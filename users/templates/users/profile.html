@@ -93,5 +93,25 @@
         </article>
     </div>
 
+    <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center justify-between gap-3">
+                <h2 class="card-title text-2xl">Recently visited stations</h2>
+                <a class="btn btn-sm btn-outline" href="{% url 'book_stations:visit-list' %}">View all visits</a>
+            </div>
+            {% if recent_visits %}
+                <ul class="space-y-2 text-sm">
+                    {% for visit in recent_visits %}
+                        <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                            <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' visit.station.readable_id %}">{{ visit.station.name }}</a>
+                            <span class="text-base-content/70"> &middot; {{ visit.visited_at|date:"j M Y" }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-base-content/75">You have not recorded any visits yet.</p>
+            {% endif %}
+        </div>
+    </article>
 </section>
 {% endblock %}
