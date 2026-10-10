@@ -186,8 +186,11 @@
                         </div>
 
                         <!-- Readable ID -->
-                        <div class="card-section-id mt-1 border-t border-base-300/60 pt-2">
-                            <p class="font-mono text-[0.72rem] leading-relaxed text-base-content/60 truncate" data-tooltip="{{ station.readable_id }}">{{ station.readable_id }}</p>
+                        <div class="card-section-id mt-1 flex items-center justify-between gap-2 border-t border-base-300/60 pt-2">
+                            <p class="min-w-0 font-mono text-[0.72rem] leading-relaxed text-base-content/60 truncate" data-tooltip="{{ station.readable_id }}">{{ station.readable_id }}</p>
+                            {% if station.pk in visited_ids %}
+                                <span class="badge badge-success shrink-0" data-testid="visited-badge">&#10003; Visited</span>
+                            {% endif %}
                         </div>
 
                     </div>

@@ -1372,3 +1372,12 @@ class StationVisitTests(TestCase):
         response = self.client.get(reverse("users:profile"))
         self.assertEqual(len(response.context["recent_visits"]), 3)
         self.assertContains(response, reverse("book_stations:visit-list"))
+
+    def test_list_shows_visited_badge_only_for_visited(self):
+        other = BookStation.objects.create(name="Other", location="x", added_by=self.user)
+        self.assertNotContains(self.client.get(reverse("book_stations:bookstation-list")), "visited-badge")
+        self.client.force_login(self.user)
+        self.client.post(reverse("book_stations:visit-record", args=[self.station.readable_id]))
+        response = self.client.get(reverse("book_stations:bookstation-list"))
+        self.assertContains(response, "visited-badge", count=1)
+        self.assertNotIn(other.pk, response.context["visited_ids"])

@@ -65,10 +65,17 @@ def bookstation_list(request):
 		("slug", "Slug"),
 	]
 
+	visited_ids = set()
+	if request.user.is_authenticated:
+		visited_ids = set(
+			StationVisit.objects.filter(user=request.user).values_list("station_id", flat=True)
+		)
+
 	return render(
 		request,
 		"book_stations/bookstation_list.html",
 		{
+			"visited_ids": visited_ids,
 			"stations": stations,
 			"active_sort_by": sort_by,
 			"active_sort_dir": sort_dir,
