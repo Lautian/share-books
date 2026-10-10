@@ -1340,7 +1340,7 @@ class StationVisitTests(TestCase):
     def test_button_shown_before_visit(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse("book_stations:bookstation-detail", args=[self.station.readable_id]))
-        self.assertContains(response, 'type="submit">Visited</button>')
+        self.assertContains(response, 'type="submit">Log visit</button>')
 
     def test_remove_and_list(self):
         self.client.force_login(self.user)

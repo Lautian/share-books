@@ -2,6 +2,12 @@
 
 {% block title %}Your profile{% endblock %}
 
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'core/css/clickable-item-cards.css' %}">
+{% endblock %}
+
 {% block content %}
 <section class="mx-auto max-w-4xl space-y-6">
     <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
@@ -102,8 +108,8 @@
             {% if recent_visits %}
                 <ul class="space-y-2 text-sm">
                     {% for visit in recent_visits %}
-                        <li class="rounded-lg border border-base-300/60 bg-base-100/70 p-2">
-                            <a class="font-semibold link-hover" href="{% url 'book_stations:bookstation-detail' visit.station.readable_id %}">{{ visit.station.name }}</a>
+                        <li class="clickable-item-card natural-card-surface rounded-lg border border-base-300/60 bg-base-100/70 p-2">
+                            <a class="font-semibold link-hover clickable-item-card-link" href="{% url 'book_stations:bookstation-detail' visit.station.readable_id %}">{{ visit.station.name }}</a>
                             <span class="text-base-content/70"> &middot; {{ visit.visited_at|date:"j M Y" }}</span>
                         </li>
                     {% endfor %}

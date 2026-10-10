@@ -451,7 +451,7 @@
                         {% else %}
                             <form method="post" action="{% url 'book_stations:visit-record' station.readable_id %}">
                                 {% csrf_token %}
-                                <button class="btn btn-success" type="submit">Visited</button>
+                                <button class="btn btn-info" type="submit">Log visit</button>
                             </form>
                         {% endif %}
                     {% endif %}
