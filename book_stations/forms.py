@@ -1,15 +1,20 @@
-from pathlib import Path
+import warnings
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
 from uuid import uuid4
 
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from openlocationcode import openlocationcode
+from PIL import Image, ImageOps
 
 from .models import BookStation
 
 
 PLUS_CODE_COORDINATE_PRECISION = Decimal("0.000001")
+MAX_STATION_IMAGE_PIXELS = 20_000_000
 
 
 def _normalize_plus_code(value):
@@ -54,13 +59,28 @@ def decode_plus_code(plus_code):
     )
 
 
+class StationPictureField(forms.ImageField):
+    def to_python(self, data):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            uploaded_image = super().to_python(data)
+
+        if uploaded_image and (
+            uploaded_image.image.width * uploaded_image.image.height
+            > MAX_STATION_IMAGE_PIXELS
+        ):
+            raise ValidationError("The image is too large.", code="max_pixels")
+
+        return uploaded_image
+
+
 class BookStationCreateForm(forms.ModelForm):
     plus_code = forms.CharField(
         required=False,
         max_length=20,
         help_text="Optional Plus Code, for example 849VCWC8+Q9.",
     )
-    picture_upload = forms.FileField(
+    picture_upload = StationPictureField(
         required=False,
         help_text="Optional station photo upload.",
     )
@@ -145,9 +165,20 @@ class BookStationCreateForm(forms.ModelForm):
         uploaded_picture = self.cleaned_data.get("picture_upload")
 
         if uploaded_picture:
-            extension = Path(uploaded_picture.name).suffix.lower()
-            upload_name = f"uploads/book_stations/images/photos/{uuid4().hex}{extension}"
-            saved_path = default_storage.save(upload_name, uploaded_picture)
+            uploaded_picture.seek(0)
+            with Image.open(uploaded_picture) as original_image:
+                image = ImageOps.exif_transpose(original_image)
+                image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                has_transparency = "A" in image.getbands() or "transparency" in image.info
+                image = image.convert("RGBA" if has_transparency else "RGB")
+                optimized_image = BytesIO()
+                image.save(optimized_image, format="WEBP", quality=82)
+
+            upload_name = f"uploads/book_stations/images/photos/{uuid4().hex}.webp"
+            saved_path = default_storage.save(
+                upload_name,
+                ContentFile(optimized_image.getvalue()),
+            )
             station.picture = saved_path
 
         if commit:
