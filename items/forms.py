@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from .models import Item
 
@@ -20,6 +21,22 @@ class ItemCreateForm(forms.ModelForm):
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
             "last_activity": forms.DateInput(attrs={"type": "date"}),
+        }
+        labels = {
+            "title": _("Title"),
+            "author": _("Author"),
+            "item_type": _("Item type"),
+            "thumbnail_url": _("Cover thumbnail URL"),
+            "description": _("Description"),
+            "status": _("Status"),
+            "current_book_station": _("Current station"),
+            "last_seen_at": _("Last seen at"),
+            "last_activity": _("Last activity"),
+        }
+        help_texts = {
+            "last_seen_at": _(
+                "Auto-set to current station when a current station is selected."
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -98,7 +115,10 @@ class ItemCreateForm(forms.ModelForm):
         if cleaned_data.get("item_type") == Item.ItemType.BOOK and not (
             cleaned_data.get("author") or ""
         ).strip():
-            self.add_error("author", "Author is required when the item type is BOOK.")
+            self.add_error(
+                "author",
+                _("Author is required when the item type is BOOK."),
+            )
 
         if current_station is not None:
             cleaned_data["last_seen_at"] = current_station

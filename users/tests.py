@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from book_stations.models import BookStation
 from items.models import Item
+from users.models import UserProfile
 
 
 class UserAuthorizationTests(TestCase):
@@ -21,7 +22,7 @@ class UserAuthorizationTests(TestCase):
         )
 
     def test_public_signup_is_unavailable(self):
-        response = self.client.get("/users/signup/")
+        response = self.client.get("/en/users/signup/")
 
         self.assertEqual(response.status_code, 404)
 
@@ -126,8 +127,58 @@ class UserAuthorizationTests(TestCase):
         response = self.client.post(reverse("users:logout"))
 
         self.assertTemplateUsed(response, "users/logged_out.html")
+        self.assertContains(response, reverse("users:login"))
+        self.assertNotContains(response, reverse("admin:index"))
+
+    def test_dutch_logout_page_keeps_dutch_home_link(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post("/nl/users/logout/")
+
+        self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            f'<a href="{reverse("users:login")}" class="btn btn-primary">Log in again</a>',
+            '<a href="/nl/" class="btn btn-ghost">Terug naar home</a>',
             html=True,
         )
+
+
+class LanguagePreferenceTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="lang")
+        self.user.set_password("pw12345!")
+        self.user.save()
+
+    def test_nl_prefix_renders_dutch(self):
+        response = self.client.get("/nl/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Language"], "nl")
+        self.assertContains(response, 'lang="nl"')
+        self.assertContains(response, "Biebs bekijken")
+
+    def test_default_language_uses_english_prefix(self):
+        response = self.client.get("/en/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Language"], "en")
+
+    def test_set_language_saves_preference_for_logged_in_user(self):
+        self.client.force_login(self.user)
+        response = self.client.post("/i18n/setlang/", {"language": "nl", "next": "/en/"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/nl/")
+        self.assertEqual(UserProfile.objects.get(user=self.user).language, "nl")
+
+    def test_profile_form_saves_language(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("users:profile"), {"language": "nl"})
+        self.assertRedirects(response, "/nl/users/profile/")
+        self.assertEqual(self.user.profile.language, "nl")
+
+    def test_login_switches_to_preferred_language(self):
+        UserProfile.objects.create(user=self.user, language="nl")
+        response = self.client.post(
+            reverse("users:login"), {"username": "lang", "password": "pw12345!"}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "/nl/users/profile/")
+        self.assertEqual(response.cookies["django_language"].value, "nl")

@@ -11,6 +11,7 @@ from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext as _, ngettext
 
 from book_stations.models import BookStation
 from movements.models import Movement
@@ -54,7 +55,11 @@ def _resolve_station_reference(value, field_name):
 
     if station is None:
         raise ValidationError(
-            {field_name: "Book station must reference an existing id or readable_id."}
+            {
+                field_name: _(
+                    "Book station must reference an existing id or readable_id."
+                )
+            }
         )
 
     return station
@@ -67,7 +72,7 @@ def _parse_last_activity(value):
         parsed_date = parse_date(value)
         if parsed_date is not None:
             return parsed_date
-    raise ValidationError({"last_activity": "Use ISO date format YYYY-MM-DD."})
+    raise ValidationError({"last_activity": _("Use ISO date format YYYY-MM-DD.")})
 
 
 def _build_station_style_map(stations):
@@ -117,14 +122,14 @@ def _transition_style(style_key):
 
 def _format_out_duration_label(start_timestamp, end_timestamp):
     if end_timestamp <= start_timestamp:
-        return "out briefly"
+        return _("out briefly")
 
     day_delta = (end_timestamp.date() - start_timestamp.date()).days
     if day_delta <= 0:
-        return "out for <1 day"
-    if day_delta == 1:
-        return "out for 1 day"
-    return f"out for {day_delta} days"
+        return _("out for <1 day")
+    return ngettext("out for %(count)s day", "out for %(count)s days", day_delta) % {
+        "count": day_delta,
+    }
 
 
 def _find_first_station_reference(movements):
@@ -190,13 +195,18 @@ def _build_journey_steps(movements):
                     movement.timestamp,
                 )
                 transition_title = (
-                    f"Out by {pending_out_event['reported_by']}, back in by "
-                    f"{movement.reported_by.username}"
+                    _("Out by %(out_user)s, back in by %(in_user)s")
+                    % {
+                        "out_user": pending_out_event["reported_by"],
+                        "in_user": movement.reported_by.username,
+                    }
                 )
                 transition_class = _transition_style("out_in")
             else:
-                transition_label = "in"
-                transition_title = f"By {movement.reported_by.username}"
+                transition_label = _("in")
+                transition_title = _("By %(user)s") % {
+                    "user": movement.reported_by.username
+                }
                 transition_class = _transition_style("in")
 
             steps.append(
@@ -213,8 +223,9 @@ def _build_journey_steps(movements):
         if from_station is not None and to_station is not None:
             steps.append(
                 {
-                    "transition_label": "move",
-                    "transition_title": f"By {movement.reported_by.username}",
+                    "transition_label": _("move"),
+                    "transition_title": _("By %(user)s")
+                    % {"user": movement.reported_by.username},
                     "transition_class": _transition_style("move"),
                     "station": _station_visual(to_station, station_style_map),
                 }
@@ -347,12 +358,12 @@ def item_list_create(request):
 
     if request.method == "POST":
         if not request.user.is_authenticated:
-            return JsonResponse({"error": "Authentication required."}, status=403)
+            return JsonResponse({"error": _("Authentication required.")}, status=403)
 
         try:
             payload = json.loads(request.body.decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError):
-            return JsonResponse({"error": "Invalid JSON payload."}, status=400)
+            return JsonResponse({"error": _("Invalid JSON payload.")}, status=400)
 
         try:
             status = payload.get("status", Item.Status.UNKNOWN) or Item.Status.UNKNOWN
@@ -524,7 +535,7 @@ def item_move(request, item_id):
                         "item": item,
                         "action": action,
                         "stations": stations,
-                        "error": "Please select a station.",
+                        "error": _("Please select a station."),
                     },
                 )
             station = BookStation.objects.filter(pk=station_id).first()
@@ -537,7 +548,10 @@ def item_move(request, item_id):
                         "item": item,
                         "action": action,
                         "stations": stations,
-                        "error": "Selected station not found. Please choose a station from the list.",
+                        "error": _(
+                            "Selected station not found. Please choose a station "
+                            "from the list."
+                        ),
                     },
                 )
             item.status = Item.Status.AT_BOOK_STATION
@@ -578,11 +592,18 @@ def _process_bulk_csv(csv_content, user):
         # Trigger header-row parsing so we can detect an empty file early.
         fieldnames = reader.fieldnames
     except csv.Error as exc:
-        results["errors"].append({"row": "—", "error": f"CSV parse error: {exc}"})
+        results["errors"].append(
+            {
+                "row": "—",
+                "error": _("CSV parse error: %(error)s") % {"error": exc},
+            }
+        )
         return results
 
     if not fieldnames:
-        results["errors"].append({"row": "—", "error": "No header row found in CSV."})
+        results["errors"].append(
+            {"row": "—", "error": _("No header row found in CSV.")}
+        )
         return results
 
     row_count = 0
@@ -595,8 +616,11 @@ def _process_bulk_csv(csv_content, user):
                 {
                     "row": "—",
                     "error": (
-                        f"Row limit of {_BULK_CSV_MAX_ROWS} exceeded;"
-                        " remaining rows were not processed."
+                        _(
+                            "Row limit of %(limit)s exceeded; remaining rows were "
+                            "not processed."
+                        )
+                        % {"limit": _BULK_CSV_MAX_ROWS}
                     ),
                 }
             )
@@ -614,7 +638,9 @@ def _process_bulk_csv(csv_content, user):
         try:
             title = row.get("title", "")
             if not title:
-                results["errors"].append({"row": row_index, "error": "title is required."})
+                results["errors"].append(
+                    {"row": row_index, "error": _("title is required.")}
+                )
                 continue
 
             # Validate status explicitly so that typos surface as a clear
@@ -626,8 +652,8 @@ def _process_bulk_csv(csv_content, user):
                     {
                         "row": row_index,
                         "error": (
-                            f"status: '{raw_status}' is not a valid status."
-                            f" Valid values: {valid}."
+                            _("status: '%(status)s' is not a valid status. Valid values: %(valid)s.")
+                            % {"status": raw_status, "valid": valid}
                         ),
                     }
                 )
@@ -642,8 +668,11 @@ def _process_bulk_csv(csv_content, user):
                     {
                         "row": row_index,
                         "error": (
-                            f"item_type: '{raw_item_type}' is not a valid type."
-                            f" Valid values: {valid}."
+                            _(
+                                "item_type: '%(item_type)s' is not a valid type. "
+                                "Valid values: %(valid)s."
+                            )
+                            % {"item_type": raw_item_type, "valid": valid}
                         ),
                     }
                 )
@@ -699,7 +728,9 @@ def _process_bulk_csv(csv_content, user):
             results["errors"].append({"row": row_index, "error": error_msg})
 
     if row_count == 0:
-        results["errors"].append({"row": "—", "error": "No data rows found in CSV."})
+        results["errors"].append(
+            {"row": "—", "error": _("No data rows found in CSV.")}
+        )
 
     return results
 
@@ -732,7 +763,10 @@ def item_bulk_add(request):
                 {
                     **ctx_limits,
                     "form_error": (
-                        "Please use only one input: either paste CSV text or upload a file."
+                        _(
+                            "Please use only one input: either paste CSV text or "
+                            "upload a file."
+                        )
                     ),
                 },
             )
@@ -741,7 +775,10 @@ def item_bulk_add(request):
             return render(
                 request,
                 "items/item_bulk_add.html",
-                {**ctx_limits, "form_error": "Please provide either CSV text or a CSV file."},
+                {
+                    **ctx_limits,
+                    "form_error": _("Please provide either CSV text or a CSV file."),
+                },
             )
 
         if csv_file:
@@ -752,7 +789,11 @@ def item_bulk_add(request):
                     {
                         **ctx_limits,
                         "form_error": (
-                            f"The uploaded file exceeds the {_BULK_CSV_MAX_FILE_BYTES // 1024} KB size limit."
+                            _(
+                                "The uploaded file exceeds the %(limit)s KB size "
+                                "limit."
+                            )
+                            % {"limit": _BULK_CSV_MAX_FILE_BYTES // 1024}
                         ),
                     },
                 )
@@ -765,7 +806,10 @@ def item_bulk_add(request):
                     {
                         **ctx_limits,
                         "form_error": (
-                            "Could not decode the uploaded file. Please use UTF-8 encoding."
+                            _(
+                                "Could not decode the uploaded file. Please use "
+                                "UTF-8 encoding."
+                            )
                         ),
                     },
                 )
@@ -777,7 +821,11 @@ def item_bulk_add(request):
                     {
                         **ctx_limits,
                         "form_error": (
-                            f"The pasted CSV text exceeds the {_BULK_CSV_MAX_TEXT_CHARS // 1024} K character limit."
+                            _(
+                                "The pasted CSV text exceeds the %(limit)s K "
+                                "character limit."
+                            )
+                            % {"limit": _BULK_CSV_MAX_TEXT_CHARS // 1024}
                         ),
                     },
                 )

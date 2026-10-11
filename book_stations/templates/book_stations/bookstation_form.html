@@ -1,11 +1,28 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
-{% block title %}{% if is_edit %}Edit Book Station{% else %}Add Book Station{% endif %}{% endblock %}
+{% block title %}{% if is_edit %}{% trans "Edit Book Station" %}{% else %}{% trans "Add Book Station" %}{% endif %}{% endblock %}
 
 {% block extra_head %}
+{% trans "Could not infer a Plus Code from those coordinates." as plus_code_inference_error %}
+{% trans "Could not infer coordinates from that Plus Code." as coordinates_inference_error %}
+{% trans "Latitude and longitude were inferred from Plus Code." as coordinates_inferred_text %}
+{% trans "Geolocation is not supported by this browser." as geolocation_unsupported_text %}
+{% trans "Fetching your location..." as geolocation_fetching_text %}
+{% trans "Latitude and longitude were added." as coordinates_added_text %}
+{% trans "Could not read your location. You can still enter coordinates manually." as geolocation_read_error %}
 <script>
     const plusCodeEncodeUrl = "{% url 'book_stations:pluscode-encode' %}";
     const plusCodeDecodeUrl = "{% url 'book_stations:pluscode-decode' %}";
+    const geoMessages = {
+        plusCodeInferenceError: "{{ plus_code_inference_error|escapejs }}",
+        coordinatesInferenceError: "{{ coordinates_inference_error|escapejs }}",
+        coordinatesInferred: "{{ coordinates_inferred_text|escapejs }}",
+        geolocationUnsupported: "{{ geolocation_unsupported_text|escapejs }}",
+        geolocationFetching: "{{ geolocation_fetching_text|escapejs }}",
+        coordinatesAdded: "{{ coordinates_added_text|escapejs }}",
+        geolocationReadError: "{{ geolocation_read_error|escapejs }}"
+    };
 
     let plusCodeInput = null;
     let latitudeInput = null;
@@ -53,7 +70,7 @@
             plusCodeInput.value = payload.plus_code || "";
 
             if (!plusCodeInput.value) {
-                setGeoStatus("Could not infer a Plus Code from those coordinates.");
+                setGeoStatus(geoMessages.plusCodeInferenceError);
             }
         } catch {
             plusCodeInput.value = "";
@@ -75,13 +92,13 @@
             const response = await fetch(`${plusCodeDecodeUrl}?${params.toString()}`);
 
             if (!response.ok) {
-                setGeoStatus("Could not infer coordinates from that Plus Code.");
+                setGeoStatus(geoMessages.coordinatesInferenceError);
                 return;
             }
 
             const payload = await response.json();
             if (!payload.latitude || !payload.longitude) {
-                setGeoStatus("Could not infer coordinates from that Plus Code.");
+                setGeoStatus(geoMessages.coordinatesInferenceError);
                 return;
             }
 
@@ -89,9 +106,9 @@
             latitudeInput.value = payload.latitude;
             longitudeInput.value = payload.longitude;
             isSyncingCoordinates = false;
-            setGeoStatus("Latitude and longitude were inferred from Plus Code.");
+            setGeoStatus(geoMessages.coordinatesInferred);
         } catch {
-            setGeoStatus("Could not infer coordinates from that Plus Code.");
+            setGeoStatus(geoMessages.coordinatesInferenceError);
         }
     }
 
@@ -128,20 +145,20 @@
         }
 
         if (!navigator.geolocation) {
-            setGeoStatus("Geolocation is not supported by this browser.");
+            setGeoStatus(geoMessages.geolocationUnsupported);
             return;
         }
 
-        setGeoStatus("Fetching your location...");
+        setGeoStatus(geoMessages.geolocationFetching);
         navigator.geolocation.getCurrentPosition(
             function (position) {
                 latitudeInput.value = position.coords.latitude.toFixed(6);
                 longitudeInput.value = position.coords.longitude.toFixed(6);
                 syncPlusCodeFromCoordinates();
-                setGeoStatus("Latitude and longitude were added.");
+                setGeoStatus(geoMessages.coordinatesAdded);
             },
             function () {
-                setGeoStatus("Could not read your location. You can still enter coordinates manually.");
+                setGeoStatus(geoMessages.geolocationReadError);
             }
         );
     }
@@ -154,12 +171,12 @@
 <section class="mx-auto max-w-3xl">
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
         <header class="border-b border-base-300/70 pb-4">
-            <p class="text-sm uppercase tracking-[0.18em] text-success">Contribute</p>
+            <p class="text-sm uppercase tracking-[0.18em] text-success">{% trans "Contribute" %}</p>
             <h1 class="mt-2 text-4xl font-bold leading-tight">
-                {% if is_edit %}Edit Book Station{% else %}Add Book Station{% endif %}
+                {% if is_edit %}{% trans "Edit Book Station" %}{% else %}{% trans "Add Book Station" %}{% endif %}
             </h1>
             <p class="mt-3 text-base-content/80">
-                Required field is <strong>name</strong>. Also provide either a textual location or geolocation coordinates. The station slug is generated from the name.
+                {% trans "Required field is name. Also provide either a textual location or geolocation coordinates. The station slug is generated from the name." %}
             </p>
         </header>
 
@@ -171,79 +188,80 @@
             {% endif %}
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Name *</span>
+                <span class="label-text font-semibold">{{ form.name.label }} *</span>
                 {{ form.name }}
                 {% if form.name.errors %}<span class="text-error text-sm">{{ form.name.errors.0 }}</span>{% endif %}
             </label>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Location (text)</span>
+                <span class="label-text font-semibold">{{ form.location.label }}</span>
                 {{ form.location }}
-                <span class="label-text-alt">Street, neighborhood, city, or other textual place description.</span>
+                <span class="label-text-alt">{{ form.location.help_text }}</span>
                 {% if form.location.errors %}<span class="text-error text-sm">{{ form.location.errors.0 }}</span>{% endif %}
             </label>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Description</span>
+                <span class="label-text font-semibold">{{ form.description.label }}</span>
                 {{ form.description }}
                 {% if form.description.errors %}<span class="text-error text-sm">{{ form.description.errors.0 }}</span>{% endif %}
             </label>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Picture upload</span>
+                <span class="label-text font-semibold">{{ form.picture_upload.label }}</span>
                 {{ form.picture_upload }}
+                {% if form.picture_upload.help_text %}<span class="label-text-alt">{{ form.picture_upload.help_text }}</span>{% endif %}
                 {% if form.picture_upload.errors %}<span class="text-error text-sm">{{ form.picture_upload.errors.0 }}</span>{% endif %}
             </label>
 
             <div class="rounded-xl border border-base-300/70 bg-base-100/70 p-4">
-                <p class="text-sm font-semibold">Geolocation</p>
+                <p class="text-sm font-semibold">{% trans "Geolocation" %}</p>
                 <p class="mt-1 text-sm text-base-content/75">
-                    Provide coordinates if location text is empty, or use coordinates alongside text for precision.
+                    {% trans "Provide coordinates if location text is empty, or use coordinates alongside text for precision." %}
                 </p>
 
                 <label class="form-control mt-3 w-full">
                     <span class="label justify-start gap-2">
-                        <span class="label-text font-semibold">Plus Code</span>
+                        <span class="label-text font-semibold">{{ form.plus_code.label }}</span>
                         <details class="relative">
-                            <summary class="btn btn-xs btn-circle btn-ghost text-info list-none">?</summary>
+                            <summary class="btn btn-xs btn-circle btn-ghost text-info list-none" aria-label="{% trans 'More information about Plus Codes' %}" title="{% trans 'More information about Plus Codes' %}">?</summary>
                             <div class="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-base-300 bg-base-100 p-3 text-xs text-base-content shadow-2xl">
-                                Plus Codes are short digital addresses that identify a location.
-                                <a class="link link-primary" href="https://maps.google.com/pluscodes/" target="_blank" rel="noopener noreferrer">Learn more about Plus Codes</a>
+                                {% trans "Plus Codes are short digital addresses that identify a location." %}
+                                <a class="link link-primary" href="https://maps.google.com/pluscodes/" target="_blank" rel="noopener noreferrer">{% trans "Learn more about Plus Codes" %}</a>
                             </div>
                         </details>
                     </span>
                     {{ form.plus_code }}
-                    <span class="label-text-alt">Use a full Plus Code (for example, 849VCWC8+Q9).</span>
+                    <span class="label-text-alt">{{ form.plus_code.help_text }}</span>
                     {% if form.plus_code.errors %}<span class="text-error text-sm">{{ form.plus_code.errors.0 }}</span>{% endif %}
                 </label>
 
                 <div class="mt-3 grid gap-3 md:grid-cols-2">
                     <label class="form-control w-full">
-                        <span class="label-text font-semibold">Latitude</span>
+                        <span class="label-text font-semibold">{{ form.latitude.label }}</span>
                         {{ form.latitude }}
                         {% if form.latitude.errors %}<span class="text-error text-sm">{{ form.latitude.errors.0 }}</span>{% endif %}
                     </label>
                     <label class="form-control w-full">
-                        <span class="label-text font-semibold">Longitude</span>
+                        <span class="label-text font-semibold">{{ form.longitude.label }}</span>
                         {{ form.longitude }}
                         {% if form.longitude.errors %}<span class="text-error text-sm">{{ form.longitude.errors.0 }}</span>{% endif %}
                     </label>
                 </div>
 
                 <div class="mt-3 flex flex-wrap items-center gap-3">
-                    <button class="btn btn-sm btn-outline" type="button" onclick="fillCurrentLocation()">Use my current location</button>
+                    <button class="btn btn-sm btn-outline" type="button" onclick="fillCurrentLocation()">{% trans "Use my current location" %}</button>
                     <span id="geo-status" class="text-sm text-base-content/70"></span>
                 </div>
             </div>
 
             <div class="flex flex-wrap gap-2">
                 <button class="btn btn-primary" type="submit">
-                    {% if is_edit %}Save changes{% else %}Create station{% endif %}
+                    {% if is_edit %}{% trans "Save changes" %}{% else %}{% trans "Create station" %}{% endif %}
                 </button>
                 {% if is_edit %}
-                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">Cancel</a>
+                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">{% trans "Cancel" %}</a>
                 {% else %}
-                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">Cancel</a>
+                    <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">{% trans "Cancel" %}</a>
                 {% endif %}
             </div>
         </form>

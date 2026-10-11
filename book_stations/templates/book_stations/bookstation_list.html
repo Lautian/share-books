@@ -1,6 +1,7 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
-{% block title %}Browse Book Stations{% endblock %}
+{% block title %}{% trans "Browse Book Stations" %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -75,27 +76,29 @@
 {% endblock %}
 
 {% block content %}
+{% trans "No description yet." as no_description_text %}
+{% trans "Coordinates not provided" as coordinates_missing_text %}
 <section class="mx-auto max-w-6xl">
     <div class="mb-8 rounded-2xl border border-base-300/70 bg-base-100/70 p-6 shadow-xl backdrop-blur-sm md:p-8">
 
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <p class="text-sm uppercase tracking-[0.18em] text-success">Open shelf network</p>
-                <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">Browse Book Stations</h1>
+                <p class="text-sm uppercase tracking-[0.18em] text-success">{% trans "Open shelf network" %}</p>
+                <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{% trans "Browse Book Stations" %}</h1>
                 <p class="mt-3 max-w-3xl text-lg text-base-content/80">
-                    Explore community book-sharing cabinets near parks, schools, and neighborhood corners.
+                    {% trans "Explore community book-sharing cabinets near parks, schools, and neighborhood corners." %}
                 </p>
             </div>
             {% if user.is_authenticated %}
                 <a class="btn btn-primary btn-sm mt-4 shrink-0 self-start" href="{% url 'book_stations:bookstation-create' %}">
-                    Add station
+                    {% trans "Add station" %}
                 </a>
             {% endif %}
         </div>
 
         <form class="mt-5 flex flex-wrap items-end gap-3" method="get">
             <label class="form-control">
-                <span class="label-text text-sm font-semibold">Sort by</span>
+                <span class="label-text text-sm font-semibold">{% trans "Sort by" %}</span>
                 <select
                     class="select select-bordered select-sm md:select-md"
                     name="sort_by"
@@ -109,13 +112,13 @@
 
             <input id="bs-sort-dir-input" type="hidden" name="sort_dir" value="{{ active_sort_dir }}">
 
-            <div class="join" role="group" aria-label="Sort direction">
+            <div class="join" role="group" aria-label="{% trans 'Sort direction' %}">
                 <button
                     class="btn btn-sm join-item md:btn-md {% if active_sort_dir == 'asc' %}btn-primary{% else %}btn-outline{% endif %}"
                     type="button"
                     onclick="document.getElementById('bs-sort-dir-input').value = 'asc'; this.form.submit();"
-                    aria-label="Sort ascending"
-                    title="Sort ascending"
+                    aria-label="{% trans 'Sort ascending' %}"
+                    title="{% trans 'Sort ascending' %}"
                 >
                     ↑
                 </button>
@@ -123,20 +126,20 @@
                     class="btn btn-sm join-item md:btn-md {% if active_sort_dir == 'desc' %}btn-primary{% else %}btn-outline{% endif %}"
                     type="button"
                     onclick="document.getElementById('bs-sort-dir-input').value = 'desc'; this.form.submit();"
-                    aria-label="Sort descending"
-                    title="Sort descending"
+                    aria-label="{% trans 'Sort descending' %}"
+                    title="{% trans 'Sort descending' %}"
                 >
                     ↓
                 </button>
             </div>
 
             {% if active_sort_by != "name" or active_sort_dir != "asc" %}
-                <a class="btn btn-sm btn-outline md:btn-md" href="{% url 'book_stations:bookstation-list' %}">Reset</a>
+                <a class="btn btn-sm btn-outline md:btn-md" href="{% url 'book_stations:bookstation-list' %}">{% trans "Reset" %}</a>
             {% endif %}
         </form>
 
         <div class="mt-4 flex justify-end">
-            <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">Browse items</a>
+            <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">{% trans "Browse items" %}</a>
         </div>
     </div>
 
@@ -155,14 +158,14 @@
 
                         <!-- Description -->
                         <div class="card-section-desc mb-2">
-                            <p class="text-base text-base-content/80 line-clamp-3" data-tooltip="{{ station.description|default:'No description yet.' }}">
-                                {{ station.description|default:"No description yet." }}
+                            <p class="text-base text-base-content/80 line-clamp-3" data-tooltip="{{ station.description|default:no_description_text }}">
+                                {{ station.description|default:no_description_text }}
                             </p>
                         </div>
 
                         <!-- Item count -->
                         <div class="card-section-count mb-3">
-                            <p class="text-sm font-medium text-base-content/70">{{ station.item_count }} item{{ station.item_count|pluralize }}</p>
+                            <p class="text-sm font-medium text-base-content/70">{% blocktrans trimmed count item_count=station.item_count %}{{ item_count }} item{% plural %}{{ item_count }} items{% endblocktrans %}</p>
                         </div>
 
                         <!-- Spacer pushes bottom meta to consistent position -->
@@ -170,18 +173,19 @@
 
                         <!-- Location -->
                         <div class="card-section-location flex items-start gap-2 text-sm min-w-0">
-                            <span class="badge badge-ghost shrink-0 mt-0.5">Location</span>
+                            <span class="badge badge-ghost shrink-0 mt-0.5">{% trans "Location" %}</span>
                             <span class="font-medium line-clamp-2 min-w-0 flex-1" data-tooltip="{{ station.location }}">{{ station.location }}</span>
                         </div>
 
                         <!-- Coordinates -->
                         <div class="card-section-geo mt-1 text-sm text-base-content/70">
                             {% if station.latitude is not None and station.longitude is not None %}
-                                <span class="geo-pill" title="Lat {{ station.latitude }} / Lng {{ station.longitude }}">
-                                    Lat {{ station.latitude }} / Lng {{ station.longitude }}
+                                {% blocktrans trimmed with lat=station.latitude lng=station.longitude asvar coordinates_text %}Lat {{ lat }} / Lng {{ lng }}{% endblocktrans %}
+                                <span class="geo-pill" title="{{ coordinates_text }}">
+                                    {{ coordinates_text }}
                                 </span>
                             {% else %}
-                                <span class="geo-pill">Coordinates not provided</span>
+                                <span class="geo-pill">{{ coordinates_missing_text }}</span>
                             {% endif %}
                         </div>
 
@@ -189,7 +193,7 @@
                         <div class="card-section-id mt-1 flex items-center justify-between gap-2 border-t border-base-300/60 pt-2">
                             <p class="min-w-0 font-mono text-[0.72rem] leading-relaxed text-base-content/60 truncate" data-tooltip="{{ station.readable_id }}">{{ station.readable_id }}</p>
                             {% if station.pk in visited_ids %}
-                                <span class="badge badge-success shrink-0" data-testid="visited-badge">&#10003; Visited</span>
+                                <span class="badge badge-success shrink-0" data-testid="visited-badge">&#10003; {% trans "Visited" %}</span>
                             {% endif %}
                         </div>
 
@@ -199,7 +203,7 @@
         </div>
     {% else %}
         <div class="alert border border-base-300 bg-base-100/80 shadow">
-            <span>No book stations are available yet.</span>
+            <span>{% trans "No book stations are available yet." %}</span>
         </div>
     {% endif %}
 </section>

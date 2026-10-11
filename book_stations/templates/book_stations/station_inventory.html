@@ -1,29 +1,31 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 {% load static %}
 
-{% block title %}{{ station.name }} Inventory{% endblock %}
+{% block title %}{% blocktrans trimmed with station_name=station.name %}{{ station_name }} Inventory{% endblocktrans %}{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/clickable-item-cards.css' %}">
 {% endblock %}
 
 {% block content %}
+{% trans "Unknown" as unknown_text %}
 <section class="mx-auto max-w-5xl">
     <div class="mb-5 flex flex-wrap gap-2">
         <a class="btn btn-sm btn-outline" href="{% url 'book_stations:bookstation-detail' station.readable_id %}">
-            Back to station
+            {% trans "Back to station" %}
         </a>
-        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">All items</a>
+        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">{% trans "All items" %}</a>
     </div>
 
     <header class="inventory-shell natural-card-surface mb-6 rounded-2xl p-6 shadow-xl">
-        <p class="text-sm uppercase tracking-[0.18em] text-success">Full inventory</p>
+        <p class="text-sm uppercase tracking-[0.18em] text-success">{% trans "Full inventory" %}</p>
         <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{{ station.name }}</h1>
-        <p class="mt-3 text-base-content/80">Items currently at this book station</p>
+        <p class="mt-3 text-base-content/80">{% trans "Items currently at this book station" %}</p>
 
         <form class="mt-5 flex flex-wrap items-end gap-3" method="get">
             <label class="form-control">
-                <span class="label-text text-sm font-semibold">Sort by</span>
+                <span class="label-text text-sm font-semibold">{% trans "Sort by" %}</span>
                 <select
                     class="select select-bordered select-sm md:select-md"
                     name="sort_by"
@@ -37,13 +39,13 @@
 
             <input id="sort-dir-input" type="hidden" name="sort_dir" value="{{ active_sort_dir }}">
 
-            <div class="join" role="group" aria-label="Sort direction">
+            <div class="join" role="group" aria-label="{% trans 'Sort direction' %}">
                 <button
                     class="btn btn-sm join-item md:btn-md {% if active_sort_dir == 'asc' %}btn-primary{% else %}btn-outline{% endif %}"
                     type="button"
                     onclick="document.getElementById('sort-dir-input').value = 'asc'; this.form.submit();"
-                    aria-label="Sort ascending"
-                    title="Sort ascending"
+                    aria-label="{% trans 'Sort ascending' %}"
+                    title="{% trans 'Sort ascending' %}"
                 >
                     ↑
                 </button>
@@ -51,15 +53,15 @@
                     class="btn btn-sm join-item md:btn-md {% if active_sort_dir == 'desc' %}btn-primary{% else %}btn-outline{% endif %}"
                     type="button"
                     onclick="document.getElementById('sort-dir-input').value = 'desc'; this.form.submit();"
-                    aria-label="Sort descending"
-                    title="Sort descending"
+                    aria-label="{% trans 'Sort descending' %}"
+                    title="{% trans 'Sort descending' %}"
                 >
                     ↓
                 </button>
             </div>
 
             {% if active_sort_by != "title" or active_sort_dir != "asc" %}
-                <a class="btn btn-sm btn-outline md:btn-md" href="{% url 'book_stations:bookstation-inventory' station.readable_id %}">Reset</a>
+                <a class="btn btn-sm btn-outline md:btn-md" href="{% url 'book_stations:bookstation-inventory' station.readable_id %}">{% trans "Reset" %}</a>
             {% endif %}
         </form>
     </header>
@@ -72,7 +74,7 @@
                         <img
                             class="mb-3 h-40 w-full rounded-xl border border-base-300/70 object-cover"
                             src="{{ item.thumbnail_url }}"
-                            alt="Cover image for {{ item.title }}"
+                            alt="{% blocktrans trimmed with item_title=item.title %}Cover image for {{ item_title }}{% endblocktrans %}"
                             loading="lazy"
                         >
                     {% endif %}
@@ -85,18 +87,18 @@
                     </div>
 
                     <p class="mt-2 text-sm text-base-content/80">
-                        {% if item.author %}by {{ item.author }}{% else %}Author not specified{% endif %}
+                        {% if item.author %}{% blocktrans trimmed with item_author=item.author %}by {{ item_author }}{% endblocktrans %}{% else %}{% trans "Author not specified" %}{% endif %}
                     </p>
 
                     <p class="mt-2 text-xs text-base-content/65">
-                        Last activity: {{ item.last_activity|date:"Y-m-d"|default:"Unknown" }}
+                        {% blocktrans trimmed with last_activity=item.last_activity|date:"Y-m-d"|default:unknown_text %}Last activity: {{ last_activity }}{% endblocktrans %}
                     </p>
                 </li>
             {% endfor %}
         </ul>
     {% else %}
         <div class="alert border border-base-300 bg-base-100/80 shadow">
-            <span>No items are currently marked as available at this station.</span>
+            <span>{% trans "No items are currently marked as available at this station." %}</span>
         </div>
     {% endif %}
 </section>

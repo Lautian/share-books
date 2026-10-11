@@ -17,15 +17,22 @@ Including another URLconf
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from users import views as users_views
+from django.conf.urls.i18n import i18n_patterns
 from django.urls import include, path
 
 urlpatterns = [
+    path("i18n/setlang/", users_views.set_language, name="set_language"),
+]
+
+urlpatterns += i18n_patterns(
     path("", include("core.urls")),
     path('admin/', admin.site.urls),
     path("book_stations/", include("book_stations.urls")),
     path("items/", include("items.urls")),
     path("users/", include("users.urls")),
-]
+    prefix_default_language=True,
+)
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

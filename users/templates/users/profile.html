@@ -1,8 +1,8 @@
 {% extends "core/base.html" %}
+{% load static i18n %}
 
-{% block title %}Your profile{% endblock %}
+{% block title %}{% trans 'Your profile' %}{% endblock %}
 
-{% load static %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'core/css/clickable-item-cards.css' %}">
@@ -12,25 +12,43 @@
 <section class="mx-auto max-w-4xl space-y-6">
     <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
         <div class="card-body">
-            <h1 class="card-title text-3xl">Profile</h1>
-            <p class="text-lg">Signed in as <strong>{{ request.user.username }}</strong>.</p>
+            <h1 class="card-title text-3xl">{% trans 'Profile' %}</h1>
+            <p class="text-lg">{% blocktrans trimmed with username=request.user.username %}Signed in as <strong>{{ username }}</strong>.{% endblocktrans %}</p>
             <div class="card-actions mt-2 flex-wrap">
-                <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list' %}">View stations</a>
-                <a class="btn btn-outline" href="{% url 'book_stations:bookstation-create' %}">Add station</a>
-                <a class="btn btn-outline" href="{% url 'items:item-create' %}">Add item</a>
+                <a class="btn btn-primary" href="{% url 'book_stations:bookstation-list' %}">{% trans 'View stations' %}</a>
+                <a class="btn btn-outline" href="{% url 'book_stations:bookstation-create' %}">{% trans 'Add station' %}</a>
+                <a class="btn btn-outline" href="{% url 'items:item-create' %}">{% trans 'Add item' %}</a>
                 <form method="post" action="{% url 'users:logout' %}">
                     {% csrf_token %}
-                    <button class="btn btn-outline" type="submit">Log out</button>
+                    <button class="btn btn-outline" type="submit">{% trans 'Log out' %}</button>
                 </form>
             </div>
         </div>
     </div>
 
+    <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl">{% trans "Language preference" %}</h2>
+            <form method="post" action="{% url 'users:profile' %}" class="flex flex-wrap items-end gap-3">
+                {% csrf_token %}
+                <label class="form-control" for="id_language">
+                    <div class="label"><span class="label-text">{% trans "Preferred language" %}</span></div>
+                    <select id="id_language" name="language" class="select select-bordered">
+                        {% for code, name in LANGUAGES %}
+                            <option value="{{ code }}"{% if code == user_profile.language %} selected{% endif %}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button class="btn btn-primary" type="submit">{% trans "Save" %}</button>
+            </form>
+        </div>
+    </article>
+
     <div class="grid gap-6 md:grid-cols-2">
         <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
             <div class="card-body">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="card-title text-2xl">Stations you added</h2>
+                    <h2 class="card-title text-2xl">{% trans 'Stations you added' %}</h2>
                     <span class="badge badge-primary">{{ added_stations|length }}</span>
                 </div>
 
@@ -46,17 +64,17 @@
                                 <p class="text-base-content/70">{{ station.location }}</p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <a class="btn btn-xs btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
-                                        Edit
+                                        {% trans "Edit" %}
                                     </a>
                                     <a class="btn btn-xs btn-error btn-outline" href="{% url 'book_stations:bookstation-delete' station.readable_id %}">
-                                        Delete
+                                        {% trans "Delete" %}
                                     </a>
                                 </div>
                             </li>
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-base-content/75">You have not added any stations yet.</p>
+                    <p class="text-base-content/75">{% trans 'You have not added any stations yet.' %}</p>
                 {% endif %}
             </div>
         </article>
@@ -64,7 +82,7 @@
         <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
             <div class="card-body">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="card-title text-2xl">Items you added</h2>
+                    <h2 class="card-title text-2xl">{% trans 'Items you added' %}</h2>
                     <span class="badge badge-primary">{{ added_items|length }}</span>
                 </div>
 
@@ -79,21 +97,21 @@
                                 </div>
                                 <p class="text-base-content/70">
                                     {{ item.get_item_type_display }}
-                                    {% if item.author %}by {{ item.author }}{% endif %}
+                                    {% if item.author %}{% blocktrans with author=item.author %}by {{ author }}{% endblocktrans %}{% endif %}
                                 </p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <a class="btn btn-xs btn-outline" href="{% url 'items:item-edit' item.id %}">
-                                        Edit
+                                        {% trans "Edit" %}
                                     </a>
                                     <a class="btn btn-xs btn-error btn-outline" href="{% url 'items:item-delete' item.id %}">
-                                        Delete
+                                        {% trans "Delete" %}
                                     </a>
                                 </div>
                             </li>
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-base-content/75">You have not added any items yet.</p>
+                    <p class="text-base-content/75">{% trans 'You have not added any items yet.' %}</p>
                 {% endif %}
             </div>
         </article>
@@ -102,8 +120,8 @@
     <article class="card border border-base-300/70 bg-base-100/75 shadow-xl">
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
-                <h2 class="card-title text-2xl">Recently visited stations</h2>
-                <a class="btn btn-sm btn-outline" href="{% url 'book_stations:visit-list' %}">View all visits</a>
+                <h2 class="card-title text-2xl">{% trans 'Recently visited stations' %}</h2>
+                <a class="btn btn-sm btn-outline" href="{% url 'book_stations:visit-list' %}">{% trans 'View all visits' %}</a>
             </div>
             {% if recent_visits %}
                 <ul class="space-y-2 text-sm">
@@ -115,7 +133,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="text-base-content/75">You have not recorded any visits yet.</p>
+                <p class="text-base-content/75">{% trans 'You have not recorded any visits yet.' %}</p>
             {% endif %}
         </div>
     </article>

@@ -1,6 +1,7 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
-{% block title %}{% if is_edit %}Edit Item{% else %}Add Item{% endif %}{% endblock %}
+{% block title %}{% if is_edit %}{% trans "Edit Item" %}{% else %}{% trans "Add Item" %}{% endif %}{% endblock %}
 
 {% block extra_head %}
 <script>
@@ -79,12 +80,14 @@
 <section class="mx-auto max-w-3xl">
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
         <header class="border-b border-base-300/70 pb-4">
-            <p class="text-sm uppercase tracking-[0.18em] text-success">Contribute</p>
+            <p class="text-sm uppercase tracking-[0.18em] text-success">{% trans "Contribute" %}</p>
             <h1 class="mt-2 text-4xl font-bold leading-tight">
-                {% if is_edit %}Edit Item{% else %}Add Item{% endif %}
+                {% if is_edit %}{% trans "Edit Item" %}{% else %}{% trans "Add Item" %}{% endif %}
             </h1>
             <p class="mt-3 text-base-content/80">
-                Only <strong>title</strong> is always required. <strong>Author</strong> is also required when item type is <strong>Book</strong>.
+                {% blocktrans trimmed %}
+                    Only <strong>title</strong> is always required. <strong>Author</strong> is also required when item type is <strong>Book</strong>.
+                {% endblocktrans %}
             </p>
         </header>
 
@@ -96,85 +99,85 @@
             {% endif %}
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Title *</span>
+                <span class="label-text font-semibold">{% trans "Title *" %}</span>
                 {{ form.title }}
                 {% if form.title.errors %}<span class="text-error text-sm">{{ form.title.errors.0 }}</span>{% endif %}
             </label>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Author</span>
+                <span class="label-text font-semibold">{% trans "Author" %}</span>
                 {{ form.author }}
                 {% if form.author.errors %}<span class="text-error text-sm">{{ form.author.errors.0 }}</span>{% endif %}
             </label>
 
             <div class="grid gap-3 md:grid-cols-2">
                 <label class="form-control w-full">
-                    <span class="label-text font-semibold">Item type</span>
+                    <span class="label-text font-semibold">{% trans "Item type" %}</span>
                     {{ form.item_type }}
                     {% if form.item_type.errors %}<span class="text-error text-sm">{{ form.item_type.errors.0 }}</span>{% endif %}
                 </label>
 
                 <label class="form-control w-full">
-                    <span class="label-text font-semibold">Status</span>
+                    <span class="label-text font-semibold">{% trans "Status" %}</span>
                     {{ form.status }}
                     {% if form.status.errors %}<span class="text-error text-sm">{{ form.status.errors.0 }}</span>{% endif %}
                 </label>
             </div>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Cover thumbnail URL</span>
+                <span class="label-text font-semibold">{% trans "Cover thumbnail URL" %}</span>
                 {{ form.thumbnail_url }}
                 {% if form.thumbnail_url.errors %}<span class="text-error text-sm">{{ form.thumbnail_url.errors.0 }}</span>{% endif %}
             </label>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Description</span>
+                <span class="label-text font-semibold">{% trans "Description" %}</span>
                 {{ form.description }}
                 {% if form.description.errors %}<span class="text-error text-sm">{{ form.description.errors.0 }}</span>{% endif %}
             </label>
 
             <div class="grid gap-3 md:grid-cols-2">
                 <label class="form-control w-full">
-                    <span class="label-text font-semibold">Current station</span>
+                    <span class="label-text font-semibold">{% trans "Current station" %}</span>
                     {{ form.current_book_station }}
                     {% if form.current_book_station.errors %}<span class="text-error text-sm">{{ form.current_book_station.errors.0 }}</span>{% endif %}
                 </label>
 
                 <label class="form-control w-full">
-                    <span class="label-text font-semibold">Last seen at</span>
+                    <span class="label-text font-semibold">{% trans "Last seen at" %}</span>
                     {{ form.last_seen_at }}
                     <span class="label-text-alt">
-                        Auto-set to current station when a current station is selected.
+                        {{ form.last_seen_at.help_text }}
                     </span>
                     {% if form.last_seen_at.errors %}<span class="text-error text-sm">{{ form.last_seen_at.errors.0 }}</span>{% endif %}
                 </label>
             </div>
 
             <label class="form-control w-full">
-                <span class="label-text font-semibold">Last activity</span>
+                <span class="label-text font-semibold">{% trans "Last activity" %}</span>
                 {{ form.last_activity }}
                 {% if form.last_activity.errors %}<span class="text-error text-sm">{{ form.last_activity.errors.0 }}</span>{% endif %}
             </label>
 
             <div class="flex flex-wrap gap-2">
                 <button class="btn btn-primary" type="submit">
-                    {% if is_edit %}Save changes{% else %}Create item{% endif %}
+                    {% if is_edit %}{% trans "Save changes" %}{% else %}{% trans "Create item" %}{% endif %}
                 </button>
                 {% if is_edit %}
-                    <a class="btn btn-outline" href="{% url 'items:item-detail' item.id %}">Cancel</a>
+                    <a class="btn btn-outline" href="{% url 'items:item-detail' item.id %}">{% trans "Cancel" %}</a>
                 {% else %}
-                    <a class="btn btn-outline" href="{% url 'items:item-list' %}">Cancel</a>
+                    <a class="btn btn-outline" href="{% url 'items:item-list' %}">{% trans "Cancel" %}</a>
                 {% endif %}
             </div>
         </form>
 
         {% if not is_edit %}
         <div class="mt-6 border-t border-base-300/70 pt-6">
-            <h2 class="text-lg font-semibold">Bulk add</h2>
+            <h2 class="text-lg font-semibold">{% trans "Bulk add" %}</h2>
             <p class="mt-1 text-sm text-base-content/60">
-                Need to add multiple items at once? Use the bulk add tool to upload a CSV file or paste CSV text.
+                {% trans "Need to add multiple items at once? Use the bulk add tool to upload a CSV file or paste CSV text." %}
             </p>
-            <a class="btn btn-outline btn-sm mt-3" href="{% url 'items:item-bulk-add' %}">Bulk add items</a>
+            <a class="btn btn-outline btn-sm mt-3" href="{% url 'items:item-bulk-add' %}">{% trans "Bulk add items" %}</a>
         </div>
         {% endif %}
     </article>

@@ -1,0 +1,1410 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: share-books\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-11 08:45+0000\n"
+"PO-Revision-Date: 2026-10-11 08:00+0000\n"
+"Last-Translator: share-books\n"
+"Language-Team: Dutch\n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: book_stations/forms.py:62
+msgid "Plus Code"
+msgstr "Plus Code"
+
+#: book_stations/forms.py:63
+msgid "Optional Plus Code, for example 849VCWC8+Q9."
+msgstr "Optionele Plus Code, bijvoorbeeld 849VCWC8+Q9."
+
+#: book_stations/forms.py:67
+msgid "Picture upload"
+msgstr "Foto uploaden"
+
+#: book_stations/forms.py:68
+msgid "Optional station photo upload."
+msgstr "Optioneel: upload een foto van de bieb."
+
+#: book_stations/forms.py:80
+msgid "Name"
+msgstr "Naam"
+
+#: book_stations/forms.py:82
+msgid "Location (text)"
+msgstr "Locatie (tekst)"
+
+#: book_stations/forms.py:85
+msgid "Street, neighborhood, city, or other textual place description."
+msgstr "Straat, buurt, stad of een andere beschrijving van de plek."
+
+#: book_stations/forms.py:90 items/forms.py:30
+#: items/templates/items/item_detail.html:99
+#: items/templates/items/item_form.html:134
+msgid "Description"
+msgstr "Beschrijving"
+
+#: book_stations/forms.py:104
+msgid "Latitude"
+msgstr "Breedtegraad"
+
+#: book_stations/forms.py:108
+msgid "Longitude"
+msgstr "Lengtegraad"
+
+#: book_stations/forms.py:130
+msgid "Enter a valid full Plus Code (for example 849VCWC8+Q9)."
+msgstr "Voer een geldige volledige Plus Code in (bijvoorbeeld 849VCWC8+Q9)."
+
+#: book_stations/forms.py:148 book_stations/models.py:67
+msgid "Provide either a textual location or both latitude and longitude."
+msgstr "Geef een locatie in tekst op, of zowel breedtegraad als lengtegraad."
+
+#: book_stations/models.py:64
+msgid "Provide both latitude and longitude, or leave both empty."
+msgstr "Geef zowel breedtegraad als lengtegraad op, of laat beide leeg."
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:4
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:11
+msgid "Delete Book Station"
+msgstr "Minibieb verwijderen"
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:10
+#: items/templates/items/item_confirm_delete.html:10
+msgid "Danger zone"
+msgstr "Gevarenzone"
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:13
+#, python-format
+msgid "You are about to delete <strong>%(station_name)s</strong>."
+msgstr "Je staat op het punt <strong>%(station_name)s</strong> te verwijderen."
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:18
+msgid ""
+"This action cannot be undone. Items currently linked to this station will no "
+"longer have it as current or last seen location."
+msgstr ""
+"Deze actie kan niet ongedaan worden gemaakt. Items die aan deze bieb "
+"gekoppeld zijn, hebben het niet langer als huidige of laatst geziene locatie."
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:24
+#: book_stations/templates/book_stations/bookstation_detail.html:446
+msgid "Delete station"
+msgstr "Bieb verwijderen"
+
+#: book_stations/templates/book_stations/bookstation_confirm_delete.html:26
+#: book_stations/templates/book_stations/bookstation_form.html:262
+#: book_stations/templates/book_stations/bookstation_form.html:264
+#: items/templates/items/item_bulk_add.html:150
+#: items/templates/items/item_confirm_delete.html:28
+#: items/templates/items/item_form.html:167
+#: items/templates/items/item_form.html:169
+#: items/templates/items/item_move_confirm.html:85
+msgid "Cancel"
+msgstr "Annuleren"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:5
+#, python-format
+msgid "%(station_name)s | Book Station"
+msgstr "%(station_name)s | Minibieb"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:8
+#: core/templates/core/base.html:154
+msgid "Click to dismiss"
+msgstr "Klik om te sluiten"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:413
+#, python-format
+msgid "Logged visit to %(station_name)s"
+msgstr "Bezoek aan %(station_name)s vastgelegd"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:416
+msgid "Undo"
+msgstr "Ongedaan maken"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:439
+msgid "Back to stations"
+msgstr "Terug naar biebs"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:443
+msgid "Edit station"
+msgstr "Bieb bewerken"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:455
+msgid "Book station detail"
+msgstr "Details minibieb"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:461
+#, python-format
+msgid "Visited %(visited_at)s"
+msgstr "Bezocht op %(visited_at)s"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:461
+#: book_stations/templates/book_stations/bookstation_list.html:196
+msgid "Visited"
+msgstr "Bezocht"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:465
+msgid "Record that I've visited this bookstation"
+msgstr "Leg vast dat ik deze minibieb heb bezocht"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:466
+msgid "Log visit"
+msgstr "Bezoek vastleggen"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:472
+#: items/templates/items/item_detail.html:41
+msgid "QR code"
+msgstr "QR-code"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:477
+msgid "No description has been added for this station yet."
+msgstr "Er is nog geen beschrijving voor deze bieb toegevoegd."
+
+#: book_stations/templates/book_stations/bookstation_detail.html:484
+#, python-format
+msgid "Photo of %(station_name)s"
+msgstr "Foto van %(station_name)s"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:489
+msgid "Add a photo for this station"
+msgstr "Voeg een foto toe voor deze bieb"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:492
+#: book_stations/templates/book_stations/bookstation_detail.html:501
+msgid "No station photo yet"
+msgstr "Nog geen biebfoto"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:494
+msgid "Click to add a photo for this station."
+msgstr "Klik om een foto voor deze bieb toe te voegen."
+
+#: book_stations/templates/book_stations/bookstation_detail.html:503
+msgid ""
+"This station is still active. Location and geolocation details are available "
+"below."
+msgstr ""
+"Deze bieb is nog actief. Locatie- en geolocatiegegevens staan hieronder."
+
+#: book_stations/templates/book_stations/bookstation_detail.html:512
+#: book_stations/templates/book_stations/bookstation_list.html:176
+msgid "Location"
+msgstr "Locatie"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:517
+#: book_stations/templates/book_stations/bookstation_form.html:217
+msgid "Geolocation"
+msgstr "Geolocatie"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:526
+msgid "Open in map"
+msgstr "Openen in kaart"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:529
+msgid "Coordinates were not provided for this station."
+msgstr "Voor deze bieb zijn geen coördinaten opgegeven."
+
+#: book_stations/templates/book_stations/bookstation_detail.html:537
+msgid "Inventory"
+msgstr "Inventaris"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:542
+#: book_stations/templates/book_stations/bookstation_detail.html:571
+#: book_stations/templates/book_stations/bookstation_detail.html:599
+#: book_stations/templates/book_stations/station_inventory.html:22
+msgid "Full inventory"
+msgstr "Volledige inventaris"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:547
+msgid "Stylized bookshelf row"
+msgstr "Gestileerde rij boekenplanken"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:556
+#: book_stations/templates/book_stations/bookstation_detail.html:589
+#, python-format
+msgid "%(item_title)s by %(item_author)s"
+msgstr "%(item_title)s van %(item_author)s"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:570
+#: book_stations/templates/book_stations/bookstation_detail.html:598
+msgid "full inventory"
+msgstr "volledige inventaris"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:591
+#: items/models.py:14
+msgid "DVD"
+msgstr "DVD"
+
+#: book_stations/templates/book_stations/bookstation_detail.html:613
+msgid "No items are currently marked as present at this station."
+msgstr "Er zijn momenteel geen items als aanwezig bij deze bieb gemarkeerd."
+
+#: book_stations/templates/book_stations/bookstation_detail.html:618
+msgid "ref:"
+msgstr "ref:"
+
+#: book_stations/templates/book_stations/bookstation_form.html:4
+#: book_stations/templates/book_stations/bookstation_form.html:176
+msgid "Edit Book Station"
+msgstr "Minibieb bewerken"
+
+#: book_stations/templates/book_stations/bookstation_form.html:4
+#: book_stations/templates/book_stations/bookstation_form.html:176
+msgid "Add Book Station"
+msgstr "Minibieb toevoegen"
+
+#: book_stations/templates/book_stations/bookstation_form.html:7
+msgid "Could not infer a Plus Code from those coordinates."
+msgstr "Kon uit deze coördinaten geen Plus Code afleiden."
+
+#: book_stations/templates/book_stations/bookstation_form.html:8
+msgid "Could not infer coordinates from that Plus Code."
+msgstr "Kon uit deze Plus Code geen coördinaten afleiden."
+
+#: book_stations/templates/book_stations/bookstation_form.html:9
+msgid "Latitude and longitude were inferred from Plus Code."
+msgstr "Breedte- en lengtegraad zijn afgeleid van de Plus Code."
+
+#: book_stations/templates/book_stations/bookstation_form.html:10
+msgid "Geolocation is not supported by this browser."
+msgstr "Geolocatie wordt door deze browser niet ondersteund."
+
+#: book_stations/templates/book_stations/bookstation_form.html:11
+msgid "Fetching your location..."
+msgstr "Je locatie wordt opgehaald..."
+
+#: book_stations/templates/book_stations/bookstation_form.html:12
+msgid "Latitude and longitude were added."
+msgstr "Breedte- en lengtegraad zijn toegevoegd."
+
+#: book_stations/templates/book_stations/bookstation_form.html:13
+msgid "Could not read your location. You can still enter coordinates manually."
+msgstr ""
+"Kon je locatie niet lezen. Je kunt de coördinaten nog steeds handmatig "
+"invoeren."
+
+#: book_stations/templates/book_stations/bookstation_form.html:174
+#: items/templates/items/item_bulk_add.html:51
+#: items/templates/items/item_form.html:83
+msgid "Contribute"
+msgstr "Bijdragen"
+
+#: book_stations/templates/book_stations/bookstation_form.html:179
+msgid ""
+"Required field is name. Also provide either a textual location or geolocation"
+" coordinates. The station slug is generated from the name."
+msgstr ""
+"Het enige verplichte veld is de naam. Geef daarnaast een locatie in tekst of "
+"geolocatiecoördinaten op. De slug van de bieb wordt uit de naam gegenereerd."
+
+#: book_stations/templates/book_stations/bookstation_form.html:219
+msgid ""
+"Provide coordinates if location text is empty, or use coordinates alongside "
+"text for precision."
+msgstr ""
+"Geef coördinaten op als de locatietekst leeg is, of gebruik coördinaten naast"
+" tekst voor meer precisie."
+
+#: book_stations/templates/book_stations/bookstation_form.html:226
+msgid "More information about Plus Codes"
+msgstr "Meer informatie over Plus Codes"
+
+#: book_stations/templates/book_stations/bookstation_form.html:228
+msgid "Plus Codes are short digital addresses that identify a location."
+msgstr "Plus Codes zijn korte digitale adressen die een locatie aanduiden."
+
+#: book_stations/templates/book_stations/bookstation_form.html:229
+msgid "Learn more about Plus Codes"
+msgstr "Meer over Plus Codes"
+
+#: book_stations/templates/book_stations/bookstation_form.html:252
+msgid "Use my current location"
+msgstr "Mijn huidige locatie gebruiken"
+
+#: book_stations/templates/book_stations/bookstation_form.html:259
+#: items/templates/items/item_form.html:164
+msgid "Save changes"
+msgstr "Wijzigingen opslaan"
+
+#: book_stations/templates/book_stations/bookstation_form.html:259
+msgid "Create station"
+msgstr "Bieb aanmaken"
+
+#: book_stations/templates/book_stations/bookstation_list.html:4
+#: book_stations/templates/book_stations/bookstation_list.html:87
+msgid "Browse Book Stations"
+msgstr "Minibiebs bekijken"
+
+#: book_stations/templates/book_stations/bookstation_list.html:79
+msgid "No description yet."
+msgstr "Nog geen beschrijving."
+
+#: book_stations/templates/book_stations/bookstation_list.html:80
+msgid "Coordinates not provided"
+msgstr "Geen coördinaten opgegeven"
+
+#: book_stations/templates/book_stations/bookstation_list.html:86
+msgid "Open shelf network"
+msgstr "Netwerk van open boekenkasten"
+
+#: book_stations/templates/book_stations/bookstation_list.html:89
+msgid ""
+"Explore community book-sharing cabinets near parks, schools, and neighborhood"
+" corners."
+msgstr ""
+"Ontdek boekenkasten van de gemeenschap bij parken, scholen en op "
+"straathoeken."
+
+#: book_stations/templates/book_stations/bookstation_list.html:94
+#: core/templates/core/base.html:76 core/templates/core/base.html:124
+#: items/templates/items/item_list.html:45
+#: users/templates/users/profile.html:19
+msgid "Add station"
+msgstr "Bieb toevoegen"
+
+#: book_stations/templates/book_stations/bookstation_list.html:101
+#: book_stations/templates/book_stations/station_inventory.html:28
+msgid "Sort by"
+msgstr "Sorteren op"
+
+#: book_stations/templates/book_stations/bookstation_list.html:115
+#: book_stations/templates/book_stations/station_inventory.html:42
+msgid "Sort direction"
+msgstr "Sorteerrichting"
+
+#: book_stations/templates/book_stations/bookstation_list.html:120
+#: book_stations/templates/book_stations/bookstation_list.html:121
+#: book_stations/templates/book_stations/station_inventory.html:47
+#: book_stations/templates/book_stations/station_inventory.html:48
+msgid "Sort ascending"
+msgstr "Oplopend sorteren"
+
+#: book_stations/templates/book_stations/bookstation_list.html:129
+#: book_stations/templates/book_stations/bookstation_list.html:130
+#: book_stations/templates/book_stations/station_inventory.html:56
+#: book_stations/templates/book_stations/station_inventory.html:57
+msgid "Sort descending"
+msgstr "Aflopend sorteren"
+
+#: book_stations/templates/book_stations/bookstation_list.html:137
+#: book_stations/templates/book_stations/station_inventory.html:64
+#: items/templates/items/item_list.html:42
+msgid "Reset"
+msgstr "Herstellen"
+
+#: book_stations/templates/book_stations/bookstation_list.html:142
+msgid "Browse items"
+msgstr "Items bekijken"
+
+#: book_stations/templates/book_stations/bookstation_list.html:168
+#, python-format
+msgid "%(item_count)s item"
+msgid_plural "%(item_count)s items"
+msgstr[0] "%(item_count)s item"
+msgstr[1] "%(item_count)s items"
+
+#: book_stations/templates/book_stations/bookstation_list.html:183
+#, python-format
+msgid "Lat %(lat)s / Lng %(lng)s"
+msgstr "Breedte %(lat)s / Lengte %(lng)s"
+
+#: book_stations/templates/book_stations/bookstation_list.html:206
+msgid "No book stations are available yet."
+msgstr "Er zijn nog geen minibiebs beschikbaar."
+
+#: book_stations/templates/book_stations/bookstation_qr.html:4
+#, python-format
+msgid "QR Code – %(station_name)s"
+msgstr "QR-code – %(station_name)s"
+
+#: book_stations/templates/book_stations/bookstation_qr.html:10
+#: book_stations/templates/book_stations/station_inventory.html:16
+msgid "Back to station"
+msgstr "Terug naar bieb"
+
+#: book_stations/templates/book_stations/bookstation_qr.html:16
+#: items/templates/items/item_qr.html:16
+msgid "QR Code"
+msgstr "QR-code"
+
+#: book_stations/templates/book_stations/bookstation_qr.html:23
+#, python-format
+msgid "QR code for %(station_name)s"
+msgstr "QR-code voor %(station_name)s"
+
+#: book_stations/templates/book_stations/bookstation_qr.html:32
+#: items/templates/items/item_qr.html:32
+msgid "Download QR code"
+msgstr "QR-code downloaden"
+
+#: book_stations/templates/book_stations/station_inventory.html:5
+#, python-format
+msgid "%(station_name)s Inventory"
+msgstr "Inventaris van %(station_name)s"
+
+#: book_stations/templates/book_stations/station_inventory.html:12
+#: items/models.py:21 items/templates/items/item_detail.html:80
+#: items/templates/items/item_detail.html:115
+#: items/templates/items/item_list.html:92
+msgid "Unknown"
+msgstr "Onbekend"
+
+#: book_stations/templates/book_stations/station_inventory.html:18
+msgid "All items"
+msgstr "Alle items"
+
+#: book_stations/templates/book_stations/station_inventory.html:24
+msgid "Items currently at this book station"
+msgstr "Items die momenteel bij deze minibieb zijn"
+
+#: book_stations/templates/book_stations/station_inventory.html:77
+#, python-format
+msgid "Cover image for %(item_title)s"
+msgstr "Omslagafbeelding van %(item_title)s"
+
+#: book_stations/templates/book_stations/station_inventory.html:90
+#, python-format
+msgid "by %(item_author)s"
+msgstr "van %(item_author)s"
+
+#: book_stations/templates/book_stations/station_inventory.html:90
+#: items/templates/items/item_detail.html:47
+#: items/templates/items/item_list.html:75
+msgid "Author not specified"
+msgstr "Auteur niet opgegeven"
+
+#: book_stations/templates/book_stations/station_inventory.html:94
+#: items/templates/items/item_list.html:98
+#, python-format
+msgid "Last activity: %(last_activity)s"
+msgstr "Laatste activiteit: %(last_activity)s"
+
+#: book_stations/templates/book_stations/station_inventory.html:101
+msgid "No items are currently marked as available at this station."
+msgstr "Er zijn momenteel geen items als beschikbaar bij deze bieb gemarkeerd."
+
+#: book_stations/templates/book_stations/visit_list.html:5
+#: book_stations/templates/book_stations/visit_list.html:14
+msgid "Visited stations"
+msgstr "Bezochte biebs"
+
+#: book_stations/templates/book_stations/visit_list.html:15
+msgid "Back to profile"
+msgstr "Terug naar profiel"
+
+#: book_stations/templates/book_stations/visit_list.html:32
+#: users/templates/users/profile.html:70 users/templates/users/profile.html:107
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: book_stations/templates/book_stations/visit_list.html:38
+msgid ""
+"You have not recorded any visits yet. Open a station and press “Log visit”."
+msgstr ""
+"Je hebt nog geen bezoeken vastgelegd. Open een bieb en klik op “Bezoek "
+"vastleggen”."
+
+#: book_stations/views.py:182 items/views.py:358
+msgid "Authentication required."
+msgstr "Inloggen vereist."
+
+#: book_stations/views.py:187 items/views.py:363
+msgid "Invalid JSON payload."
+msgstr "Ongeldige JSON-gegevens."
+
+#: book_stations/views.py:434
+#, python-format
+msgid "Removed %(station_name)s from your visited stations."
+msgstr "%(station_name)s is verwijderd uit je bezochte biebs."
+
+#: core/templates/core/base.html:7 core/templates/core/base.html:90
+#: core/templates/core/home.html:4 core/templates/core/home.html:15
+msgid "Little libraries"
+msgstr "Minibiebs"
+
+#: core/templates/core/base.html:64
+msgid "Open menu"
+msgstr "Menu openen"
+
+#: core/templates/core/base.html:70 core/templates/core/base.html:95
+msgid "Home"
+msgstr "Home"
+
+#: core/templates/core/base.html:71 core/templates/core/base.html:96
+msgid "Book stations"
+msgstr "Minibiebs"
+
+#: core/templates/core/base.html:72 core/templates/core/base.html:97
+#: items/templates/items/item_list.html:14
+msgid "Browse Items"
+msgstr "Items bekijken"
+
+#: core/templates/core/base.html:74 core/templates/core/base.html:122
+msgid "Account"
+msgstr "Account"
+
+#: core/templates/core/base.html:75 core/templates/core/base.html:123
+#: users/templates/users/profile.html:15
+msgid "Profile"
+msgstr "Profiel"
+
+#: core/templates/core/base.html:77 core/templates/core/base.html:125
+#: items/templates/items/item_list.html:44
+#: users/templates/users/profile.html:20
+msgid "Add item"
+msgstr "Item toevoegen"
+
+#: core/templates/core/base.html:78 core/templates/core/base.html:126
+msgid "Admin"
+msgstr "Beheer"
+
+#: core/templates/core/base.html:82 core/templates/core/base.html:130
+#: users/templates/users/profile.html:23
+msgid "Log out"
+msgstr "Uitloggen"
+
+#: core/templates/core/base.html:86 core/templates/core/base.html:136
+#: users/templates/registration/login.html:4
+#: users/templates/registration/login.html:10
+#: users/templates/registration/login.html:32
+msgid "Log in"
+msgstr "Inloggen"
+
+#: core/templates/core/base.html:102
+msgid "Language"
+msgstr "Taal"
+
+#: core/templates/core/base.html:116
+msgid "Open user menu"
+msgstr "Gebruikersmenu openen"
+
+#: core/templates/core/home.html:14
+msgid "Community reading network"
+msgstr "Leesnetwerk van de gemeenschap"
+
+#: core/templates/core/home.html:17
+msgid ""
+"Find neighborhood book stations where people leave and take books, magazines,"
+" DVDs, and more. Explore nearby cabinets and help your local reading circle "
+"grow."
+msgstr ""
+"Vind minibiebs in de buurt waar mensen boeken, tijdschriften, dvd's en meer "
+"achterlaten en meenemen. Ontdek kasten bij jou in de buurt en help je lokale "
+"leesgemeenschap groeien."
+
+#: core/templates/core/home.html:24
+msgid "Browse stations"
+msgstr "Biebs bekijken"
+
+#: core/templates/core/home.html:26
+msgid "Manage in admin"
+msgstr "Beheren in admin"
+
+#: items/forms.py:26 items/templates/items/item_bulk_add.html:173
+msgid "Title"
+msgstr "Titel"
+
+#: items/forms.py:27 items/templates/items/item_form.html:108
+msgid "Author"
+msgstr "Auteur"
+
+#: items/forms.py:28 items/templates/items/item_form.html:115
+msgid "Item type"
+msgstr "Type item"
+
+#: items/forms.py:29 items/templates/items/item_form.html:128
+msgid "Cover thumbnail URL"
+msgstr "URL van omslagminiatuur"
+
+#: items/forms.py:31 items/templates/items/item_detail.html:68
+#: items/templates/items/item_form.html:121
+#: items/templates/items/item_list.html:21
+#: items/templates/items/item_list.html:81
+msgid "Status"
+msgstr "Status"
+
+#: items/forms.py:32 items/templates/items/item_detail.html:15
+#: items/templates/items/item_detail.html:73
+#: items/templates/items/item_form.html:141
+#: items/templates/items/item_list.html:85
+msgid "Current station"
+msgstr "Huidige bieb"
+
+#: items/forms.py:33 items/templates/items/item_detail.html:86
+#: items/templates/items/item_form.html:147
+msgid "Last seen at"
+msgstr "Laatst gezien bij"
+
+#: items/forms.py:34 items/templates/items/item_detail.html:110
+#: items/templates/items/item_form.html:157
+msgid "Last activity"
+msgstr "Laatste activiteit"
+
+#: items/forms.py:38
+msgid "Auto-set to current station when a current station is selected."
+msgstr ""
+"Wordt automatisch op de huidige bieb gezet wanneer een huidige bieb is "
+"gekozen."
+
+#: items/forms.py:120 items/models.py:96
+msgid "Author is required when the item type is BOOK."
+msgstr "Auteur is verplicht wanneer het type item BOEK is."
+
+#: items/models.py:12
+msgid "Book"
+msgstr "Boek"
+
+#: items/models.py:13
+msgid "Magazine"
+msgstr "Tijdschrift"
+
+#: items/models.py:15
+msgid "Other"
+msgstr "Overig"
+
+#: items/models.py:18
+msgid "At book station"
+msgstr "Bij minibieb"
+
+#: items/models.py:19 movements/models.py:11 movements/models.py:19
+msgid "Taken out"
+msgstr "Meegenomen"
+
+#: items/models.py:20
+msgid "Lost"
+msgstr "Verloren"
+
+#: items/models.py:103
+msgid "Current book station is required when status is AT_BOOK_STATION."
+msgstr ""
+"Een huidige minibieb is verplicht wanneer de status AT_BOOK_STATION is."
+
+#: items/models.py:117
+msgid "Current book station must be empty unless status is AT_BOOK_STATION."
+msgstr ""
+"De huidige minibieb moet leeg zijn tenzij de status AT_BOOK_STATION is."
+
+#: items/templates/items/item_bulk_add.html:4
+#: items/templates/items/item_bulk_add.html:52
+msgid "Bulk Add Items"
+msgstr "Meerdere items tegelijk toevoegen"
+
+#: items/templates/items/item_bulk_add.html:7
+#: items/templates/items/item_bulk_add.html:133
+msgid "No file chosen"
+msgstr "Geen bestand gekozen"
+
+#: items/templates/items/item_bulk_add.html:54
+msgid ""
+"Upload multiple items at once using a CSV file or by pasting CSV text. The "
+"first row must be a header row with column names."
+msgstr ""
+"Upload meerdere items tegelijk met een CSV-bestand of door CSV-tekst te "
+"plakken. De eerste rij moet een koprij met kolomnamen zijn."
+
+#: items/templates/items/item_bulk_add.html:60
+msgid ""
+"<strong>Required column:</strong> <code class=\"text-sm bg-base-200 px-1 "
+"rounded\">title</code>. <strong>Required when item type is Book:</strong> "
+"<code class=\"text-sm bg-base-200 px-1 rounded\">author</code>."
+msgstr ""
+"<strong>Verplichte kolom:</strong> <code class=\"text-sm bg-base-200 px-1 "
+"rounded\">title</code>. <strong>Verplicht wanneer het type item Boek "
+"is:</strong> <code class=\"text-sm bg-base-200 px-1 rounded\">author</code>."
+
+#: items/templates/items/item_bulk_add.html:66
+msgid ""
+"Optional columns: <code class=\"bg-base-200 px-1 rounded\">author</code>, "
+"<code class=\"bg-base-200 px-1 rounded\">item_type</code>, <code class=\"bg-"
+"base-200 px-1 rounded\">status</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">current_book_station</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">last_seen_at</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">thumbnail_url</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">description</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">last_activity</code>. Omitted optional columns are treated as "
+"blank."
+msgstr ""
+"Optionele kolommen: <code class=\"bg-base-200 px-1 rounded\">author</code>, "
+"<code class=\"bg-base-200 px-1 rounded\">item_type</code>, <code class=\"bg-"
+"base-200 px-1 rounded\">status</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">current_book_station</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">last_seen_at</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">thumbnail_url</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">description</code>, <code class=\"bg-base-200 px-1 "
+"rounded\">last_activity</code>. Weggelaten optionele kolommen worden als leeg"
+" behandeld."
+
+#: items/templates/items/item_bulk_add.html:80
+msgid ""
+"Stations can be referenced by their numeric ID or readable ID. Dates should "
+"be in <code class=\"bg-base-200 px-1 rounded\">YYYY-MM-DD</code> format."
+msgstr ""
+"Biebs kunnen worden opgegeven met hun numerieke ID of leesbare ID. Datums "
+"moeten de notatie <code class=\"bg-base-200 px-1 rounded\">JJJJ-MM-DD</code> "
+"hebben."
+
+#: items/templates/items/item_bulk_add.html:86
+#, python-format
+msgid ""
+"<strong>Limits:</strong> up to %(max_rows)s rows; uploaded files up to "
+"%(max_file_kb)s KB."
+msgstr ""
+"<strong>Limieten:</strong> maximaal %(max_rows)s rijen; geüploade bestanden "
+"tot %(max_file_kb)s KB."
+
+#: items/templates/items/item_bulk_add.html:101
+msgid "Option 1 — Paste CSV text"
+msgstr "Optie 1 — Plak CSV-tekst"
+
+#: items/templates/items/item_bulk_add.html:104
+msgid ""
+"Paste your CSV directly below. Typing here will clear any selected file."
+msgstr ""
+"Plak je CSV hieronder. Als je hier typt, wordt een gekozen bestand gewist."
+
+#: items/templates/items/item_bulk_add.html:110
+msgid ""
+"title,author,item_type&#10;The Great Gatsby,F. Scott "
+"Fitzgerald,BOOK&#10;National Geographic April 2024,,MAGAZINE"
+msgstr ""
+"title,author,item_type&#10;The Great Gatsby,F. Scott "
+"Fitzgerald,BOOK&#10;National Geographic April 2024,,MAGAZINE"
+
+#: items/templates/items/item_bulk_add.html:115
+msgid "OR"
+msgstr "OF"
+
+#: items/templates/items/item_bulk_add.html:119
+msgid "Option 2 — Upload a CSV file"
+msgstr "Optie 2 — Upload een CSV-bestand"
+
+#: items/templates/items/item_bulk_add.html:122
+msgid ""
+"Choose a <code>.csv</code> file from your device. Selecting a file will clear"
+" the pasted text."
+msgstr ""
+"Kies een <code>.csv</code>-bestand van je apparaat. Als je een bestand kiest,"
+" wordt de geplakte tekst gewist."
+
+#: items/templates/items/item_bulk_add.html:132
+msgid "Choose file"
+msgstr "Bestand kiezen"
+
+#: items/templates/items/item_bulk_add.html:143
+msgid "Upload CSV file"
+msgstr "CSV-bestand uploaden"
+
+#: items/templates/items/item_bulk_add.html:148
+#: items/templates/items/item_form.html:176
+msgid "Bulk add"
+msgstr "Meerdere toevoegen"
+
+#: items/templates/items/item_bulk_add.html:149
+msgid "Add single item"
+msgstr "Eén item toevoegen"
+
+#: items/templates/items/item_bulk_add.html:156
+msgid "Results"
+msgstr "Resultaten"
+
+#: items/templates/items/item_bulk_add.html:161
+#, python-format
+msgid "%(created_count)s item added successfully."
+msgid_plural "%(created_count)s items added successfully."
+msgstr[0] "%(created_count)s item is succesvol toegevoegd."
+msgstr[1] "%(created_count)s items zijn succesvol toegevoegd."
+
+#: items/templates/items/item_bulk_add.html:172
+#: items/templates/items/item_bulk_add.html:206
+msgid "Row"
+msgstr "Rij"
+
+#: items/templates/items/item_bulk_add.html:174
+msgid "Action"
+msgstr "Actie"
+
+#: items/templates/items/item_bulk_add.html:183
+msgid "View"
+msgstr "Bekijken"
+
+#: items/templates/items/item_bulk_add.html:195
+#, python-format
+msgid "%(error_count)s row could not be added."
+msgid_plural "%(error_count)s rows could not be added."
+msgstr[0] "%(error_count)s rij kon niet worden toegevoegd."
+msgstr[1] "%(error_count)s rijen konden niet worden toegevoegd."
+
+#: items/templates/items/item_bulk_add.html:207
+msgid "Error"
+msgstr "Fout"
+
+#: items/templates/items/item_bulk_add.html:224
+msgid ""
+"No rows were processed. Please check that your CSV has a header row and at "
+"least one data row."
+msgstr ""
+"Er zijn geen rijen verwerkt. Controleer of je CSV een koprij en minstens één "
+"gegevensrij bevat."
+
+#: items/templates/items/item_confirm_delete.html:4
+#: items/templates/items/item_confirm_delete.html:11
+msgid "Delete Item"
+msgstr "Item verwijderen"
+
+#: items/templates/items/item_confirm_delete.html:13
+#, python-format
+msgid "You are about to delete <strong>%(title)s</strong>."
+msgstr "Je staat op het punt <strong>%(title)s</strong> te verwijderen."
+
+#: items/templates/items/item_confirm_delete.html:20
+msgid "This action cannot be undone."
+msgstr "Deze actie kan niet ongedaan worden gemaakt."
+
+#: items/templates/items/item_confirm_delete.html:26
+#: items/templates/items/item_detail.html:20
+msgid "Delete item"
+msgstr "Item verwijderen"
+
+#: items/templates/items/item_detail.html:4
+#, python-format
+msgid "%(title)s | Item"
+msgstr "%(title)s | Item"
+
+#: items/templates/items/item_detail.html:9
+#: items/templates/items/item_history.html:10
+msgid "Back to items"
+msgstr "Terug naar items"
+
+#: items/templates/items/item_detail.html:19
+msgid "Edit item"
+msgstr "Item bewerken"
+
+#: items/templates/items/item_detail.html:26
+msgid "Take Out"
+msgstr "Meenemen"
+
+#: items/templates/items/item_detail.html:27
+msgid "Put In"
+msgstr "Terugzetten"
+
+#: items/templates/items/item_detail.html:28
+msgid "Mark Lost"
+msgstr "Als verloren markeren"
+
+#: items/templates/items/item_detail.html:30
+msgid "Log in to move item"
+msgstr "Log in om het item te verplaatsen"
+
+#: items/templates/items/item_detail.html:38
+msgid "Item detail"
+msgstr "Itemdetails"
+
+#: items/templates/items/item_detail.html:45
+#: items/templates/items/item_list.html:73
+#: users/templates/users/profile.html:100
+#, python-format
+msgid "by %(author)s"
+msgstr "van %(author)s"
+
+#: items/templates/items/item_detail.html:56
+#: items/templates/items/item_list.html:59
+#, python-format
+msgid "Cover image for %(title)s"
+msgstr "Omslagafbeelding van %(title)s"
+
+#: items/templates/items/item_detail.html:63
+#: items/templates/items/item_list.html:31
+msgid "Type"
+msgstr "Type"
+
+#: items/templates/items/item_detail.html:104
+msgid "No description provided."
+msgstr "Geen beschrijving opgegeven."
+
+#: items/templates/items/item_detail.html:124
+msgid "History"
+msgstr "Geschiedenis"
+
+#: items/templates/items/item_detail.html:125
+msgid "Latest movements"
+msgstr "Laatste verplaatsingen"
+
+#: items/templates/items/item_detail.html:127
+#: items/templates/items/item_history.html:15
+msgid "Full history"
+msgstr "Volledige geschiedenis"
+
+#: items/templates/items/item_detail.html:143
+msgid "No movements recorded yet."
+msgstr "Nog geen verplaatsingen vastgelegd."
+
+#: items/templates/items/item_form.html:4
+#: items/templates/items/item_form.html:85
+msgid "Edit Item"
+msgstr "Item bewerken"
+
+#: items/templates/items/item_form.html:4
+#: items/templates/items/item_form.html:85
+msgid "Add Item"
+msgstr "Item toevoegen"
+
+#: items/templates/items/item_form.html:88
+msgid ""
+"Only <strong>title</strong> is always required. <strong>Author</strong> is "
+"also required when item type is <strong>Book</strong>."
+msgstr ""
+"Alleen de <strong>titel</strong> is altijd verplicht. De "
+"<strong>auteur</strong> is ook verplicht wanneer het type item "
+"<strong>Boek</strong> is."
+
+#: items/templates/items/item_form.html:102
+msgid "Title *"
+msgstr "Titel *"
+
+#: items/templates/items/item_form.html:164
+msgid "Create item"
+msgstr "Item aanmaken"
+
+#: items/templates/items/item_form.html:178
+msgid ""
+"Need to add multiple items at once? Use the bulk add tool to upload a CSV "
+"file or paste CSV text."
+msgstr ""
+"Wil je meerdere items tegelijk toevoegen? Gebruik de bulkfunctie om een CSV-"
+"bestand te uploaden of CSV-tekst te plakken."
+
+#: items/templates/items/item_form.html:180
+msgid "Bulk add items"
+msgstr "Meerdere items toevoegen"
+
+#: items/templates/items/item_history.html:4
+#, python-format
+msgid "%(title)s history | Item"
+msgstr "Geschiedenis van %(title)s | Item"
+
+#: items/templates/items/item_history.html:9
+#: items/templates/items/item_qr.html:10
+msgid "Back to item"
+msgstr "Terug naar item"
+
+#: items/templates/items/item_history.html:16
+msgid "Item journey flow"
+msgstr "Reisverloop van het item"
+
+#: items/templates/items/item_history.html:20
+#, python-format
+msgid "%(movement_count)s recorded movement"
+msgid_plural "%(movement_count)s recorded movements"
+msgstr[0] "%(movement_count)s vastgelegde verplaatsing"
+msgstr[1] "%(movement_count)s vastgelegde verplaatsingen"
+
+#: items/templates/items/item_history.html:30
+msgid "Timeline"
+msgstr "Tijdlijn"
+
+#: items/templates/items/item_history.html:31
+msgid "Hover the labels to see movement details."
+msgstr "Beweeg over de labels om details van de verplaatsing te zien."
+
+#: items/templates/items/item_history.html:40
+msgid "First sighting"
+msgstr "Eerste waarneming"
+
+#: items/templates/items/item_history.html:74
+msgid "This item has movements, but no station appears in those records yet."
+msgstr ""
+"Dit item heeft verplaatsingen, maar in die gegevens komt nog geen bieb voor."
+
+#: items/templates/items/item_history.html:78
+msgid "No movements recorded yet for this item."
+msgstr "Er zijn nog geen verplaatsingen voor dit item vastgelegd."
+
+#: items/templates/items/item_list.html:4
+msgid "Items | Book Stations"
+msgstr "Items | Minibiebs"
+
+#: items/templates/items/item_list.html:13
+msgid "Inventory explorer"
+msgstr "Inventarisverkenner"
+
+#: items/templates/items/item_list.html:16
+msgid ""
+"This is a best-effort snapshot of community inventory. Use status and type "
+"filters to focus the list."
+msgstr ""
+"Dit is een momentopname van de inventaris van de gemeenschap, zo goed "
+"mogelijk bijgehouden. Gebruik de status- en typefilters om de lijst te "
+"verfijnen."
+
+#: items/templates/items/item_list.html:23
+msgid "All statuses"
+msgstr "Alle statussen"
+
+#: items/templates/items/item_list.html:33
+msgid "All types"
+msgstr "Alle types"
+
+#: items/templates/items/item_list.html:41
+msgid "Apply filters"
+msgstr "Filters toepassen"
+
+#: items/templates/items/item_list.html:100
+msgid "Last activity: Unknown"
+msgstr "Laatste activiteit: onbekend"
+
+#: items/templates/items/item_list.html:109
+msgid "No items match the selected filters."
+msgstr "Geen items komen overeen met de gekozen filters."
+
+#: items/templates/items/item_move_confirm.html:4
+#, python-format
+msgid "Move Item | %(title)s"
+msgstr "Item verplaatsen | %(title)s"
+
+#: items/templates/items/item_move_confirm.html:10
+msgid "Move item"
+msgstr "Item verplaatsen"
+
+#: items/templates/items/item_move_confirm.html:16
+msgid "Current status:"
+msgstr "Huidige status:"
+
+#: items/templates/items/item_move_confirm.html:21
+msgid "Currently at:"
+msgstr "Momenteel bij:"
+
+#: items/templates/items/item_move_confirm.html:29
+msgid ""
+"You are about to <strong>take this item out</strong> of its current station. "
+"It will be marked as <strong>Taken out</strong>."
+msgstr ""
+"Je staat op het punt dit item <strong>mee te nemen</strong> uit de huidige "
+"bieb. Het wordt gemarkeerd als <strong>Meegenomen</strong>."
+
+#: items/templates/items/item_move_confirm.html:36
+msgid ""
+"You are about to <strong>place this item in a book station</strong>. Please "
+"select the destination station."
+msgstr ""
+"Je staat op het punt dit item <strong>in een minibieb te plaatsen</strong>. "
+"Kies de bestemmingsbieb."
+
+#: items/templates/items/item_move_confirm.html:43
+msgid ""
+"You are about to <strong>mark this item as lost</strong>. It will be removed "
+"from its current station if applicable."
+msgstr ""
+"Je staat op het punt dit item <strong>als verloren te markeren</strong>. Het "
+"wordt indien van toepassing uit de huidige bieb verwijderd."
+
+#: items/templates/items/item_move_confirm.html:61
+msgid "Destination station"
+msgstr "Bestemmingsbieb"
+
+#: items/templates/items/item_move_confirm.html:69
+msgid "— Select a station —"
+msgstr "— Kies een bieb —"
+
+#: items/templates/items/item_move_confirm.html:79
+msgid "Confirm: Take Out"
+msgstr "Bevestigen: meenemen"
+
+#: items/templates/items/item_move_confirm.html:81
+msgid "Confirm: Put In"
+msgstr "Bevestigen: terugzetten"
+
+#: items/templates/items/item_move_confirm.html:83
+msgid "Confirm: Mark Lost"
+msgstr "Bevestigen: als verloren markeren"
+
+#: items/templates/items/item_qr.html:4
+#, python-format
+msgid "QR Code – %(title)s"
+msgstr "QR-code – %(title)s"
+
+#: items/templates/items/item_qr.html:23
+#, python-format
+msgid "QR code for %(title)s"
+msgstr "QR-code voor %(title)s"
+
+#: items/views.py:57
+msgid "Book station must reference an existing id or readable_id."
+msgstr "Minibieb moet verwijzen naar een bestaand id of readable_id."
+
+#: items/views.py:72
+msgid "Use ISO date format YYYY-MM-DD."
+msgstr "Gebruik het ISO-datumformaat JJJJ-MM-DD."
+
+#: items/views.py:122
+msgid "out briefly"
+msgstr "kort weg"
+
+#: items/views.py:126
+msgid "out for <1 day"
+msgstr "minder dan 1 dag weg"
+
+#: items/views.py:127
+#, python-format
+msgid "out for %(count)s day"
+msgid_plural "out for %(count)s days"
+msgstr[0] "%(count)s dag weg"
+msgstr[1] "%(count)s dagen weg"
+
+#: items/views.py:195
+#, python-format
+msgid "Out by %(out_user)s, back in by %(in_user)s"
+msgstr "Meegenomen door %(out_user)s, teruggezet door %(in_user)s"
+
+#: items/views.py:203
+msgid "in"
+msgstr "erin"
+
+#: items/views.py:204 items/views.py:224
+#, python-format
+msgid "By %(user)s"
+msgstr "Door %(user)s"
+
+#: items/views.py:223
+msgid "move"
+msgstr "verplaatsing"
+
+#: items/views.py:523
+msgid "Please select a station."
+msgstr "Kies een bieb."
+
+#: items/views.py:537
+msgid "Selected station not found. Please choose a station from the list."
+msgstr "Gekozen bieb niet gevonden. Kies een bieb uit de lijst."
+
+#: items/views.py:583
+#, python-format
+msgid "CSV parse error: %(error)s"
+msgstr "CSV-leesfout: %(error)s"
+
+#: items/views.py:590
+msgid "No header row found in CSV."
+msgstr "Geen koprij gevonden in CSV."
+
+#: items/views.py:605
+#, python-format
+msgid "Row limit of %(limit)s exceeded; remaining rows were not processed."
+msgstr ""
+"Limiet van %(limit)s rijen overschreden; de overige rijen zijn niet verwerkt."
+
+#: items/views.py:627
+msgid "title is required."
+msgstr "title is verplicht."
+
+#: items/views.py:640
+#, python-format
+msgid "status: '%(status)s' is not a valid status. Valid values: %(valid)s."
+msgstr ""
+"status: '%(status)s' is geen geldige status. Geldige waarden: %(valid)s."
+
+#: items/views.py:657
+#, python-format
+msgid ""
+"item_type: '%(item_type)s' is not a valid type. Valid values: %(valid)s."
+msgstr ""
+"item_type: '%(item_type)s' is geen geldig type. Geldige waarden: %(valid)s."
+
+#: items/views.py:717
+msgid "No data rows found in CSV."
+msgstr "Geen gegevensrijen gevonden in CSV."
+
+#: items/views.py:752
+msgid "Please use only one input: either paste CSV text or upload a file."
+msgstr "Gebruik slechts één invoer: plak CSV-tekst of upload een bestand."
+
+#: items/views.py:765
+msgid "Please provide either CSV text or a CSV file."
+msgstr "Geef CSV-tekst of een CSV-bestand op."
+
+#: items/views.py:778
+#, python-format
+msgid "The uploaded file exceeds the %(limit)s KB size limit."
+msgstr "Het geüploade bestand overschrijdt de limiet van %(limit)s KB."
+
+#: items/views.py:795
+msgid "Could not decode the uploaded file. Please use UTF-8 encoding."
+msgstr "Kon het geüploade bestand niet decoderen. Gebruik UTF-8-codering."
+
+#: items/views.py:810
+#, python-format
+msgid "The pasted CSV text exceeds the %(limit)s K character limit."
+msgstr "De geplakte CSV-tekst overschrijdt de limiet van %(limit)s K tekens."
+
+#: movements/models.py:12
+msgid "Placed in"
+msgstr "Teruggezet"
+
+#: movements/models.py:13 movements/models.py:21
+msgid "Marked lost"
+msgstr "Als verloren gemarkeerd"
+
+#: movements/models.py:14 movements/models.py:22
+msgid "Marked found"
+msgstr "Als gevonden gemarkeerd"
+
+#: movements/models.py:15 movements/models.py:23
+msgid "Transferred"
+msgstr "Overgebracht"
+
+#: movements/models.py:16
+msgid "Created"
+msgstr "Aangemaakt"
+
+#: movements/models.py:20
+msgid "Placed in station"
+msgstr "In bieb geplaatst"
+
+#: movements/models.py:24
+msgid "Added to catalog"
+msgstr "Aan catalogus toegevoegd"
+
+#: movements/models.py:86 movements/models.py:91
+msgid "unknown"
+msgstr "onbekend"
+
+#: movements/models.py:96
+#, python-format
+msgid "Item record created at %(station)s."
+msgstr "Itemrecord aangemaakt bij %(station)s."
+
+#: movements/models.py:99
+msgid "Item record created with no station assigned yet."
+msgstr "Itemrecord aangemaakt zonder toegewezen bieb."
+
+#: movements/models.py:102
+#, python-format
+msgid "Moved from %(from_station)s to %(to_station)s."
+msgstr "Verplaatst van %(from_station)s naar %(to_station)s."
+
+#: movements/models.py:109
+#, python-format
+msgid "Placed in %(station)s."
+msgstr "Geplaatst in %(station)s."
+
+#: movements/models.py:110
+msgid "Placed in a station."
+msgstr "In een bieb geplaatst."
+
+#: movements/models.py:114
+#, python-format
+msgid "Taken out from %(station)s."
+msgstr "Meegenomen uit %(station)s."
+
+#: movements/models.py:117
+msgid "Taken out from station."
+msgstr "Uit bieb meegenomen."
+
+#: movements/models.py:121
+#, python-format
+msgid "Marked as lost after being at %(station)s."
+msgstr "Als verloren gemarkeerd na te zijn geweest bij %(station)s."
+
+#: movements/models.py:124
+msgid "Marked as lost."
+msgstr "Als verloren gemarkeerd."
+
+#: movements/models.py:128
+#, python-format
+msgid "Marked as found at %(station)s."
+msgstr "Als gevonden gemarkeerd bij %(station)s."
+
+#: movements/models.py:131
+msgid "Marked as found."
+msgstr "Als gevonden gemarkeerd."
+
+#: movements/models.py:133
+msgid "Movement recorded."
+msgstr "Verplaatsing vastgelegd."
+
+#: users/models.py:11 users/templates/users/profile.html:35
+msgid "Preferred language"
+msgstr "Voorkeurstaal"
+
+#: users/templates/users/logged_out.html:4
+msgid "Logged out"
+msgstr "Uitgelogd"
+
+#: users/templates/users/logged_out.html:10
+msgid "You are logged out"
+msgstr "Je bent uitgelogd"
+
+#: users/templates/users/logged_out.html:11
+msgid "See you soon at Little libraries."
+msgstr "Tot snel bij Minibiebs."
+
+#: users/templates/users/logged_out.html:13
+msgid "Log in again"
+msgstr "Opnieuw inloggen"
+
+#: users/templates/users/logged_out.html:14
+msgid "Back home"
+msgstr "Terug naar home"
+
+#: users/templates/users/profile.html:4
+msgid "Your profile"
+msgstr "Jouw profiel"
+
+#: users/templates/users/profile.html:16
+#, python-format
+msgid "Signed in as <strong>%(username)s</strong>."
+msgstr "Ingelogd als <strong>%(username)s</strong>."
+
+#: users/templates/users/profile.html:18
+msgid "View stations"
+msgstr "Biebs bekijken"
+
+#: users/templates/users/profile.html:31
+msgid "Language preference"
+msgstr "Taalvoorkeur"
+
+#: users/templates/users/profile.html:42
+msgid "Save"
+msgstr "Opslaan"
+
+#: users/templates/users/profile.html:51
+msgid "Stations you added"
+msgstr "Biebs die je hebt toegevoegd"
+
+#: users/templates/users/profile.html:67 users/templates/users/profile.html:104
+msgid "Edit"
+msgstr "Bewerken"
+
+#: users/templates/users/profile.html:77
+msgid "You have not added any stations yet."
+msgstr "Je hebt nog geen biebs toegevoegd."
+
+#: users/templates/users/profile.html:85
+msgid "Items you added"
+msgstr "Items die je hebt toegevoegd"
+
+#: users/templates/users/profile.html:114
+msgid "You have not added any items yet."
+msgstr "Je hebt nog geen items toegevoegd."
+
+#: users/templates/users/profile.html:123
+msgid "Recently visited stations"
+msgstr "Recent bezochte biebs"
+
+#: users/templates/users/profile.html:124
+msgid "View all visits"
+msgstr "Alle bezoeken bekijken"
+
+#: users/templates/users/profile.html:136
+msgid "You have not recorded any visits yet."
+msgstr "Je hebt nog geen bezoeken vastgelegd."
+
+#: users/views.py:69
+msgid "Language preference saved."
+msgstr "Taalvoorkeur opgeslagen."

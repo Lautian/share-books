@@ -1,12 +1,13 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
-{% block title %}Log in{% endblock %}
+{% block title %}{% trans 'Log in' %}{% endblock %}
 
 {% block content %}
 <section class="mx-auto max-w-xl">
     <div class="card border border-base-300/70 shadow-2xl" style="background-color: rgba(250, 252, 248, 0.78);">
         <div class="card-body">
-            <h1 class="card-title text-3xl">Log in</h1>
+            <h1 class="card-title text-3xl">{% trans 'Log in' %}</h1>
 
             <form method="post" class="mt-4 space-y-3">
                 {% csrf_token %}
@@ -28,7 +29,7 @@
                     </label>
                 {% endfor %}
 
-                <button class="btn btn-primary w-full" type="submit">Log in</button>
+                <button class="btn btn-primary w-full" type="submit">{% trans 'Log in' %}</button>
                 <input type="hidden" name="next" value="{{ next }}">
             </form>
 
