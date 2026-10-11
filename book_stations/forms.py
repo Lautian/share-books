@@ -1,8 +1,10 @@
+import warnings
 from decimal import Decimal, ROUND_HALF_UP
 from io import BytesIO
 from uuid import uuid4
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from openlocationcode import openlocationcode
@@ -12,6 +14,7 @@ from .models import BookStation
 
 
 PLUS_CODE_COORDINATE_PRECISION = Decimal("0.000001")
+MAX_STATION_IMAGE_PIXELS = 20_000_000
 
 
 def _normalize_plus_code(value):
@@ -56,13 +59,28 @@ def decode_plus_code(plus_code):
     )
 
 
+class StationPictureField(forms.ImageField):
+    def to_python(self, data):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            uploaded_image = super().to_python(data)
+
+        if uploaded_image and (
+            uploaded_image.image.width * uploaded_image.image.height
+            > MAX_STATION_IMAGE_PIXELS
+        ):
+            raise ValidationError("The image is too large.", code="max_pixels")
+
+        return uploaded_image
+
+
 class BookStationCreateForm(forms.ModelForm):
     plus_code = forms.CharField(
         required=False,
         max_length=20,
         help_text="Optional Plus Code, for example 849VCWC8+Q9.",
     )
-    picture_upload = forms.ImageField(
+    picture_upload = StationPictureField(
         required=False,
         help_text="Optional station photo upload.",
     )

@@ -2,6 +2,7 @@ from importlib import import_module
 from io import BytesIO, StringIO
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -993,6 +994,96 @@ class BookStationCreateFormViewTests(TestCase):
         with default_storage.open(station.picture) as stored_photo:
             with Image.open(stored_photo) as optimized_photo:
                 self.assertEqual(optimized_photo.size, (800, 1600))
+
+    def test_bookstation_photo_upload_rejects_too_many_pixels(self):
+        with patch("book_stations.forms.MAX_STATION_IMAGE_PIXELS", 399):
+            form = BookStationCreateForm(
+                data={
+                    "name": "Oversized Station",
+                    "location": "Garden Lane",
+                    "description": "",
+                    "latitude": "",
+                    "longitude": "",
+                },
+                files={"picture_upload": make_image_upload("oversized.jpg", 20, 20)},
+            )
+            self.assertFalse(form.is_valid())
+            self.assertIn("picture_upload", form.errors)
+
+    def test_bookstation_photo_upload_rejects_decompression_bomb_warning(self):
+        with patch("book_stations.forms.Image.MAX_IMAGE_PIXELS", 399):
+            form = BookStationCreateForm(
+                data={
+                    "name": "Bomb Station",
+                    "location": "Garden Lane",
+                    "description": "",
+                    "latitude": "",
+                    "longitude": "",
+                },
+                files={"picture_upload": make_image_upload("large.jpg", 20, 20)},
+            )
+            self.assertFalse(form.is_valid())
+            self.assertIn("picture_upload", form.errors)
+
+    def test_bookstation_photo_upload_applies_exif_orientation(self):
+        image_file = BytesIO()
+        exif = Image.Exif()
+        exif[274] = 6
+        Image.new("RGB", (1200, 800), color="red").save(
+            image_file, format="JPEG", exif=exif
+        )
+        upload = SimpleUploadedFile(
+            "oriented.jpg", image_file.getvalue(), content_type="image/jpeg"
+        )
+        form = BookStationCreateForm(
+            data={
+                "name": "Oriented Station",
+                "location": "Garden Lane",
+                "description": "",
+                "latitude": "",
+                "longitude": "",
+            },
+            files={"picture_upload": upload},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        station = form.save(commit=False)
+        station.added_by = self.user
+        station.save()
+
+        with default_storage.open(station.picture) as stored_photo:
+            with Image.open(stored_photo) as optimized_photo:
+                self.assertEqual(optimized_photo.size, (800, 1200))
+                self.assertEqual(optimized_photo.getexif().get(274, 1), 1)
+
+    def test_bookstation_photo_upload_preserves_transparency(self):
+        image_file = BytesIO()
+        Image.new("RGBA", (64, 32), color=(255, 0, 0, 128)).save(
+            image_file, format="PNG"
+        )
+        upload = SimpleUploadedFile(
+            "transparent.png", image_file.getvalue(), content_type="image/png"
+        )
+        form = BookStationCreateForm(
+            data={
+                "name": "Transparent Station",
+                "location": "Garden Lane",
+                "description": "",
+                "latitude": "",
+                "longitude": "",
+            },
+            files={"picture_upload": upload},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        station = form.save(commit=False)
+        station.added_by = self.user
+        station.save()
+
+        with default_storage.open(station.picture) as stored_photo:
+            with Image.open(stored_photo) as optimized_photo:
+                self.assertIn("A", optimized_photo.getbands())
+                self.assertEqual(optimized_photo.getpixel((0, 0))[3], 128)
 
     def test_bookstation_create_form_logs_without_picture(self):
         self.client.force_login(self.user)
