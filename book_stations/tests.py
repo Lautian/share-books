@@ -1311,3 +1311,75 @@ class SeedDevDataCommandTests(TestCase):
 		self.assertTrue(BookStation.objects.exists())
 		user = get_user_model().objects.get(username="dev_alice")
 		self.assertTrue(user.check_password(test_password))
+
+
+class StationVisitTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username="visitor", password="StrongPass123")
+        self.station = BookStation.objects.create(name="Visit Me", location="Town", added_by=self.user)
+
+    def test_requires_login(self):
+        response = self.client.post(reverse("book_stations:visit-record", args=[self.station.readable_id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.station.visits.count(), 0)
+
+    def test_record_shows_toast_with_undo_and_badge(self):
+        self.client.force_login(self.user)
+        url = reverse("book_stations:visit-record", args=[self.station.readable_id])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.client.post(url)
+        original_visited_at = self.station.visits.get().visited_at
+        self.client.post(url)
+        self.assertEqual(self.station.visits.count(), 1)
+        self.assertEqual(self.station.visits.get().visited_at, original_visited_at)
+        detail = reverse("book_stations:bookstation-detail", args=[self.station.readable_id])
+        response = self.client.get(detail)
+        self.assertContains(response, "Logged visit to Visit Me")
+        self.assertContains(response, "Undo")
+        self.assertContains(response, "Visited</span>")
+        self.assertNotContains(self.client.get(detail), "Logged visit to")
+
+    def test_button_shown_before_visit(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("book_stations:bookstation-detail", args=[self.station.readable_id]))
+        self.assertContains(response, 'type="submit">Log visit</button>')
+
+    def test_remove_and_list(self):
+        self.client.force_login(self.user)
+        self.client.post(reverse("book_stations:visit-record", args=[self.station.readable_id]))
+        self.assertContains(self.client.get(reverse("book_stations:visit-list")), "Visit Me")
+        response = self.client.post(
+            reverse("book_stations:visit-remove", args=[self.station.readable_id]),
+            {"next": reverse("book_stations:visit-list")},
+        )
+        self.assertRedirects(response, reverse("book_stations:visit-list"))
+        self.assertEqual(self.station.visits.count(), 0)
+
+    def test_remove_rejects_external_next(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("book_stations:visit-remove", args=[self.station.readable_id]),
+            {"next": "https://evil.example/"},
+        )
+        self.assertEqual(
+            response.url,
+            reverse("book_stations:bookstation-detail", args=[self.station.readable_id]),
+        )
+
+    def test_profile_shows_recent_three(self):
+        self.client.force_login(self.user)
+        for i in range(4):
+            s = BookStation.objects.create(name=f"Extra {i}", location="x", added_by=self.user)
+            self.client.post(reverse("book_stations:visit-record", args=[s.readable_id]))
+        response = self.client.get(reverse("users:profile"))
+        self.assertEqual(len(response.context["recent_visits"]), 3)
+        self.assertContains(response, reverse("book_stations:visit-list"))
+
+    def test_list_shows_visited_badge_only_for_visited(self):
+        other = BookStation.objects.create(name="Other", location="x", added_by=self.user)
+        self.assertNotContains(self.client.get(reverse("book_stations:bookstation-list")), "visited-badge")
+        self.client.force_login(self.user)
+        self.client.post(reverse("book_stations:visit-record", args=[self.station.readable_id]))
+        response = self.client.get(reverse("book_stations:bookstation-list"))
+        self.assertContains(response, "visited-badge", count=1)
+        self.assertNotIn(other.pk, response.context["visited_ids"])

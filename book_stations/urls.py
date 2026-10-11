@@ -9,6 +9,17 @@ urlpatterns = [
     path("add/", views.bookstation_create, name="bookstation-create"),
     path("api/plus-codes/encode/", views.plus_code_encode_api, name="pluscode-encode"),
     path("api/plus-codes/decode/", views.plus_code_decode_api, name="pluscode-decode"),
+    path("visits/", views.visit_list, name="visit-list"),
+    path(
+        "<slug:readable_id>/visit/",
+        views.visit_record,
+        name="visit-record",
+    ),
+    path(
+        "<slug:readable_id>/visit/remove/",
+        views.visit_remove,
+        name="visit-remove",
+    ),
     path(
         "<slug:readable_id>/edit/",
         views.bookstation_edit,
