@@ -1336,6 +1336,8 @@ class StationVisitTests(TestCase):
         response = self.client.get(detail)
         self.assertContains(response, "Logged visit to Visit Me")
         self.assertContains(response, "Undo")
+        self.assertContains(response, "setTimeout(function")
+        self.assertContains(response, "}, 8000);")
         self.assertContains(response, "Visited</span>")
         self.assertNotContains(self.client.get(detail), "Logged visit to")
 
