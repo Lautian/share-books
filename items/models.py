@@ -2,22 +2,23 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from book_stations.models import BookStation
 
 
 class Item(models.Model):
     class ItemType(models.TextChoices):
-        BOOK = "BOOK", "Book"
-        MAGAZINE = "MAGAZINE", "Magazine"
-        DVD = "DVD", "DVD"
-        OTHER = "OTHER", "Other"
+        BOOK = "BOOK", _("Book")
+        MAGAZINE = "MAGAZINE", _("Magazine")
+        DVD = "DVD", _("DVD")
+        OTHER = "OTHER", _("Other")
 
     class Status(models.TextChoices):
-        AT_BOOK_STATION = "AT_BOOK_STATION", "At book station"
-        TAKEN_OUT = "TAKEN_OUT", "Taken out"
-        LOST = "LOST", "Lost"
-        UNKNOWN = "UNKNOWN", "Unknown"
+        AT_BOOK_STATION = "AT_BOOK_STATION", _("At book station")
+        TAKEN_OUT = "TAKEN_OUT", _("Taken out")
+        LOST = "LOST", _("Lost")
+        UNKNOWN = "UNKNOWN", _("Unknown")
 
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255, blank=True)
@@ -92,13 +93,16 @@ class Item(models.Model):
         super().clean()
         if self.item_type == self.ItemType.BOOK and not (self.author or "").strip():
             raise ValidationError(
-                {"author": "Author is required when the item type is BOOK."}
+                {"author": _("Author is required when the item type is BOOK.")}
             )
         if self.status == self.Status.AT_BOOK_STATION and self.current_book_station_id is None:
             raise ValidationError(
                 {
                     "current_book_station": (
-                        "Current book station is required when status is AT_BOOK_STATION."
+                        _(
+                            "Current book station is required when status is "
+                            "AT_BOOK_STATION."
+                        )
                     )
                 }
             )
@@ -109,8 +113,10 @@ class Item(models.Model):
             raise ValidationError(
                 {
                     "current_book_station": (
-                        "Current book station must be empty unless status is "
-                        "AT_BOOK_STATION."
+                        _(
+                            "Current book station must be empty unless status is "
+                            "AT_BOOK_STATION."
+                        )
                     )
                 }
             )

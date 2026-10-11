@@ -13,6 +13,7 @@ from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from items.models import Item
 
@@ -60,9 +61,9 @@ def bookstation_list(request):
 		stations = stations.order_by(*order_fields)
 
 	sort_by_options = [
-		("name", "Name"),
-		("location", "Location"),
-		("slug", "Slug"),
+		("name", _lazy("Name")),
+		("location", _lazy("Location")),
+		("slug", _lazy("Slug")),
 	]
 
 	visited_ids = set()
@@ -178,12 +179,12 @@ def bookstation_list_create(request):
 
 	if request.method == "POST":
 		if not request.user.is_authenticated:
-			return JsonResponse({"error": "Authentication required."}, status=403)
+			return JsonResponse({"error": _("Authentication required.")}, status=403)
 
 		try:
 			payload = json.loads(request.body.decode("utf-8"))
 		except (json.JSONDecodeError, UnicodeDecodeError):
-			return JsonResponse({"error": "Invalid JSON payload."}, status=400)
+			return JsonResponse({"error": _("Invalid JSON payload.")}, status=400)
 
 		station = BookStation(
 			name=payload.get("name", ""),
@@ -267,10 +268,10 @@ def bookstation_inventory_page(request, readable_id):
 		items = items.order_by(*order_fields)
 
 	sort_by_options = [
-		("title", "Title"),
-		("author", "Author"),
-		("item_type", "Type"),
-		("last_activity", "Last activity"),
+		("title", _lazy("Title")),
+		("author", _lazy("Author")),
+		("item_type", _lazy("Type")),
+		("last_activity", _lazy("Last activity")),
 	]
 
 	return render(
@@ -423,9 +424,16 @@ def visit_remove(request, readable_id):
 		return HttpResponseNotAllowed(["POST"])
 
 	station = get_object_or_404(BookStation, readable_id=readable_id)
-	deleted, _ = StationVisit.objects.filter(user=request.user, station=station).delete()
-	if deleted:
-		messages.success(request, f"Removed {station.name} from your visited stations.")
+	deleted_count, _delete_details = StationVisit.objects.filter(
+		user=request.user,
+		station=station,
+	).delete()
+	if deleted_count:
+		messages.success(
+			request,
+			_("Removed %(station_name)s from your visited stations.")
+			% {"station_name": station.name},
+		)
 	return redirect(
 		_safe_next(
 			request,

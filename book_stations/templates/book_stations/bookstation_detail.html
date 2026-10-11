@@ -1,9 +1,11 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 {% load static %}
 
-{% block title %}{{ station.name }} | Book Station{% endblock %}
+{% block title %}{% blocktrans trimmed with station_name=station.name %}{{ station_name }} | Book Station{% endblocktrans %}{% endblock %}
 
 {% block extra_head %}
+{% trans "Click to dismiss" as click_to_dismiss_text %}
 <style>
     body.nature-site::before {
         background:
@@ -408,10 +410,10 @@
 {% if just_visited %}
 <div class="toast toast-bottom toast-center z-50 cursor-pointer" id="visit-toast" role="status">
     <div class="alert alert-success shadow-lg">
-        <span>Logged visit to {{ station.name }}</span>
+        <span>{% blocktrans trimmed with station_name=station.name %}Logged visit to {{ station_name }}{% endblocktrans %}</span>
         <form method="post" action="{% url 'book_stations:visit-remove' station.readable_id %}">
             {% csrf_token %}
-            <button class="btn btn-sm" type="submit">Undo</button>
+            <button class="btn btn-sm" type="submit">{% trans "Undo" %}</button>
         </form>
     </div>
 </div>
@@ -419,7 +421,7 @@
     (function () {
         var el = document.getElementById("visit-toast");
         if (el) {
-            el.title = "Click to dismiss";
+            el.title = "{{ click_to_dismiss_text|escapejs }}";
             el.addEventListener("click", function (event) {
                 if (!event.target.closest("button, a")) { el.remove(); }
             });
@@ -434,14 +436,14 @@
 <section class="mx-auto max-w-4xl">
     <div class="mb-5 flex flex-wrap gap-2">
         <a class="btn btn-outline" href="{% url 'book_stations:bookstation-list' %}">
-            Back to stations
+            {% trans "Back to stations" %}
         </a>
         {% if user.is_authenticated %}
             <a class="btn btn-outline" href="{% url 'book_stations:bookstation-edit' station.readable_id %}">
-                Edit station
+                {% trans "Edit station" %}
             </a>
             <a class="btn btn-error btn-outline" href="{% url 'book_stations:bookstation-delete' station.readable_id %}">
-                Delete station
+                {% trans "Delete station" %}
             </a>
         {% endif %}
     </div>
@@ -450,55 +452,55 @@
         <header class="mb-6 border-b border-base-300/70 pb-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.2em] text-success">Book station detail</p>
+                    <p class="text-sm uppercase tracking-[0.2em] text-success">{% trans "Book station detail" %}</p>
                     <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{{ station.name }}</h1>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     {% if user.is_authenticated %}
                         {% if user_visit %}
-                            <span class="badge badge-success badge-lg" title="Visited {{ user_visit.visited_at|date:'j M Y' }}">&#10003; Visited</span>
+                            <span class="badge badge-success badge-lg" title="{% blocktrans trimmed with visited_at=user_visit.visited_at|date:'j M Y' %}Visited {{ visited_at }}{% endblocktrans %}">&#10003; {% trans "Visited" %}</span>
                         {% else %}
                             <form method="post" action="{% url 'book_stations:visit-record' station.readable_id %}">
                                 {% csrf_token %}
-                                <div class="tooltip tooltip-bottom" data-tip="Record that I've visited this bookstation">
-                                    <button class="btn btn-info" type="submit">Log visit</button>
+                                <div class="tooltip tooltip-bottom" data-tip="{% trans "Record that I've visited this bookstation" %}">
+                                    <button class="btn btn-info" type="submit">{% trans "Log visit" %}</button>
                                 </div>
                             </form>
                         {% endif %}
                     {% endif %}
                     <a class="btn btn-outline" href="{% url 'book_stations:bookstation-qr' station.readable_id %}">
-                        QR code
+                        {% trans "QR code" %}
                     </a>
                 </div>
             </div>
             <p class="mt-4 text-lg text-base-content/80">
-                {{ station.description|default:"No description has been added for this station yet." }}
+                {% trans "No description has been added for this station yet." as no_description_text %}{{ station.description|default:no_description_text }}
             </p>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-[1.2fr_1fr] lg:items-start">
             <section class="photo-wrap overflow-hidden rounded-2xl p-3 shadow-sm">
                 {% if station.picture %}
-                    <img class="station-photo rounded-xl" src="{{ station.picture_url }}" alt="Photo of {{ station.name }}">
+                    <img class="station-photo rounded-xl" src="{{ station.picture_url }}" alt="{% blocktrans trimmed with station_name=station.name %}Photo of {{ station_name }}{% endblocktrans %}">
                 {% elif user.is_authenticated %}
                     <a
                         class="photo-fallback flex items-center justify-center rounded-xl p-6 text-center transition-opacity hover:opacity-75"
                         href="{% url 'book_stations:bookstation-edit' station.readable_id %}"
-                        title="Add a photo for this station"
+                        title="{% trans "Add a photo for this station" %}"
                     >
                         <div>
-                            <p class="font-semibold text-base-content/80">No station photo yet</p>
+                            <p class="font-semibold text-base-content/80">{% trans "No station photo yet" %}</p>
                             <p class="mt-2 text-sm leading-relaxed text-base-content/70">
-                                Click to add a photo for this station.
+                                {% trans "Click to add a photo for this station." %}
                             </p>
                         </div>
                     </a>
                 {% else %}
                     <div class="photo-fallback flex items-center justify-center rounded-xl p-6 text-center">
                         <div>
-                            <p class="font-semibold text-base-content/80">No station photo yet</p>
+                            <p class="font-semibold text-base-content/80">{% trans "No station photo yet" %}</p>
                             <p class="mt-2 text-sm leading-relaxed text-base-content/70">
-                                This station is still active. Location and geolocation details are available below.
+                                {% trans "This station is still active. Location and geolocation details are available below." %}
                             </p>
                         </div>
                     </div>
@@ -507,12 +509,12 @@
 
             <div class="space-y-4">
                 <section class="meta-card rounded-2xl p-4 shadow-sm">
-                <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Location</p>
+                <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">{% trans "Location" %}</p>
                 <p class="mt-2 text-lg font-semibold">{{ station.location }}</p>
                 </section>
 
                 <section class="meta-card rounded-2xl p-4 shadow-sm">
-                    <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Geolocation</p>
+                    <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">{% trans "Geolocation" %}</p>
                     {% if station.latitude is not None and station.longitude is not None %}
                         <p class="mt-2 font-mono text-base">{{ station.latitude }}, {{ station.longitude }}</p>
                         <a
@@ -521,10 +523,10 @@
                             target="_blank"
                             rel="noreferrer"
                         >
-                            Open in map
+                            {% trans "Open in map" %}
                         </a>
                     {% else %}
-                        <p class="mt-2 text-base text-base-content/70">Coordinates were not provided for this station.</p>
+                        <p class="mt-2 text-base text-base-content/70">{% trans "Coordinates were not provided for this station." %}</p>
                     {% endif %}
                 </section>
             </div>
@@ -532,17 +534,17 @@
 
         <section class="meta-card mt-6 rounded-2xl p-5 shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold">Inventory</h2>
+                <h2 class="text-xl font-semibold">{% trans "Inventory" %}</h2>
                 <a
                     class="btn btn-sm btn-outline"
                     href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
                 >
-                    Full inventory
+                    {% trans "Full inventory" %}
                 </a>
             </div>
 
             {% if items %}
-                <div class="shelf-stage mt-4" aria-label="Stylized bookshelf row">
+                <div class="shelf-stage mt-4" aria-label="{% trans "Stylized bookshelf row" %}">
                     <div class="book-row">
                         <div class="book-group">
                             {% for item in book_like_items %}
@@ -551,7 +553,7 @@
                                 <a
                                     class="shelf-book {{ tone_cycle }} {{ height_cycle }}"
                                     href="{% url 'items:item-detail' item.id %}"
-                                    title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
+                                    title="{% if item.author %}{% blocktrans trimmed with item_title=item.title item_author=item.author %}{{ item_title }} by {{ item_author }}{% endblocktrans %}{% else %}{{ item.title }}{% endif %}"
                                 >
                                     <span class="spine-text">
                                         <strong>{{ item.title }}</strong>
@@ -565,8 +567,8 @@
                                 <a
                                     class="book-rest"
                                     href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
-                                    title="full inventory"
-                                    aria-label="Full inventory"
+                                    title="{% trans "full inventory" %}"
+                                    aria-label="{% trans "Full inventory" %}"
                                 >
                                     <div class="rest-spine tone-1 h-short"></div>
                                     <div class="rest-spine tone-2 h-mid"></div>
@@ -584,17 +586,17 @@
                                     <a
                                         class="dvd-case"
                                         href="{% url 'items:item-detail' item.id %}"
-                                        title="{{ item.title }}{% if item.author %} by {{ item.author }}{% endif %}"
+                                        title="{% if item.author %}{% blocktrans trimmed with item_title=item.title item_author=item.author %}{{ item_title }} by {{ item_author }}{% endblocktrans %}{% else %}{{ item.title }}{% endif %}"
                                     >
-                                        <span class="dvd-badge">DVD</span>
+                                        <span class="dvd-badge">{% trans "DVD" %}</span>
                                         <span class="dvd-title">{{ item.title }}</span>
                                     </a>
                                 {% endfor %}
                                 <a
                                     class="dvd-rest"
                                     href="{% url 'book_stations:bookstation-inventory' station.readable_id %}"
-                                    title="full inventory"
-                                    aria-label="Full inventory"
+                                    title="{% trans "full inventory" %}"
+                                    aria-label="{% trans "Full inventory" %}"
                                 >
                                     <div class="rest-dvd-spine"></div>
                                     <div class="rest-dvd-spine"></div>
@@ -608,12 +610,12 @@
                     <div class="shelf-plank" aria-hidden="true"></div>
                 </div>
             {% else %}
-                <p class="mt-4 text-base-content/75">No items are currently marked as present at this station.</p>
+                <p class="mt-4 text-base-content/75">{% trans "No items are currently marked as present at this station." %}</p>
             {% endif %}
         </section>
 
         <p class="station-reference station-id mt-6 pt-3 font-mono">
-            ref: {{ station.readable_id }}
+            {% trans "ref:" %} {{ station.readable_id }}
         </p>
     </article>
 </section>

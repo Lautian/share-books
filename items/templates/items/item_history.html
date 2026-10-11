@@ -1,29 +1,34 @@
 {% extends "core/base.html" %}
+{% load i18n %}
 
-{% block title %}{{ item.title }} history | Item{% endblock %}
+{% block title %}{% blocktrans trimmed with title=item.title %}{{ title }} history | Item{% endblocktrans %}{% endblock %}
 
 {% block content %}
 <section class="mx-auto max-w-6xl">
     <div class="mb-5 flex flex-wrap gap-2">
-        <a class="btn btn-sm btn-outline" href="{% url 'items:item-detail' item.id %}">Back to item</a>
-        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">Back to items</a>
+        <a class="btn btn-sm btn-outline" href="{% url 'items:item-detail' item.id %}">{% trans "Back to item" %}</a>
+        <a class="btn btn-sm btn-outline" href="{% url 'items:item-list' %}">{% trans "Back to items" %}</a>
     </div>
 
     <article class="rounded-3xl border border-base-300/70 bg-base-100/80 p-6 shadow-2xl md:p-8">
         <header class="border-b border-base-300/70 pb-4">
-            <p class="text-sm uppercase tracking-[0.2em] text-success">Full history</p>
-            <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">Item journey flow</h1>
+            <p class="text-sm uppercase tracking-[0.2em] text-success">{% trans "Full history" %}</p>
+            <h1 class="mt-2 text-4xl font-bold leading-tight md:text-5xl">{% trans "Item journey flow" %}</h1>
             <p class="mt-3 text-lg text-base-content/80">
                 {{ item.title }}
                 <span class="mx-2 text-base-content/40">•</span>
-                {{ movements|length }} recorded movement{{ movements|length|pluralize }}
+                {% blocktrans trimmed count movement_count=movements|length %}
+                    {{ movement_count }} recorded movement
+                {% plural %}
+                    {{ movement_count }} recorded movements
+                {% endblocktrans %}
             </p>
         </header>
 
         {% if journey_start_station %}
             <div class="mt-7 rounded-2xl border border-base-300/70 bg-gradient-to-b from-base-100 via-base-100 to-success/5 p-4 md:p-6">
-                <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">Timeline</p>
-                <p class="mt-1 text-sm text-base-content/75">Hover the labels to see movement details.</p>
+                <p class="text-xs uppercase tracking-[0.16em] text-base-content/65">{% trans "Timeline" %}</p>
+                <p class="mt-1 text-sm text-base-content/75">{% trans "Hover the labels to see movement details." %}</p>
 
                 <div class="mx-auto mt-5 max-w-2xl">
                     <div class="relative pl-20">
@@ -32,7 +37,7 @@
                         <div class="relative mb-8">
                             <span class="absolute left-0 top-0 flex h-16 w-16 items-center justify-center rounded-full border-2 text-3xl shadow-lg ring-4 ring-base-100" style="{{ journey_start_station.icon_style }}">📚</span>
                             <div class="ml-20 pt-2">
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-600">First sighting</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-rose-600">{% trans "First sighting" %}</p>
                                 <a class="mt-1 inline-block text-lg font-semibold link-hover" style="{{ journey_start_station.name_style }}" href="{% url 'book_stations:bookstation-detail' journey_start_station.readable_id %}">
                                     {{ journey_start_station.name }}
                                 </a>
@@ -66,11 +71,11 @@
             </div>
         {% elif movements %}
             <p class="mt-6 rounded-2xl border border-base-300/70 bg-base-100/70 p-4 text-sm text-base-content/70">
-                This item has movements, but no station appears in those records yet.
+                {% trans "This item has movements, but no station appears in those records yet." %}
             </p>
         {% else %}
             <p class="mt-6 rounded-2xl border border-base-300/70 bg-base-100/70 p-4 text-sm text-base-content/70">
-                No movements recorded yet for this item.
+                {% trans "No movements recorded yet for this item." %}
             </p>
         {% endif %}
     </article>

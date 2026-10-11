@@ -6,6 +6,7 @@ from django.db import models
 from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 
 
 class BookStation(models.Model):
@@ -59,8 +60,12 @@ class BookStation(models.Model):
 	def clean(self):
 		super().clean()
 		errors = {}
-		coordinate_message = "Provide both latitude and longitude, or leave both empty."
-		location_or_geo_message = "Provide either a textual location or both latitude and longitude."
+		coordinate_message = _(
+		    "Provide both latitude and longitude, or leave both empty."
+		)
+		location_or_geo_message = _(
+		    "Provide either a textual location or both latitude and longitude."
+		)
 
 		if (self.latitude is None) != (self.longitude is None):
 			errors["latitude"] = coordinate_message

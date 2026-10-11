@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from django import forms
 from django.core.files.storage import default_storage
+from django.utils.translation import gettext_lazy as _
 from openlocationcode import openlocationcode
 
 from .models import BookStation
@@ -58,11 +59,13 @@ class BookStationCreateForm(forms.ModelForm):
     plus_code = forms.CharField(
         required=False,
         max_length=20,
-        help_text="Optional Plus Code, for example 849VCWC8+Q9.",
+        label=_("Plus Code"),
+        help_text=_("Optional Plus Code, for example 849VCWC8+Q9."),
     )
     picture_upload = forms.FileField(
         required=False,
-        help_text="Optional station photo upload.",
+        label=_("Picture upload"),
+        help_text=_("Optional station photo upload."),
     )
 
     class Meta:
@@ -74,11 +77,17 @@ class BookStationCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["name"].label = _("Name")
         self.fields["name"].widget.attrs.update({"class": "input input-bordered w-full"})
+        self.fields["location"].label = _("Location (text)")
         self.fields["location"].required = False
+        self.fields["location"].help_text = _(
+            "Street, neighborhood, city, or other textual place description."
+        )
         self.fields["location"].widget.attrs.update(
             {"class": "input input-bordered w-full"}
         )
+        self.fields["description"].label = _("Description")
         self.fields["description"].widget.attrs.update(
             {"class": "textarea textarea-bordered w-full"}
         )
@@ -92,9 +101,11 @@ class BookStationCreateForm(forms.ModelForm):
         self.fields["latitude"].widget.attrs.update(
             {"class": "input input-bordered w-full"}
         )
+        self.fields["latitude"].label = _("Latitude")
         self.fields["longitude"].widget.attrs.update(
             {"class": "input input-bordered w-full"}
         )
+        self.fields["longitude"].label = _("Longitude")
         self.fields["picture_upload"].widget.attrs.update(
             {"class": "file-input file-input-bordered w-full"}
         )
@@ -116,7 +127,7 @@ class BookStationCreateForm(forms.ModelForm):
             if decoded_coordinates is None:
                 self.add_error(
                     "plus_code",
-                    "Enter a valid full Plus Code (for example 849VCWC8+Q9).",
+                    _("Enter a valid full Plus Code (for example 849VCWC8+Q9)."),
                 )
             else:
                 # Plus Code is the source of truth whenever provided.
@@ -133,7 +144,9 @@ class BookStationCreateForm(forms.ModelForm):
         )
 
         if not has_textual_location and not has_geolocation:
-            message = "Provide either a textual location or both latitude and longitude."
+            message = _(
+                "Provide either a textual location or both latitude and longitude."
+            )
             self.add_error("location", message)
             self.add_error("latitude", message)
             self.add_error("longitude", message)

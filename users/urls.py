@@ -8,7 +8,7 @@ app_name = "users"
 urlpatterns = [
     path(
         "login/",
-        auth_views.LoginView.as_view(
+        views.LoginView.as_view(
             template_name="registration/login.html",
             redirect_authenticated_user=True,
             next_page="users:profile",
