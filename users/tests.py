@@ -145,7 +145,7 @@ class LanguagePreferenceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Language"], "nl")
         self.assertContains(response, 'lang="nl"')
-        self.assertContains(response, "Stations bekijken")
+        self.assertContains(response, "Biebs bekijken")
 
     def test_default_language_has_no_prefix(self):
         response = self.client.get("/")
