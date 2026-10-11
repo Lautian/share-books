@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 from decimal import Decimal, InvalidOperation
 
 import qrcode
@@ -18,6 +19,8 @@ from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
 from .models import BookStation, StationVisit
+
+logger = logging.getLogger(__name__)
 
 
 def bookstation_list(request):
@@ -294,10 +297,22 @@ def bookstation_create(request):
 			station = form.save(commit=False)
 			station.added_by = request.user
 			station.save()
+			logger.info(
+				"BookStation created: readable_id=%s user_id=%s photo_uploaded=%s",
+				station.readable_id,
+				request.user.pk,
+				bool(form.cleaned_data.get("picture_upload")),
+			)
 			return redirect(
 				"book_stations:bookstation-detail",
 				readable_id=station.readable_id,
 			)
+		logger.info(
+			"BookStation create form invalid: user_id=%s photo_uploaded=%s errors=%s",
+			request.user.pk,
+			"picture_upload" in request.FILES,
+			list(form.errors),
+		)
 	else:
 		form = BookStationCreateForm()
 
@@ -313,6 +328,12 @@ def bookstation_edit(request, readable_id):
 		if form.is_valid():
 			updated = form.save(commit=False)
 			updated.save()
+			logger.info(
+				"BookStation edited: readable_id=%s user_id=%s photo_uploaded=%s",
+				updated.readable_id,
+				request.user.pk,
+				bool(form.cleaned_data.get("picture_upload")),
+			)
 			return redirect(
 				"book_stations:bookstation-detail",
 				readable_id=station.readable_id,

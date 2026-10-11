@@ -556,21 +556,27 @@ class BookStationViewTests(TestCase):
     def test_owner_can_edit_station(self):
         self.client.login(username="station-owner", password="StrongPass123")
 
-        response = self.client.post(
-            reverse(
-                "book_stations:bookstation-edit",
-                kwargs={"readable_id": self.station.readable_id},
-            ),
-            data={
-                "name": "Riverside Box Updated",
-                "location": "Riverside Walk, London",
-                "description": "Updated description",
-                "latitude": "51.507351",
-                "longitude": "-0.127758",
-            },
-        )
+        with self.assertLogs("book_stations.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse(
+                    "book_stations:bookstation-edit",
+                    kwargs={"readable_id": self.station.readable_id},
+                ),
+                data={
+                    "name": "Riverside Box Updated",
+                    "location": "Riverside Walk, London",
+                    "description": "Updated description",
+                    "latitude": "51.507351",
+                    "longitude": "-0.127758",
+                },
+            )
 
         self.station.refresh_from_db()
+        self.assertIn(
+            f"BookStation edited: readable_id={self.station.readable_id} "
+            f"user_id={self.user.pk} photo_uploaded=False",
+            logs.output[0],
+        )
         self.assertRedirects(
             response,
             reverse(
@@ -923,19 +929,25 @@ class BookStationCreateFormViewTests(TestCase):
         self.client.login(username="form-user", password=self.password)
         upload = SimpleUploadedFile("station.jpg", b"test-bytes", content_type="image/jpeg")
 
-        response = self.client.post(
-            reverse("book_stations:bookstation-create"),
-            data={
-                "name": "River Walk Station",
-                "location": "River Walk",
-                "description": "A new shelf",
-                "latitude": "",
-                "longitude": "",
-                "picture_upload": upload,
-            },
-        )
+        with self.assertLogs("book_stations.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse("book_stations:bookstation-create"),
+                data={
+                    "name": "River Walk Station",
+                    "location": "River Walk",
+                    "description": "A new shelf",
+                    "latitude": "",
+                    "longitude": "",
+                    "picture_upload": upload,
+                },
+            )
 
         created_station = BookStation.objects.get(name="River Walk Station")
+        self.assertIn(
+            f"BookStation created: readable_id={created_station.readable_id} "
+            f"user_id={self.user.pk} photo_uploaded=True",
+            logs.output[0],
+        )
         self.assertRedirects(
             response,
             reverse(
@@ -947,6 +959,86 @@ class BookStationCreateFormViewTests(TestCase):
         self.assertEqual(created_station.readable_id, "river-walk-station")
         self.assertTrue(created_station.picture.startswith("uploads/"))
         self.assertTrue(created_station.picture_url.startswith("/media/uploads/"))
+
+    def test_bookstation_create_form_logs_without_picture(self):
+        self.client.force_login(self.user)
+
+        with self.assertLogs("book_stations.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse("book_stations:bookstation-create"),
+                data={
+                    "name": "Station Without Photo",
+                    "location": "Garden Lane",
+                    "description": "A shelf without a photo",
+                    "latitude": "",
+                    "longitude": "",
+                },
+            )
+
+        station = BookStation.objects.get(name="Station Without Photo")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            f"BookStation created: readable_id={station.readable_id} "
+            f"user_id={self.user.pk} photo_uploaded=False",
+            logs.output[0],
+        )
+
+    def test_bookstation_create_form_logs_invalid_submission(self):
+        self.client.force_login(self.user)
+
+        with self.assertLogs("book_stations.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse("book_stations:bookstation-create"),
+                data={
+                    "name": "",
+                    "location": "",
+                    "description": "",
+                    "latitude": "",
+                    "longitude": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f"BookStation create form invalid: user_id={self.user.pk} "
+            "photo_uploaded=False",
+            logs.output[0],
+        )
+        self.assertIn("name", logs.output[0])
+        self.assertIn("location", logs.output[0])
+
+    def test_bookstation_edit_form_logs_picture_upload(self):
+        self.client.force_login(self.user)
+        station = BookStation.objects.create(
+            name="Station To Edit",
+            description="Before edit",
+            location="Garden Lane",
+            added_by=self.user,
+        )
+        upload = SimpleUploadedFile("updated.jpg", b"test-bytes", content_type="image/jpeg")
+
+        with self.assertLogs("book_stations.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse(
+                    "book_stations:bookstation-edit",
+                    kwargs={"readable_id": station.readable_id},
+                ),
+                data={
+                    "name": station.name,
+                    "location": station.location,
+                    "description": "Updated description",
+                    "latitude": "",
+                    "longitude": "",
+                    "picture_upload": upload,
+                },
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            f"BookStation edited: readable_id={station.readable_id} "
+            f"user_id={self.user.pk} photo_uploaded=True",
+            logs.output[0],
+        )
 
 
 class BookStationQRCodeViewTests(TestCase):
