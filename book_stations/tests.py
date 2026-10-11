@@ -1328,8 +1328,10 @@ class StationVisitTests(TestCase):
         url = reverse("book_stations:visit-record", args=[self.station.readable_id])
         self.assertEqual(self.client.get(url).status_code, 405)
         self.client.post(url)
+        original_visited_at = self.station.visits.get().visited_at
         self.client.post(url)
         self.assertEqual(self.station.visits.count(), 1)
+        self.assertEqual(self.station.visits.get().visited_at, original_visited_at)
         detail = reverse("book_stations:bookstation-detail", args=[self.station.readable_id])
         response = self.client.get(detail)
         self.assertContains(response, "Logged visit to Visit Me")
