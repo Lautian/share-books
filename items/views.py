@@ -437,7 +437,7 @@ def item_edit(request, item_id):
             updated = form.save(commit=False)
             updated.save(reported_by=request.user)
             logger.info(
-                "Item edited: item_id=%s user_id=%s changed_fields=%s",
+                "Item edited: item_id=%s user_id=%s submitted_changed_fields=%s",
                 item.id,
                 request.user.pk,
                 form.changed_data,

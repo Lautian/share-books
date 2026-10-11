@@ -365,28 +365,62 @@ class ItemViewTests(TestCase):
     def test_owner_can_edit_item(self):
         self.client.login(username="item-owner", password="StrongPass123")
 
-        response = self.client.post(
-            reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
-            data={
-                "title": "Clean Code 2nd Edition",
-                "author": "Robert C. Martin",
-                "item_type": Item.ItemType.BOOK,
-                "thumbnail_url": "",
-                "description": "Updated programming book",
-                "status": Item.Status.AT_BOOK_STATION,
-                "current_book_station": self.station.id,
-                "last_seen_at": self.other_station.id,
-                "last_activity": "2026-03-09",
-            },
-        )
+        with self.assertLogs("items.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+                data={
+                    "title": "Clean Code 2nd Edition",
+                    "author": "Robert C. Martin",
+                    "item_type": Item.ItemType.BOOK,
+                    "thumbnail_url": "",
+                    "description": "Updated programming book",
+                    "status": Item.Status.AT_BOOK_STATION,
+                    "current_book_station": self.station.id,
+                    "last_seen_at": self.other_station.id,
+                    "last_activity": "2026-03-09",
+                },
+            )
 
         self.item_here.refresh_from_db()
+        self.assertIn(
+            f"Item edited: item_id={self.item_here.id} user_id={self.user.pk} "
+            "submitted_changed_fields=",
+            logs.output[0],
+        )
+        self.assertIn("'title'", logs.output[0])
         self.assertRedirects(
             response,
             reverse("items:item-detail", kwargs={"item_id": self.item_here.id}),
         )
         self.assertEqual(self.item_here.title, "Clean Code 2nd Edition")
         self.assertEqual(self.item_here.description, "Updated programming book")
+
+    def test_invalid_item_edit_logs_user_and_error_fields(self):
+        self.client.force_login(self.user)
+
+        with self.assertLogs("items.views", level="INFO") as logs:
+            response = self.client.post(
+                reverse("items:item-edit", kwargs={"item_id": self.item_here.id}),
+                data={
+                    "title": "Clean Code",
+                    "author": "",
+                    "item_type": Item.ItemType.BOOK,
+                    "thumbnail_url": "",
+                    "description": "Programming book",
+                    "status": Item.Status.AT_BOOK_STATION,
+                    "current_book_station": self.station.id,
+                    "last_seen_at": self.station.id,
+                    "last_activity": "2026-02-05",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            f"Item edit form invalid: item_id={self.item_here.id} "
+            f"user_id={self.user.pk} errors=",
+            logs.output[0],
+        )
+        self.assertIn("'author'", logs.output[0])
 
     def test_another_user_can_edit_item(self):
         self.client.force_login(self.other_user)
