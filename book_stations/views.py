@@ -396,7 +396,11 @@ def bookstation_qr_code(request, readable_id):
 
 def _safe_next(request, fallback):
 	target = request.POST.get("next", "")
-	if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+	if target and url_has_allowed_host_and_scheme(
+		target,
+		allowed_hosts={request.get_host()},
+		require_https=request.is_secure(),
+	):
 		return target
 	return fallback
 
