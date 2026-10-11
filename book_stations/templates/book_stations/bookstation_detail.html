@@ -415,6 +415,12 @@
         </form>
     </div>
 </div>
+<script>
+    setTimeout(function () {
+        var toast = document.getElementById("visit-toast");
+        if (toast) { toast.remove(); }
+    }, 8000);
+</script>
 {% endif %}
 <section class="mx-auto max-w-4xl">
     <div class="mb-5 flex flex-wrap gap-2">
