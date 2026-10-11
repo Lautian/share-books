@@ -2,6 +2,7 @@ import base64
 import csv
 import io
 import json
+import logging
 
 import qrcode
 from django.contrib.auth.decorators import login_required
@@ -16,6 +17,8 @@ from movements.models import Movement
 
 from .forms import ItemCreateForm
 from .models import Item
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize_item(item):
@@ -433,7 +436,19 @@ def item_edit(request, item_id):
         if form.is_valid():
             updated = form.save(commit=False)
             updated.save(reported_by=request.user)
+            logger.info(
+                "Item edited: item_id=%s user_id=%s changed_fields=%s",
+                item.id,
+                request.user.pk,
+                form.changed_data,
+            )
             return redirect("items:item-detail", item_id=item.id)
+        logger.info(
+            "Item edit form invalid: item_id=%s user_id=%s errors=%s",
+            item.id,
+            request.user.pk,
+            list(form.errors),
+        )
     else:
         form = ItemCreateForm(instance=item)
 
