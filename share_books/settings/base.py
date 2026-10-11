@@ -134,5 +134,12 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': False,
         },
+        # Storage/HTTP client libraries can emit request details (signed URLs,
+        # credentials, payloads) at DEBUG/INFO, so keep them at WARNING+.
+        'boto3': {'level': 'WARNING'},
+        'botocore': {'level': 'WARNING'},
+        's3transfer': {'level': 'WARNING'},
+        'storages': {'level': 'WARNING'},
+        'urllib3': {'level': 'WARNING'},
     },
 }
