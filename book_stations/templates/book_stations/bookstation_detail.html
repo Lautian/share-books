@@ -406,7 +406,7 @@
 
 {% block content %}
 {% if just_visited %}
-<div class="toast toast-top toast-center z-50" id="visit-toast" role="status">
+<div class="toast toast-bottom toast-center z-50 cursor-pointer" id="visit-toast" role="status">
     <div class="alert alert-success shadow-lg">
         <span>Logged visit to {{ station.name }}</span>
         <form method="post" action="{% url 'book_stations:visit-remove' station.readable_id %}">
@@ -416,6 +416,15 @@
     </div>
 </div>
 <script>
+    (function () {
+        var el = document.getElementById("visit-toast");
+        if (el) {
+            el.title = "Click to dismiss";
+            el.addEventListener("click", function (event) {
+                if (!event.target.closest("button, a")) { el.remove(); }
+            });
+        }
+    })();
     setTimeout(function () {
         var toast = document.getElementById("visit-toast");
         if (toast) { toast.remove(); }

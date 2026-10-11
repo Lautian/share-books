@@ -128,7 +128,7 @@
 </header>
 
 {% if messages %}
-<div class="toast toast-top toast-center z-50" id="message-toast" role="status">
+<div class="toast toast-bottom toast-center z-50 cursor-pointer" id="message-toast" role="status">
     {% for message in messages %}
         <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %} shadow-lg">
             <span>{{ message }}</span>
@@ -136,6 +136,15 @@
     {% endfor %}
 </div>
 <script>
+    (function () {
+        var el = document.getElementById("message-toast");
+        if (el) {
+            el.title = "Click to dismiss";
+            el.addEventListener("click", function (event) {
+                if (!event.target.closest("button, a")) { el.remove(); }
+            });
+        }
+    })();
     setTimeout(function () {
         var toast = document.getElementById("message-toast");
         if (toast) { toast.remove(); }
