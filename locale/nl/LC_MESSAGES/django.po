@@ -75,7 +75,7 @@ msgstr "Geef zowel breedtegraad als lengtegraad op, of laat beide leeg."
 #: book_stations/templates/book_stations/bookstation_confirm_delete.html:4
 #: book_stations/templates/book_stations/bookstation_confirm_delete.html:11
 msgid "Delete Book Station"
-msgstr "Boekenstation verwijderen"
+msgstr "Minibieb verwijderen"
 
 #: book_stations/templates/book_stations/bookstation_confirm_delete.html:10
 #: items/templates/items/item_confirm_delete.html:10
@@ -116,7 +116,7 @@ msgstr "Annuleren"
 #: book_stations/templates/book_stations/bookstation_detail.html:5
 #, python-format
 msgid "%(station_name)s | Book Station"
-msgstr "%(station_name)s | Boekenstation"
+msgstr "%(station_name)s | Minibieb"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:8
 #: core/templates/core/base.html:154
@@ -142,7 +142,7 @@ msgstr "Station bewerken"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:455
 msgid "Book station detail"
-msgstr "Details boekenstation"
+msgstr "Details minibieb"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:461
 #, python-format
@@ -156,7 +156,7 @@ msgstr "Bezocht"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:465
 msgid "Record that I've visited this bookstation"
-msgstr "Leg vast dat ik dit boekenstation heb bezocht"
+msgstr "Leg vast dat ik deze minibieb heb bezocht"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:466
 msgid "Log visit"
@@ -256,12 +256,12 @@ msgstr "ref:"
 #: book_stations/templates/book_stations/bookstation_form.html:4
 #: book_stations/templates/book_stations/bookstation_form.html:176
 msgid "Edit Book Station"
-msgstr "Boekenstation bewerken"
+msgstr "Minibieb bewerken"
 
 #: book_stations/templates/book_stations/bookstation_form.html:4
 #: book_stations/templates/book_stations/bookstation_form.html:176
 msgid "Add Book Station"
-msgstr "Boekenstation toevoegen"
+msgstr "Minibieb toevoegen"
 
 #: book_stations/templates/book_stations/bookstation_form.html:7
 msgid "Could not infer a Plus Code from those coordinates."
@@ -345,7 +345,7 @@ msgstr "Station aanmaken"
 #: book_stations/templates/book_stations/bookstation_list.html:4
 #: book_stations/templates/book_stations/bookstation_list.html:87
 msgid "Browse Book Stations"
-msgstr "Boekenstations bekijken"
+msgstr "Minibiebs bekijken"
 
 #: book_stations/templates/book_stations/bookstation_list.html:79
 msgid "No description yet."
@@ -422,7 +422,7 @@ msgstr "Breedte %(lat)s / Lengte %(lng)s"
 
 #: book_stations/templates/book_stations/bookstation_list.html:206
 msgid "No book stations are available yet."
-msgstr "Er zijn nog geen boekenstations beschikbaar."
+msgstr "Er zijn nog geen minibiebs beschikbaar."
 
 #: book_stations/templates/book_stations/bookstation_qr.html:4
 #, python-format
@@ -467,7 +467,7 @@ msgstr "Alle items"
 
 #: book_stations/templates/book_stations/station_inventory.html:24
 msgid "Items currently at this book station"
-msgstr "Items die momenteel bij dit boekenstation zijn"
+msgstr "Items die momenteel bij deze minibieb zijn"
 
 #: book_stations/templates/book_stations/station_inventory.html:77
 #, python-format
@@ -534,7 +534,7 @@ msgstr "%(station_name)s is verwijderd uit je bezochte stations."
 #: core/templates/core/base.html:7 core/templates/core/base.html:90
 #: core/templates/core/home.html:4 core/templates/core/home.html:15
 msgid "Little libraries"
-msgstr "Kleine bibliotheken"
+msgstr "Minibiebs"
 
 #: core/templates/core/base.html:64
 msgid "Open menu"
@@ -546,7 +546,7 @@ msgstr "Home"
 
 #: core/templates/core/base.html:71 core/templates/core/base.html:96
 msgid "Book stations"
-msgstr "Boekenstations"
+msgstr "Minibiebs"
 
 #: core/templates/core/base.html:72 core/templates/core/base.html:97
 #: items/templates/items/item_list.html:14
@@ -602,7 +602,7 @@ msgid ""
 "magazines, DVDs, and more. Explore nearby cabinets and help your local "
 "reading circle grow."
 msgstr ""
-"Vind boekenstations in de buurt waar mensen boeken, tijdschriften, dvd's en "
+"Vind minibiebs in de buurt waar mensen boeken, tijdschriften, dvd's en "
 "meer achterlaten en meenemen. Ontdek kasten bij jou in de buurt en help je "
 "lokale leesgemeenschap groeien."
 
@@ -678,7 +678,7 @@ msgstr "Overig"
 
 #: items/models.py:18
 msgid "At book station"
-msgstr "Bij boekenstation"
+msgstr "Bij minibieb"
 
 #: items/models.py:19 movements/models.py:11 movements/models.py:19
 msgid "Taken out"
@@ -691,12 +691,12 @@ msgstr "Verloren"
 #: items/models.py:103
 msgid "Current book station is required when status is AT_BOOK_STATION."
 msgstr ""
-"Een huidig boekenstation is verplicht wanneer de status AT_BOOK_STATION is."
+"Een huidige minibieb is verplicht wanneer de status AT_BOOK_STATION is."
 
 #: items/models.py:117
 msgid "Current book station must be empty unless status is AT_BOOK_STATION."
 msgstr ""
-"Het huidige boekenstation moet leeg zijn tenzij de status AT_BOOK_STATION "
+"De huidige minibieb moet leeg zijn tenzij de status AT_BOOK_STATION "
 "is."
 
 #: items/templates/items/item_bulk_add.html:4
@@ -1037,7 +1037,7 @@ msgstr "Er zijn nog geen verplaatsingen voor dit item vastgelegd."
 
 #: items/templates/items/item_list.html:4
 msgid "Items | Book Stations"
-msgstr "Items | Boekenstations"
+msgstr "Items | Minibiebs"
 
 #: items/templates/items/item_list.html:13
 msgid "Inventory explorer"
@@ -1102,7 +1102,7 @@ msgid ""
 "You are about to <strong>place this item in a book station</strong>. Please "
 "select the destination station."
 msgstr ""
-"Je staat op het punt dit item <strong>in een boekenstation te "
+"Je staat op het punt dit item <strong>in een minibieb te "
 "plaatsen</strong>. Kies het bestemmingsstation."
 
 #: items/templates/items/item_move_confirm.html:43
@@ -1145,7 +1145,7 @@ msgstr "QR-code voor %(title)s"
 
 #: items/views.py:57
 msgid "Book station must reference an existing id or readable_id."
-msgstr "Boekenstation moet verwijzen naar een bestaand id of readable_id."
+msgstr "Minibieb moet verwijzen naar een bestaand id of readable_id."
 
 #: items/views.py:72
 msgid "Use ISO date format YYYY-MM-DD."
@@ -1351,7 +1351,7 @@ msgstr "Je bent uitgelogd"
 
 #: users/templates/users/logged_out.html:11
 msgid "See you soon at Little libraries."
-msgstr "Tot snel bij Kleine bibliotheken."
+msgstr "Tot snel bij Minibiebs."
 
 #: users/templates/users/logged_out.html:13
 msgid "Log in again"
