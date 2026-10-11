@@ -22,7 +22,7 @@ class UserAuthorizationTests(TestCase):
         )
 
     def test_public_signup_is_unavailable(self):
-        response = self.client.get("/users/signup/")
+        response = self.client.get("/en/users/signup/")
 
         self.assertEqual(response.status_code, 404)
 
@@ -127,9 +127,18 @@ class UserAuthorizationTests(TestCase):
         response = self.client.post(reverse("users:logout"))
 
         self.assertTemplateUsed(response, "users/logged_out.html")
+        self.assertContains(response, reverse("users:login"))
+        self.assertNotContains(response, reverse("admin:index"))
+
+    def test_dutch_logout_page_keeps_dutch_home_link(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post("/nl/users/logout/")
+
+        self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            f'<a href="{reverse("users:login")}" class="btn btn-primary">Log in again</a>',
+            '<a href="/nl/" class="btn btn-ghost">Terug naar home</a>',
             html=True,
         )
 
@@ -147,14 +156,14 @@ class LanguagePreferenceTests(TestCase):
         self.assertContains(response, 'lang="nl"')
         self.assertContains(response, "Biebs bekijken")
 
-    def test_default_language_has_no_prefix(self):
-        response = self.client.get("/")
+    def test_default_language_uses_english_prefix(self):
+        response = self.client.get("/en/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Language"], "en")
 
     def test_set_language_saves_preference_for_logged_in_user(self):
         self.client.force_login(self.user)
-        response = self.client.post("/i18n/setlang/", {"language": "nl", "next": "/"})
+        response = self.client.post("/i18n/setlang/", {"language": "nl", "next": "/en/"})
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, "/nl/")
         self.assertEqual(UserProfile.objects.get(user=self.user).language, "nl")

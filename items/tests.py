@@ -1304,7 +1304,7 @@ class ItemBulkAddViewTests(TestCase):
 
     def test_get_requires_login(self):
         response = self.client.get(self.url)
-        self.assertRedirects(response, f"/users/login/?next={self.url}")
+        self.assertRedirects(response, f"{reverse('users:login')}?next={self.url}")
 
     def test_get_renders_bulk_add_page(self):
         self.client.login(username="bulk-add-user", password="StrongPass123")
@@ -1316,7 +1316,7 @@ class ItemBulkAddViewTests(TestCase):
 
     def test_post_requires_login(self):
         response = self.client.post(self.url, {"csv_text": "title\nA Book"})
-        self.assertRedirects(response, f"/users/login/?next={self.url}")
+        self.assertRedirects(response, f"{reverse('users:login')}?next={self.url}")
 
     def test_post_without_input_shows_error(self):
         self.client.login(username="bulk-add-user", password="StrongPass123")

@@ -11,9 +11,7 @@ Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
-    1. Import the include() function: from users import views as users_views
-from django.conf.urls.i18n import i18n_patterns
-from django.urls import include, path
+    1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
@@ -33,7 +31,7 @@ urlpatterns += i18n_patterns(
     path("book_stations/", include("book_stations.urls")),
     path("items/", include("items.urls")),
     path("users/", include("users.urls")),
-    prefix_default_language=False,
+    prefix_default_language=True,
 )
 
 if settings.DEBUG:

@@ -10,8 +10,8 @@ from django.urls import reverse
 
 
 class HomePageViewTests(TestCase):
-    def test_root_renders_homepage(self):
-        response = self.client.get("/")
+    def test_english_prefix_renders_homepage(self):
+        response = self.client.get("/en/")
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/home.html")
@@ -85,20 +85,20 @@ class MigrationConsistencyTests(TestCase):
 
 class NavigationBarTests(TestCase):
     def test_navbar_contains_browse_items_link(self):
-        response = self.client.get("/")
+        response = self.client.get("/en/")
 
         self.assertContains(response, reverse("items:item-list"))
         self.assertContains(response, "Browse Items")
 
     def test_navbar_shows_login_actions_for_anonymous_user(self):
-        response = self.client.get("/")
+        response = self.client.get("/en/")
 
         self.assertContains(response, reverse("users:login"))
         self.assertNotContains(response, "Sign up")
         mobile_menu = response.content.split(b'aria-label="Open menu"', 1)[1].split(
             b"</ul>", 1
         )[0]
-        self.assertNotIn(b'href="/admin/"', mobile_menu)
+        self.assertNotIn(f'href="{reverse("admin:index")}"'.encode(), mobile_menu)
         self.assertNotContains(response, reverse("users:profile"))
 
     def test_navbar_shows_account_actions_for_authenticated_user(self):
@@ -108,14 +108,20 @@ class NavigationBarTests(TestCase):
         )
         self.client.force_login(user)
 
-        response = self.client.get("/")
+        response = self.client.get("/en/")
 
         self.assertContains(response, reverse("users:profile"))
         self.assertContains(response, reverse("book_stations:bookstation-create"))
         self.assertContains(response, reverse("items:item-create"))
         self.assertLess(
-            response.content.index(b'href="/admin/"'),
+            response.content.index(f'href="{reverse("admin:index")}"'.encode()),
             response.content.index(b"Log out"),
         )
         self.assertContains(response, "Log out")
         self.assertNotContains(response, reverse("users:login"))
+
+    def test_home_links_preserve_dutch_language_prefix(self):
+        response = self.client.get("/nl/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.count(b'href="/nl/"'), 3)
