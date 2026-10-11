@@ -1,5 +1,5 @@
 from importlib import import_module
-from io import StringIO
+from io import BytesIO, StringIO
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
@@ -8,17 +8,25 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, connection
 from django.db.models import Count
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from items.models import Item
 
 from .forms import BookStationCreateForm, decode_plus_code, encode_plus_code
 from .management.commands.seed_dev_data import DEFAULT_PASSWORD
 from .models import BookStation
+
+
+def make_image_upload(name, width, height):
+    image_file = BytesIO()
+    Image.new("RGB", (width, height), color="red").save(image_file, format="JPEG")
+    return SimpleUploadedFile(name, image_file.getvalue(), content_type="image/jpeg")
 
 
 class BookStationModelTests(TestCase):
@@ -927,7 +935,7 @@ class BookStationCreateFormViewTests(TestCase):
 
     def test_bookstation_create_form_uploads_picture_and_assigns_owner(self):
         self.client.login(username="form-user", password=self.password)
-        upload = SimpleUploadedFile("station.jpg", b"test-bytes", content_type="image/jpeg")
+        upload = make_image_upload("station.jpg", 2000, 1200)
 
         with self.assertLogs("book_stations.views", level="INFO") as logs:
             response = self.client.post(
@@ -958,7 +966,33 @@ class BookStationCreateFormViewTests(TestCase):
         self.assertEqual(created_station.added_by, self.user)
         self.assertEqual(created_station.readable_id, "river-walk-station")
         self.assertTrue(created_station.picture.startswith("uploads/"))
+        self.assertTrue(created_station.picture.endswith(".webp"))
         self.assertTrue(created_station.picture_url.startswith("/media/uploads/"))
+        with default_storage.open(created_station.picture) as stored_photo:
+            with Image.open(stored_photo) as optimized_photo:
+                self.assertEqual(optimized_photo.format, "WEBP")
+                self.assertEqual(optimized_photo.size, (1600, 960))
+
+    def test_bookstation_photo_upload_is_bounded_by_maximum_height(self):
+        form = BookStationCreateForm(
+            data={
+                "name": "Portrait Station",
+                "location": "Garden Lane",
+                "description": "",
+                "latitude": "",
+                "longitude": "",
+            },
+            files={"picture_upload": make_image_upload("portrait.jpg", 1200, 2400)},
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        station = form.save(commit=False)
+        station.added_by = self.user
+        station.save()
+
+        with default_storage.open(station.picture) as stored_photo:
+            with Image.open(stored_photo) as optimized_photo:
+                self.assertEqual(optimized_photo.size, (800, 1600))
 
     def test_bookstation_create_form_logs_without_picture(self):
         self.client.force_login(self.user)
@@ -1015,7 +1049,7 @@ class BookStationCreateFormViewTests(TestCase):
             location="Garden Lane",
             added_by=self.user,
         )
-        upload = SimpleUploadedFile("updated.jpg", b"test-bytes", content_type="image/jpeg")
+        upload = make_image_upload("updated.jpg", 32, 32)
 
         with self.assertLogs("book_stations.views", level="INFO") as logs:
             response = self.client.post(

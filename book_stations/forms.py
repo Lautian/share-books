@@ -1,10 +1,12 @@
-from pathlib import Path
 from decimal import Decimal, ROUND_HALF_UP
+from io import BytesIO
 from uuid import uuid4
 
 from django import forms
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from openlocationcode import openlocationcode
+from PIL import Image, ImageOps
 
 from .models import BookStation
 
@@ -60,7 +62,7 @@ class BookStationCreateForm(forms.ModelForm):
         max_length=20,
         help_text="Optional Plus Code, for example 849VCWC8+Q9.",
     )
-    picture_upload = forms.FileField(
+    picture_upload = forms.ImageField(
         required=False,
         help_text="Optional station photo upload.",
     )
@@ -145,9 +147,20 @@ class BookStationCreateForm(forms.ModelForm):
         uploaded_picture = self.cleaned_data.get("picture_upload")
 
         if uploaded_picture:
-            extension = Path(uploaded_picture.name).suffix.lower()
-            upload_name = f"uploads/book_stations/images/photos/{uuid4().hex}{extension}"
-            saved_path = default_storage.save(upload_name, uploaded_picture)
+            uploaded_picture.seek(0)
+            with Image.open(uploaded_picture) as original_image:
+                image = ImageOps.exif_transpose(original_image)
+                image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+                has_transparency = "A" in image.getbands() or "transparency" in image.info
+                image = image.convert("RGBA" if has_transparency else "RGB")
+                optimized_image = BytesIO()
+                image.save(optimized_image, format="WEBP", quality=82)
+
+            upload_name = f"uploads/book_stations/images/photos/{uuid4().hex}.webp"
+            saved_path = default_storage.save(
+                upload_name,
+                ContentFile(optimized_image.getvalue()),
+            )
             station.picture = saved_path
 
         if commit:
