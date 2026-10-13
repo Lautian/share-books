@@ -11,6 +11,7 @@
 {% trans "Fetching your location..." as geolocation_fetching_text %}
 {% trans "Latitude and longitude were added." as coordinates_added_text %}
 {% trans "Could not read your location. You can still enter coordinates manually." as geolocation_read_error %}
+{% trans "This will replace the existing photo: %(filename)s. Are you sure?" as replacement_confirmation %}
 <script>
     const plusCodeEncodeUrl = "{% url 'book_stations:pluscode-encode' %}";
     const plusCodeDecodeUrl = "{% url 'book_stations:pluscode-decode' %}";
@@ -188,12 +189,13 @@
             updateDeleteButton();
         });
         fileInput.addEventListener("change", function () {
-            if (removeInput.value) {
-                filenameEl.textContent = "";
-            } else if (fileInput.files.length) {
+            if (fileInput.files.length) {
+                removeInput.value = "";
                 filenameEl.textContent = fileInput.files[0].name;
+            } else if (removeInput.value) {
+                filenameEl.textContent = "";
             } else {
-                filenameEl.textContent = removeInput.value ? "" : originalName;
+                filenameEl.textContent = originalName;
             }
             updateDeleteButton();
         });
@@ -201,7 +203,7 @@
         form.addEventListener("submit", function (event) {
             let message = "";
             if (fileInput.files.length) {
-                message = "{% trans 'This will replace the existing photo. Are you sure?' as m %}{{ m|escapejs }}";
+                message = "{{ replacement_confirmation|escapejs }}".replace("%(filename)s", originalName);
             } else if (removeInput.value) {
                 message = "{% trans 'Are you sure you want to delete this photo?' as m2 %}{{ m2|escapejs }}";
             }
