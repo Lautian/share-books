@@ -174,12 +174,18 @@
         }
         const filenameEl = document.getElementById("picture-filename");
         const originalName = filenameEl.textContent;
+        const deleteButton = document.getElementById("picture-delete");
         const form = fileInput.form;
 
-        document.getElementById("picture-delete").addEventListener("click", function () {
+        function updateDeleteButton() {
+            deleteButton.style.display = filenameEl.textContent.trim() ? "" : "none";
+        }
+
+        deleteButton.addEventListener("click", function () {
             removeInput.value = "true";
             fileInput.value = "";
             filenameEl.textContent = "";
+            updateDeleteButton();
         });
         fileInput.addEventListener("change", function () {
             if (fileInput.files.length) {
@@ -188,7 +194,9 @@
             } else {
                 filenameEl.textContent = removeInput.value ? "" : originalName;
             }
+            updateDeleteButton();
         });
+        updateDeleteButton();
         form.addEventListener("submit", function (event) {
             let message = "";
             if (fileInput.files.length) {
