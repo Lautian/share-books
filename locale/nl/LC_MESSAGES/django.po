@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: share-books\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-11 08:45+0000\n"
+"POT-Creation-Date: 2026-10-13 12:55+0000\n"
 "PO-Revision-Date: 2026-10-11 08:00+0000\n"
 "Last-Translator: share-books\n"
 "Language-Team: Dutch\n"
@@ -18,57 +18,57 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: book_stations/forms.py:62
+#: book_stations/forms.py:82
 msgid "Plus Code"
 msgstr "Plus Code"
 
-#: book_stations/forms.py:63
+#: book_stations/forms.py:83
 msgid "Optional Plus Code, for example 849VCWC8+Q9."
 msgstr "Optionele Plus Code, bijvoorbeeld 849VCWC8+Q9."
 
-#: book_stations/forms.py:67
+#: book_stations/forms.py:87
 msgid "Picture upload"
 msgstr "Foto uploaden"
 
-#: book_stations/forms.py:68
+#: book_stations/forms.py:88
 msgid "Optional station photo upload."
 msgstr "Optioneel: upload een foto van de bieb."
 
-#: book_stations/forms.py:80
+#: book_stations/forms.py:102
 msgid "Name"
 msgstr "Naam"
 
-#: book_stations/forms.py:82
+#: book_stations/forms.py:104
 msgid "Location (text)"
 msgstr "Locatie (tekst)"
 
-#: book_stations/forms.py:85
+#: book_stations/forms.py:107
 msgid "Street, neighborhood, city, or other textual place description."
 msgstr "Straat, buurt, stad of een andere beschrijving van de plek."
 
-#: book_stations/forms.py:90 items/forms.py:30
+#: book_stations/forms.py:112 items/forms.py:30
 #: items/templates/items/item_detail.html:99
 #: items/templates/items/item_form.html:134
 msgid "Description"
 msgstr "Beschrijving"
 
-#: book_stations/forms.py:104
+#: book_stations/forms.py:126
 msgid "Latitude"
 msgstr "Breedtegraad"
 
-#: book_stations/forms.py:108
+#: book_stations/forms.py:130
 msgid "Longitude"
 msgstr "Lengtegraad"
 
-#: book_stations/forms.py:130
+#: book_stations/forms.py:152
 msgid "Enter a valid full Plus Code (for example 849VCWC8+Q9)."
 msgstr "Voer een geldige volledige Plus Code in (bijvoorbeeld 849VCWC8+Q9)."
 
-#: book_stations/forms.py:148 book_stations/models.py:67
+#: book_stations/forms.py:170 book_stations/models.py:68
 msgid "Provide either a textual location or both latitude and longitude."
 msgstr "Geef een locatie in tekst op, of zowel breedtegraad als lengtegraad."
 
-#: book_stations/models.py:64
+#: book_stations/models.py:65
 msgid "Provide both latitude and longitude, or leave both empty."
 msgstr "Geef zowel breedtegraad als lengtegraad op, of laat beide leeg."
 
@@ -101,8 +101,8 @@ msgid "Delete station"
 msgstr "Bieb verwijderen"
 
 #: book_stations/templates/book_stations/bookstation_confirm_delete.html:26
-#: book_stations/templates/book_stations/bookstation_form.html:262
-#: book_stations/templates/book_stations/bookstation_form.html:264
+#: book_stations/templates/book_stations/bookstation_form.html:307
+#: book_stations/templates/book_stations/bookstation_form.html:309
 #: items/templates/items/item_bulk_add.html:150
 #: items/templates/items/item_confirm_delete.html:28
 #: items/templates/items/item_form.html:167
@@ -117,7 +117,7 @@ msgid "%(station_name)s | Book Station"
 msgstr "%(station_name)s | Minibieb"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:8
-#: core/templates/core/base.html:154
+#: core/templates/core/base.html:155
 msgid "Click to dismiss"
 msgstr "Klik om te sluiten"
 
@@ -200,7 +200,7 @@ msgid "Location"
 msgstr "Locatie"
 
 #: book_stations/templates/book_stations/bookstation_detail.html:517
-#: book_stations/templates/book_stations/bookstation_form.html:217
+#: book_stations/templates/book_stations/bookstation_form.html:262
 msgid "Geolocation"
 msgstr "Geolocatie"
 
@@ -252,12 +252,12 @@ msgid "ref:"
 msgstr "ref:"
 
 #: book_stations/templates/book_stations/bookstation_form.html:4
-#: book_stations/templates/book_stations/bookstation_form.html:176
+#: book_stations/templates/book_stations/bookstation_form.html:213
 msgid "Edit Book Station"
 msgstr "Minibieb bewerken"
 
 #: book_stations/templates/book_stations/bookstation_form.html:4
-#: book_stations/templates/book_stations/bookstation_form.html:176
+#: book_stations/templates/book_stations/bookstation_form.html:213
 msgid "Add Book Station"
 msgstr "Minibieb toevoegen"
 
@@ -291,50 +291,68 @@ msgstr ""
 "Kon je locatie niet lezen. Je kunt de coördinaten nog steeds handmatig "
 "invoeren."
 
-#: book_stations/templates/book_stations/bookstation_form.html:174
+#: book_stations/templates/book_stations/bookstation_form.html:195
+msgid "This will replace the existing photo. Are you sure?"
+msgstr "Hiermee wordt de bestaande foto vervangen. Weet je het zeker?"
+
+#: book_stations/templates/book_stations/bookstation_form.html:197
+msgid "Are you sure you want to delete this photo?"
+msgstr "Weet je zeker dat je deze foto wilt verwijderen?"
+
+#: book_stations/templates/book_stations/bookstation_form.html:211
 #: items/templates/items/item_bulk_add.html:51
 #: items/templates/items/item_form.html:83
 msgid "Contribute"
 msgstr "Bijdragen"
 
-#: book_stations/templates/book_stations/bookstation_form.html:179
+#: book_stations/templates/book_stations/bookstation_form.html:216
 msgid ""
-"Required field is name. Also provide either a textual location or geolocation"
-" coordinates. The station slug is generated from the name."
+"Required field is name. Also provide either a textual location or "
+"geolocation coordinates. The station slug is generated from the name."
 msgstr ""
 "Het enige verplichte veld is de naam. Geef daarnaast een locatie in tekst of "
 "geolocatiecoördinaten op. De slug van de bieb wordt uit de naam gegenereerd."
 
-#: book_stations/templates/book_stations/bookstation_form.html:219
+#: book_stations/templates/book_stations/bookstation_form.html:251
+msgid "Current photo:"
+msgstr "Huidige foto:"
+
+#: book_stations/templates/book_stations/bookstation_form.html:253
+#: book_stations/templates/book_stations/visit_list.html:32
+#: users/templates/users/profile.html:70 users/templates/users/profile.html:107
+msgid "Delete"
+msgstr "Verwijderen"
+
+#: book_stations/templates/book_stations/bookstation_form.html:264
 msgid ""
 "Provide coordinates if location text is empty, or use coordinates alongside "
 "text for precision."
 msgstr ""
-"Geef coördinaten op als de locatietekst leeg is, of gebruik coördinaten naast"
-" tekst voor meer precisie."
+"Geef coördinaten op als de locatietekst leeg is, of gebruik coördinaten "
+"naast tekst voor meer precisie."
 
-#: book_stations/templates/book_stations/bookstation_form.html:226
+#: book_stations/templates/book_stations/bookstation_form.html:271
 msgid "More information about Plus Codes"
 msgstr "Meer informatie over Plus Codes"
 
-#: book_stations/templates/book_stations/bookstation_form.html:228
+#: book_stations/templates/book_stations/bookstation_form.html:273
 msgid "Plus Codes are short digital addresses that identify a location."
 msgstr "Plus Codes zijn korte digitale adressen die een locatie aanduiden."
 
-#: book_stations/templates/book_stations/bookstation_form.html:229
+#: book_stations/templates/book_stations/bookstation_form.html:274
 msgid "Learn more about Plus Codes"
 msgstr "Meer over Plus Codes"
 
-#: book_stations/templates/book_stations/bookstation_form.html:252
+#: book_stations/templates/book_stations/bookstation_form.html:297
 msgid "Use my current location"
 msgstr "Mijn huidige locatie gebruiken"
 
-#: book_stations/templates/book_stations/bookstation_form.html:259
+#: book_stations/templates/book_stations/bookstation_form.html:304
 #: items/templates/items/item_form.html:164
 msgid "Save changes"
 msgstr "Wijzigingen opslaan"
 
-#: book_stations/templates/book_stations/bookstation_form.html:259
+#: book_stations/templates/book_stations/bookstation_form.html:304
 msgid "Create station"
 msgstr "Bieb aanmaken"
 
@@ -357,8 +375,8 @@ msgstr "Netwerk van open boekenkasten"
 
 #: book_stations/templates/book_stations/bookstation_list.html:89
 msgid ""
-"Explore community book-sharing cabinets near parks, schools, and neighborhood"
-" corners."
+"Explore community book-sharing cabinets near parks, schools, and "
+"neighborhood corners."
 msgstr ""
 "Ontdek boekenkasten van de gemeenschap bij parken, scholen en op "
 "straathoeken."
@@ -500,11 +518,6 @@ msgstr "Bezochte biebs"
 msgid "Back to profile"
 msgstr "Terug naar profiel"
 
-#: book_stations/templates/book_stations/visit_list.html:32
-#: users/templates/users/profile.html:70 users/templates/users/profile.html:107
-msgid "Delete"
-msgstr "Verwijderen"
-
 #: book_stations/templates/book_stations/visit_list.html:38
 msgid ""
 "You have not recorded any visits yet. Open a station and press “Log visit”."
@@ -512,15 +525,15 @@ msgstr ""
 "Je hebt nog geen bezoeken vastgelegd. Open een bieb en klik op “Bezoek "
 "vastleggen”."
 
-#: book_stations/views.py:182 items/views.py:358
+#: book_stations/views.py:185 items/views.py:361
 msgid "Authentication required."
 msgstr "Inloggen vereist."
 
-#: book_stations/views.py:187 items/views.py:363
+#: book_stations/views.py:190 items/views.py:366
 msgid "Invalid JSON payload."
 msgstr "Ongeldige JSON-gegevens."
 
-#: book_stations/views.py:434
+#: book_stations/views.py:455
 #, python-format
 msgid "Removed %(station_name)s from your visited stations."
 msgstr "%(station_name)s is verwijderd uit je bezochte biebs."
@@ -592,9 +605,9 @@ msgstr "Leesnetwerk van de gemeenschap"
 
 #: core/templates/core/home.html:17
 msgid ""
-"Find neighborhood book stations where people leave and take books, magazines,"
-" DVDs, and more. Explore nearby cabinets and help your local reading circle "
-"grow."
+"Find neighborhood book stations where people leave and take books, "
+"magazines, DVDs, and more. Explore nearby cabinets and help your local "
+"reading circle grow."
 msgstr ""
 "Vind minibiebs in de buurt waar mensen boeken, tijdschriften, dvd's en meer "
 "achterlaten en meenemen. Ontdek kasten bij jou in de buurt en help je lokale "
@@ -717,8 +730,8 @@ msgid ""
 "<code class=\"text-sm bg-base-200 px-1 rounded\">author</code>."
 msgstr ""
 "<strong>Verplichte kolom:</strong> <code class=\"text-sm bg-base-200 px-1 "
-"rounded\">title</code>. <strong>Verplicht wanneer het type item Boek "
-"is:</strong> <code class=\"text-sm bg-base-200 px-1 rounded\">author</code>."
+"rounded\">title</code>. <strong>Verplicht wanneer het type item Boek is:</"
+"strong> <code class=\"text-sm bg-base-200 px-1 rounded\">author</code>."
 
 #: items/templates/items/item_bulk_add.html:66
 msgid ""
@@ -739,8 +752,8 @@ msgstr ""
 "rounded\">last_seen_at</code>, <code class=\"bg-base-200 px-1 "
 "rounded\">thumbnail_url</code>, <code class=\"bg-base-200 px-1 "
 "rounded\">description</code>, <code class=\"bg-base-200 px-1 "
-"rounded\">last_activity</code>. Weggelaten optionele kolommen worden als leeg"
-" behandeld."
+"rounded\">last_activity</code>. Weggelaten optionele kolommen worden als "
+"leeg behandeld."
 
 #: items/templates/items/item_bulk_add.html:80
 msgid ""
@@ -772,11 +785,11 @@ msgstr ""
 
 #: items/templates/items/item_bulk_add.html:110
 msgid ""
-"title,author,item_type&#10;The Great Gatsby,F. Scott "
-"Fitzgerald,BOOK&#10;National Geographic April 2024,,MAGAZINE"
+"title,author,item_type&#10;The Great Gatsby,F. Scott Fitzgerald,BOOK&#10;"
+"National Geographic April 2024,,MAGAZINE"
 msgstr ""
-"title,author,item_type&#10;The Great Gatsby,F. Scott "
-"Fitzgerald,BOOK&#10;National Geographic April 2024,,MAGAZINE"
+"title,author,item_type&#10;The Great Gatsby,F. Scott Fitzgerald,BOOK&#10;"
+"National Geographic April 2024,,MAGAZINE"
 
 #: items/templates/items/item_bulk_add.html:115
 msgid "OR"
@@ -788,11 +801,11 @@ msgstr "Optie 2 — Upload een CSV-bestand"
 
 #: items/templates/items/item_bulk_add.html:122
 msgid ""
-"Choose a <code>.csv</code> file from your device. Selecting a file will clear"
-" the pasted text."
+"Choose a <code>.csv</code> file from your device. Selecting a file will "
+"clear the pasted text."
 msgstr ""
-"Kies een <code>.csv</code>-bestand van je apparaat. Als je een bestand kiest,"
-" wordt de geplakte tekst gewist."
+"Kies een <code>.csv</code>-bestand van je apparaat. Als je een bestand "
+"kiest, wordt de geplakte tekst gewist."
 
 #: items/templates/items/item_bulk_add.html:132
 msgid "Choose file"
@@ -961,9 +974,8 @@ msgid ""
 "Only <strong>title</strong> is always required. <strong>Author</strong> is "
 "also required when item type is <strong>Book</strong>."
 msgstr ""
-"Alleen de <strong>titel</strong> is altijd verplicht. De "
-"<strong>auteur</strong> is ook verplicht wanneer het type item "
-"<strong>Boek</strong> is."
+"Alleen de <strong>titel</strong> is altijd verplicht. De <strong>auteur</"
+"strong> is ook verplicht wanneer het type item <strong>Boek</strong> is."
 
 #: items/templates/items/item_form.html:102
 msgid "Title *"
@@ -1135,109 +1147,109 @@ msgstr "QR-code – %(title)s"
 msgid "QR code for %(title)s"
 msgstr "QR-code voor %(title)s"
 
-#: items/views.py:57
+#: items/views.py:60
 msgid "Book station must reference an existing id or readable_id."
 msgstr "Minibieb moet verwijzen naar een bestaand id of readable_id."
 
-#: items/views.py:72
+#: items/views.py:75
 msgid "Use ISO date format YYYY-MM-DD."
 msgstr "Gebruik het ISO-datumformaat JJJJ-MM-DD."
 
-#: items/views.py:122
+#: items/views.py:125
 msgid "out briefly"
 msgstr "kort weg"
 
-#: items/views.py:126
+#: items/views.py:129
 msgid "out for <1 day"
 msgstr "minder dan 1 dag weg"
 
-#: items/views.py:127
+#: items/views.py:130
 #, python-format
 msgid "out for %(count)s day"
 msgid_plural "out for %(count)s days"
 msgstr[0] "%(count)s dag weg"
 msgstr[1] "%(count)s dagen weg"
 
-#: items/views.py:195
+#: items/views.py:198
 #, python-format
 msgid "Out by %(out_user)s, back in by %(in_user)s"
 msgstr "Meegenomen door %(out_user)s, teruggezet door %(in_user)s"
 
-#: items/views.py:203
+#: items/views.py:206
 msgid "in"
 msgstr "erin"
 
-#: items/views.py:204 items/views.py:224
+#: items/views.py:207 items/views.py:227
 #, python-format
 msgid "By %(user)s"
 msgstr "Door %(user)s"
 
-#: items/views.py:223
+#: items/views.py:226
 msgid "move"
 msgstr "verplaatsing"
 
-#: items/views.py:523
+#: items/views.py:538
 msgid "Please select a station."
 msgstr "Kies een bieb."
 
-#: items/views.py:537
+#: items/views.py:552
 msgid "Selected station not found. Please choose a station from the list."
 msgstr "Gekozen bieb niet gevonden. Kies een bieb uit de lijst."
 
-#: items/views.py:583
+#: items/views.py:598
 #, python-format
 msgid "CSV parse error: %(error)s"
 msgstr "CSV-leesfout: %(error)s"
 
-#: items/views.py:590
+#: items/views.py:605
 msgid "No header row found in CSV."
 msgstr "Geen koprij gevonden in CSV."
 
-#: items/views.py:605
+#: items/views.py:620
 #, python-format
 msgid "Row limit of %(limit)s exceeded; remaining rows were not processed."
 msgstr ""
 "Limiet van %(limit)s rijen overschreden; de overige rijen zijn niet verwerkt."
 
-#: items/views.py:627
+#: items/views.py:642
 msgid "title is required."
 msgstr "title is verplicht."
 
-#: items/views.py:640
+#: items/views.py:655
 #, python-format
 msgid "status: '%(status)s' is not a valid status. Valid values: %(valid)s."
 msgstr ""
 "status: '%(status)s' is geen geldige status. Geldige waarden: %(valid)s."
 
-#: items/views.py:657
+#: items/views.py:672
 #, python-format
 msgid ""
 "item_type: '%(item_type)s' is not a valid type. Valid values: %(valid)s."
 msgstr ""
 "item_type: '%(item_type)s' is geen geldig type. Geldige waarden: %(valid)s."
 
-#: items/views.py:717
+#: items/views.py:732
 msgid "No data rows found in CSV."
 msgstr "Geen gegevensrijen gevonden in CSV."
 
-#: items/views.py:752
+#: items/views.py:767
 msgid "Please use only one input: either paste CSV text or upload a file."
 msgstr "Gebruik slechts één invoer: plak CSV-tekst of upload een bestand."
 
-#: items/views.py:765
+#: items/views.py:780
 msgid "Please provide either CSV text or a CSV file."
 msgstr "Geef CSV-tekst of een CSV-bestand op."
 
-#: items/views.py:778
+#: items/views.py:793
 #, python-format
 msgid "The uploaded file exceeds the %(limit)s KB size limit."
 msgstr "Het geüploade bestand overschrijdt de limiet van %(limit)s KB."
 
-#: items/views.py:795
+#: items/views.py:810
 msgid "Could not decode the uploaded file. Please use UTF-8 encoding."
 msgstr "Kon het geüploade bestand niet decoderen. Gebruik UTF-8-codering."
 
-#: items/views.py:810
+#: items/views.py:825
 #, python-format
 msgid "The pasted CSV text exceeds the %(limit)s K character limit."
 msgstr "De geplakte CSV-tekst overschrijdt de limiet van %(limit)s K tekens."
