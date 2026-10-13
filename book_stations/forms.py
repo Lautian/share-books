@@ -88,6 +88,8 @@ class BookStationCreateForm(forms.ModelForm):
         help_text=_("Optional station photo upload."),
     )
 
+    remove_picture = forms.BooleanField(required=False, widget=forms.HiddenInput())
+
     class Meta:
         model = BookStation
         fields = ["name", "location", "description", "latitude", "longitude"]
@@ -173,9 +175,27 @@ class BookStationCreateForm(forms.ModelForm):
 
         return cleaned_data
 
+    @staticmethod
+    def _delete_stored_picture(path):
+        if path and path.startswith("uploads/"):
+            try:
+                default_storage.delete(path)
+            except Exception:
+                pass
+
     def save(self, commit=True):
         station = super().save(commit=False)
         uploaded_picture = self.cleaned_data.get("picture_upload")
+        old_picture = self.initial.get("picture") or (
+            BookStation.objects.filter(pk=station.pk).values_list("picture", flat=True).first()
+            if station.pk
+            else ""
+        )
+
+        if self.cleaned_data.get("remove_picture") and not uploaded_picture:
+            station.picture = ""
+            station.picture_display_name = ""
+            self._delete_stored_picture(old_picture)
 
         if uploaded_picture:
             uploaded_picture.seek(0)
@@ -193,6 +213,8 @@ class BookStationCreateForm(forms.ModelForm):
                 ContentFile(optimized_image.getvalue()),
             )
             station.picture = saved_path
+            station.picture_display_name = (uploaded_picture.name or "")[:255]
+            self._delete_stored_picture(old_picture)
 
         if commit:
             station.save()

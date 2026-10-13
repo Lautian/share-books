@@ -164,6 +164,43 @@
     }
 
     document.addEventListener("DOMContentLoaded", setupGeolocationSync);
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const current = document.getElementById("current-picture");
+        const removeInput = document.getElementById("id_remove_picture");
+        const fileInput = document.getElementById("id_picture_upload");
+        if (!current || !removeInput || !fileInput) {
+            return;
+        }
+        const filenameEl = document.getElementById("picture-filename");
+        const originalName = filenameEl.textContent;
+        const form = fileInput.form;
+
+        document.getElementById("picture-delete").addEventListener("click", function () {
+            removeInput.value = "true";
+            fileInput.value = "";
+            filenameEl.textContent = "";
+        });
+        fileInput.addEventListener("change", function () {
+            if (fileInput.files.length) {
+                removeInput.value = "";
+                filenameEl.textContent = fileInput.files[0].name;
+            } else {
+                filenameEl.textContent = removeInput.value ? "" : originalName;
+            }
+        });
+        form.addEventListener("submit", function (event) {
+            let message = "";
+            if (fileInput.files.length) {
+                message = "{% trans 'This will replace the existing photo. Are you sure?' as m %}{{ m|escapejs }}";
+            } else if (removeInput.value) {
+                message = "{% trans 'Are you sure you want to delete this photo?' as m2 %}{{ m2|escapejs }}";
+            }
+            if (message && !window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
+    });
 </script>
 {% endblock %}
 
@@ -206,8 +243,16 @@
                 {% if form.description.errors %}<span class="text-error text-sm">{{ form.description.errors.0 }}</span>{% endif %}
             </label>
 
+            {{ form.remove_picture }}
             <label class="form-control w-full">
                 <span class="label-text font-semibold">{{ form.picture_upload.label }}</span>
+                {% if is_edit and station.picture %}
+                    <span class="mb-2 flex items-center gap-2 text-sm" id="current-picture" data-has-picture="1">
+                        <span>{% trans "Current photo:" %}</span>
+                        <span id="picture-filename" class="font-mono">{{ station.picture_display_name|default:station.picture }}</span>
+                        <button type="button" id="picture-delete" class="btn btn-xs btn-outline btn-error">{% trans "Delete" %}</button>
+                    </span>
+                {% endif %}
                 {{ form.picture_upload }}
                 {% if form.picture_upload.help_text %}<span class="label-text-alt">{{ form.picture_upload.help_text }}</span>{% endif %}
                 {% if form.picture_upload.errors %}<span class="text-error text-sm">{{ form.picture_upload.errors.0 }}</span>{% endif %}

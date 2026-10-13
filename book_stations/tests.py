@@ -1166,6 +1166,38 @@ class BookStationCreateFormViewTests(TestCase):
         )
 
 
+    def test_bookstation_edit_can_remove_picture(self):
+        self.client.force_login(self.user)
+        station = BookStation.objects.create(
+            name="Photo Station",
+            location="Garden Lane",
+            added_by=self.user,
+        )
+        url = reverse(
+            "book_stations:bookstation-edit",
+            kwargs={"readable_id": station.readable_id},
+        )
+        base = {
+            "name": station.name,
+            "location": station.location,
+            "description": "",
+            "latitude": "",
+            "longitude": "",
+        }
+        self.client.post(url, data={**base, "picture_upload": make_image_upload("mine.jpg", 32, 32)})
+        station.refresh_from_db()
+        self.assertEqual(station.picture_display_name, "mine.jpg")
+        stored_path = station.picture
+        self.assertTrue(default_storage.exists(stored_path))
+        self.assertContains(self.client.get(url), "mine.jpg")
+
+        self.client.post(url, data={**base, "remove_picture": "true"})
+        station.refresh_from_db()
+        self.assertEqual(station.picture, "")
+        self.assertEqual(station.picture_display_name, "")
+        self.assertFalse(default_storage.exists(stored_path))
+
+
 class BookStationQRCodeViewTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(

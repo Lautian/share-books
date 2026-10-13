@@ -14,6 +14,7 @@ class BookStation(models.Model):
 	readable_id = models.SlugField(max_length=64, unique=True, blank=True)
 	description = models.TextField(blank=True)
 	picture = models.CharField(max_length=255, blank=True)
+	picture_display_name = models.CharField(max_length=255, blank=True)
 	latitude = models.DecimalField(
 		max_digits=9,
 		decimal_places=6,
