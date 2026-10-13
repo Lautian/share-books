@@ -188,8 +188,9 @@
             updateDeleteButton();
         });
         fileInput.addEventListener("change", function () {
-            if (fileInput.files.length) {
-                removeInput.value = "";
+            if (removeInput.value) {
+                filenameEl.textContent = "";
+            } else if (fileInput.files.length) {
                 filenameEl.textContent = fileInput.files[0].name;
             } else {
                 filenameEl.textContent = removeInput.value ? "" : originalName;
@@ -206,6 +207,11 @@
             }
             if (message && !window.confirm(message)) {
                 event.preventDefault();
+                if (removeInput.value) {
+                    removeInput.value = "";
+                    filenameEl.textContent = fileInput.files.length ? fileInput.files[0].name : originalName;
+                    updateDeleteButton();
+                }
             }
         });
     });
