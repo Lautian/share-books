@@ -298,6 +298,7 @@ def bookstation_create(request):
 			station = form.save(commit=False)
 			station.added_by = request.user
 			station.save()
+			form.delete_old_picture()
 			logger.info(
 				"BookStation created: readable_id=%s user_id=%s photo_uploaded=%s",
 				station.readable_id,
@@ -329,6 +330,7 @@ def bookstation_edit(request, readable_id):
 		if form.is_valid():
 			updated = form.save(commit=False)
 			updated.save()
+			form.delete_old_picture()
 			logger.info(
 				"BookStation edited: readable_id=%s user_id=%s photo_uploaded=%s",
 				updated.readable_id,

@@ -1166,6 +1166,77 @@ class BookStationCreateFormViewTests(TestCase):
         )
 
 
+    def test_bookstation_edit_can_remove_picture(self):
+        self.client.force_login(self.user)
+        station = BookStation.objects.create(
+            name="Photo Station",
+            location="Garden Lane",
+            added_by=self.user,
+        )
+        url = reverse(
+            "book_stations:bookstation-edit",
+            kwargs={"readable_id": station.readable_id},
+        )
+        base = {
+            "name": station.name,
+            "location": station.location,
+            "description": "",
+            "latitude": "",
+            "longitude": "",
+        }
+        self.client.post(url, data={**base, "picture_upload": make_image_upload("mine.jpg", 32, 32)})
+        station.refresh_from_db()
+        self.assertEqual(station.picture_display_name, "mine.jpg")
+        stored_path = station.picture
+        self.assertTrue(default_storage.exists(stored_path))
+        self.assertContains(self.client.get(url), "mine.jpg")
+
+        self.client.post(url, data={**base, "remove_picture": "true"})
+        station.refresh_from_db()
+        self.assertEqual(station.picture, "")
+        self.assertEqual(station.picture_display_name, "")
+        self.assertFalse(default_storage.exists(stored_path))
+
+    def test_bookstation_edit_replaces_picture_after_saving_station(self):
+        self.client.force_login(self.user)
+        station = BookStation.objects.create(
+            name="Photo Station",
+            location="Garden Lane",
+            added_by=self.user,
+        )
+        url = reverse(
+            "book_stations:bookstation-edit",
+            kwargs={"readable_id": station.readable_id},
+        )
+        base = {
+            "name": station.name,
+            "location": station.location,
+            "description": "",
+            "latitude": "",
+            "longitude": "",
+        }
+        self.client.post(
+            url,
+            data={**base, "picture_upload": make_image_upload("original.jpg", 32, 32)},
+        )
+        station.refresh_from_db()
+        old_path = station.picture
+        self.assertTrue(default_storage.exists(old_path))
+
+        response = self.client.post(
+            url,
+            data={**base, "picture_upload": make_image_upload("replacement.jpg", 32, 32)},
+        )
+
+        station.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(station.picture.endswith(".webp"))
+        self.assertEqual(station.picture_display_name, "replacement.jpg")
+        self.assertNotEqual(station.picture, old_path)
+        self.assertTrue(default_storage.exists(station.picture))
+        self.assertFalse(default_storage.exists(old_path))
+
+
 class BookStationQRCodeViewTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
